@@ -152,7 +152,7 @@ public class Pair
             }
 
             CachedPlayer?.Dispose();
-            CachedPlayer = _cachedPlayerFactory.Create(_onlineUserIdentDto!);
+            CachedPlayer = _cachedPlayerFactory.Create(new OnlineUserIdentDto(UserData, _onlineUserIdentDto!.Ident));
         }
         finally
         {

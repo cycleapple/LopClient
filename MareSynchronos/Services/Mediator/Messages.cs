@@ -4,6 +4,7 @@ using MareSynchronos.API.Dto;
 using MareSynchronos.API.Dto.Group;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.PlayerData.Pairs;
+using MareSynchronos.Services.Events;
 using MareSynchronos.WebAPI.Files.Models;
 using System.Numerics;
 
@@ -78,6 +79,7 @@ public record CensusUpdateMessage(byte Gender, byte RaceId, byte TribeId) : Mess
 public record TargetPairMessage(Pair Pair) : MessageBase;
 public record CombatStartMessage : MessageBase;
 public record CombatEndMessage : MessageBase;
+public record EventMessage(Event Event) : MessageBase;
 public record PenumbraDirectoryChangedMessage(string? ModDirectory) : MessageBase;
 
 public record UserChatMsgMessage(SignedChatMessage ChatMsg) : MessageBase;

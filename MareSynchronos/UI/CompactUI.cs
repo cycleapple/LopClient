@@ -502,9 +502,18 @@ public class CompactUi : WindowMediatorSubscriberBase
             ImGui.TextUnformatted(downloadText);
         }
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Mare Character Data Analysis", WindowContentWidth))
+        var bottomButtonWidth = (WindowContentWidth - ImGui.GetStyle().ItemSpacing.X) / 2;
+
+        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Character Analysis", bottomButtonWidth))
         {
             Mediator.Publish(new UiToggleMessage(typeof(DataAnalysisUi)));
+        }
+
+        ImGui.SameLine();
+
+        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.NotesMedical, "Event Viewer", bottomButtonWidth))
+        {
+            Mediator.Publish(new UiToggleMessage(typeof(EventViewerUI)));
         }
 
         ImGui.SameLine();

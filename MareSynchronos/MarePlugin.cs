@@ -89,6 +89,8 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version!;
         Logger.LogInformation("Launching {name} {major}.{minor}.{build}-lop{rev}", "Loporrit Sync", version.Major, version.Minor, version.Build, version.Revision);
+        Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(MarePlugin), Services.Events.EventSeverity.Informational,
+            $"Starting Loporrit Sync {version.Major}.{version.Minor}.{version.Build}-lop{version.Revision}")));
 
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (msg) => _ = Task.Run(WaitForPlayerAndLaunchCharacterManager));
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());

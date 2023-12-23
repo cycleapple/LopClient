@@ -32,7 +32,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
     private bool _showModal = false;
 
     public DataAnalysisUi(ILogger<DataAnalysisUi> logger, MareMediator mediator, CharacterAnalyzer characterAnalyzer, IpcManager ipcManager, PerformanceCollectorService performanceCollectorService)
-        : base(logger, mediator, "Mare Character Data Analysis", performanceCollectorService)
+        : base(logger, mediator, "Character Data Analysis", performanceCollectorService)
     {
         _characterAnalyzer = characterAnalyzer;
         _ipcManager = ipcManager;
