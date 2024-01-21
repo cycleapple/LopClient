@@ -88,6 +88,9 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<FileCompactor>();
             collection.AddSingleton<TagHandler>();
             collection.AddSingleton<UidDisplayHandler>();
+            collection.AddSingleton((s) => new IpcProvider(s.GetRequiredService<ILogger<IpcProvider>>(),
+                pluginInterface,
+                s.GetRequiredService<MareCharaFileManager>(), s.GetRequiredService<DalamudUtilService>()));
             collection.AddSingleton<PlayerPerformanceService>();
             collection.AddSingleton((s) => new EventAggregator(s.GetRequiredService<MareConfigService>(),
                 s.GetRequiredService<ILogger<EventAggregator>>(), s.GetRequiredService<MareMediator>()));
@@ -178,6 +181,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddHostedService(p => p.GetRequiredService<DtrEntry>());
             collection.AddHostedService(p => p.GetRequiredService<EventAggregator>());
             collection.AddHostedService(p => p.GetRequiredService<MarePlugin>());
+            collection.AddHostedService(p => p.GetRequiredService<IpcProvider>());
         })
         .Build();
 
