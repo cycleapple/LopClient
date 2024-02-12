@@ -591,8 +591,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
             }
 
             if (!IsInCombat)
-                _performanceCollector.LogPerformance(this, "FrameworkOnUpdateInternal>MediatorFrameworkUpdate",
-                    () => Mediator.Publish(new FrameworkUpdateMessage()));
+                Mediator.Publish(new FrameworkUpdateMessage());
 
             Mediator.Publish(new PriorityFrameworkUpdateMessage());
 
@@ -616,8 +615,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
             }
 
             if (IsInCombat)
-                _performanceCollector.LogPerformance(this, "FrameworkOnUpdateInternal>MediatorFrameworkUpdate",
-                    () => Mediator.Publish(new FrameworkUpdateMessage()));
+                Mediator.Publish(new FrameworkUpdateMessage());
 
             Mediator.Publish(new DelayedFrameworkUpdateMessage());
 
