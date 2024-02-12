@@ -24,8 +24,5 @@ public static class Crypto
     {
         return BitConverter.ToString(_sha256CryptoProvider.ComputeHash(Encoding.UTF8.GetBytes(stringToCompute))).Replace("-", "", StringComparison.Ordinal);
     }
-
-
-
 #pragma warning restore SYSLIB0021 // Type or member is obsolete
 }

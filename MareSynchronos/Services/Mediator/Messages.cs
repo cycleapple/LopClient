@@ -78,6 +78,7 @@ public record CensusUpdateMessage(byte Gender, byte RaceId, byte TribeId) : Mess
 public record TargetPairMessage(Pair Pair) : MessageBase;
 public record CombatStartMessage : MessageBase;
 public record CombatEndMessage : MessageBase;
+public record PenumbraDirectoryChangedMessage(string? ModDirectory) : MessageBase;
 
 public record UserChatMsgMessage(SignedChatMessage ChatMsg) : MessageBase;
 public record GroupChatMsgMessage(GroupDto GroupInfo, SignedChatMessage ChatMsg) : MessageBase;

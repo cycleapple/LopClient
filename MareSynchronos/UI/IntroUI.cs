@@ -24,7 +24,7 @@ public class IntroUi : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly MareConfigService _configService;
-    private readonly PeriodicFileScanner _fileCacheManager;
+    private readonly CacheMonitor _cacheMonitor;
     private readonly Dictionary<string, string> _languages = new(StringComparer.Ordinal) { { "English", "en" }, { "Deutsch", "de" }, { "Français", "fr" } };
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiShared;
@@ -41,12 +41,12 @@ public class IntroUi : WindowMediatorSubscriberBase
     private RegisterReplyDto? _registrationReply;
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController,
-        PeriodicFileScanner fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator) : base(logger, mareMediator, "Loporrit Setup")
+        CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator) : base(logger, mareMediator, "Loporrit Setup")
     {
         _uiShared = uiShared;
         _configService = configService;
         _apiController = apiController;
-        _fileCacheManager = fileCacheManager;
+        _cacheMonitor = fileCacheManager;
         _serverConfigurationManager = serverConfigurationManager;
 
         IsOpen = false;
@@ -176,11 +176,11 @@ public class IntroUi : WindowMediatorSubscriberBase
                 _uiShared.DrawCacheDirectorySetting();
             }
 
-            if (!_fileCacheManager.IsScanRunning && !string.IsNullOrEmpty(_configService.Current.CacheFolder) && _uiShared.HasValidPenumbraModPath && Directory.Exists(_configService.Current.CacheFolder))
+            if (!_cacheMonitor.IsScanRunning && !string.IsNullOrEmpty(_configService.Current.CacheFolder) && _uiShared.HasValidPenumbraModPath && Directory.Exists(_configService.Current.CacheFolder))
             {
                 if (ImGui.Button("Start Scan##startScan"))
                 {
-                    _fileCacheManager.InvokeScan(forced: true);
+                    _cacheMonitor.InvokeScan();
                 }
             }
             else
