@@ -123,8 +123,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
     public bool EditTrackerPosition { get; set; }
 
-    public long FileCacheSize => _cacheMonitor.FileCacheSize;
-
     public bool HasValidPenumbraModPath => !(_ipcManager.PenumbraModDirectory ?? string.Empty).IsNullOrEmpty() && Directory.Exists(_ipcManager.PenumbraModDirectory);
 
     public bool IsInGpose => _dalamudUtil.IsInCutscene;
