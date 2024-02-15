@@ -30,7 +30,7 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
 
     public PopoutProfileUi(ILogger<PopoutProfileUi> logger, MareMediator mediator, UiSharedService uiSharedService,
         ServerConfigurationManager serverManager, MareConfigService mareConfigService,
-        MareProfileManager mareProfileManager, PairManager pairManager) : base(logger, mediator, "###LoporritSyncPopoutProfileUI")
+        MareProfileManager mareProfileManager, PairManager pairManager, PerformanceCollectorService performanceCollectorService) : base(logger, mediator, "###LoporritSyncPopoutProfileUI", performanceCollectorService)
     {
         _uiSharedService = uiSharedService;
         _serverManager = serverManager;
@@ -78,7 +78,7 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
         IsOpen = false;
     }
 
-    public override void Draw()
+    protected override void DrawInternal()
     {
         if (_pair == null) return;
 

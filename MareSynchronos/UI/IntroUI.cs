@@ -7,6 +7,7 @@ using MareSynchronos.FileCache;
 using MareSynchronos.Localization;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
+using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.WebAPI;
@@ -41,7 +42,8 @@ public class IntroUi : WindowMediatorSubscriberBase
     private RegisterReplyDto? _registrationReply;
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController,
-        CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator) : base(logger, mareMediator, "Loporrit Setup")
+        CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator,
+        PerformanceCollectorService performanceCollectorService) : base(logger, mareMediator, "Loporrit Setup", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;
@@ -69,7 +71,7 @@ public class IntroUi : WindowMediatorSubscriberBase
         });
     }
 
-    public override void Draw()
+    protected override void DrawInternal()
     {
         if (_uiShared.IsInGpose) return;
 

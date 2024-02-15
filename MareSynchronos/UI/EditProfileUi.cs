@@ -36,7 +36,8 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     public EditProfileUi(ILogger<EditProfileUi> logger, MareMediator mediator,
         ApiController apiController, IUiBuilder uiBuilder, UiSharedService uiSharedService,
         FileDialogManager fileDialogManager, ServerConfigurationManager serverConfigurationManager,
-        MareProfileManager mareProfileManager) : base(logger, mediator, "Loporrit Edit Profile###LoporritSyncEditProfileUI")
+        MareProfileManager mareProfileManager, PerformanceCollectorService performanceCollectorService)
+        : base(logger, mediator, "Loporrit Edit Profile###LoporritSyncEditProfileUI", performanceCollectorService)
     {
         IsOpen = false;
         this.SizeConstraints = new()
@@ -64,7 +65,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         });
     }
 
-    public override void Draw()
+    protected override void DrawInternal()
     {
         _uiSharedService.BigText("Current Profile (as saved on server)");
 

@@ -59,7 +59,9 @@ public class CompactUi : WindowMediatorSubscriberBase
     private bool _wasOpen;
 
     public CompactUi(ILogger<CompactUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController, PairManager pairManager, ChatService chatService,
-        ServerConfigurationManager serverManager, MareMediator mediator, FileUploadManager fileTransferManager, UidDisplayHandler uidDisplayHandler) : base(logger, mediator, "###LoporritSyncMainUI")
+        ServerConfigurationManager serverManager, MareMediator mediator, FileUploadManager fileTransferManager, UidDisplayHandler uidDisplayHandler,
+        PerformanceCollectorService performanceCollectorService)
+        : base(logger, mediator, "###LoporritSyncMainUI", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;
@@ -101,7 +103,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         };
     }
 
-    public override void Draw()
+    protected override void DrawInternal()
     {
         /*if (_apiController.ServerInfo.AccentColor.HasValue)
         {
