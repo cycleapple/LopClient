@@ -62,7 +62,9 @@ public sealed class DtrEntry : IDisposable, IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Starting DtrEntry");
         _runTask = Task.Run(RunAsync, _cancellationTokenSource.Token);
+        _logger.LogInformation("Started DtrEntry");
         return Task.CompletedTask;
     }
 
@@ -144,7 +146,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
                 {
                     visiblePairs = _pairManager.GetOnlineUserPairs()
                         .Where(x => x.IsVisible)
-                        .Select(x => string.Format("{0} ({1})", _configService.Current.PreferNoteInDtrTooltip ? x.GetNoteOrName() : x.PlayerName, x.UserData.AliasOrUID ));
+                        .Select(x => string.Format("{0} ({1})", _configService.Current.PreferNoteInDtrTooltip ? x.GetNoteOrName() : x.PlayerName, x.UserData.AliasOrUID));
                 }
                 else
                 {
