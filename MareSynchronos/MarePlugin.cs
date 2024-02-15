@@ -94,6 +94,8 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) => DalamudUtilOnLogOut());
 
+        Mediator.StartQueueProcessing();
+
         return Task.CompletedTask;
     }
 

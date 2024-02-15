@@ -146,13 +146,13 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<ILogger<GameChatHooks>>(), gameInteropProvider, chatGui,
                 s.GetRequiredService<MareConfigService>(), s.GetRequiredService<ServerConfigurationManager>()));
 
-            collection.AddHostedService(p => p.GetRequiredService<MarePlugin>());
             collection.AddHostedService(p => p.GetRequiredService<FileCacheManager>());
+            collection.AddHostedService(p => p.GetRequiredService<MareMediator>());
             collection.AddHostedService(p => p.GetRequiredService<ConfigurationMigrator>());
             collection.AddHostedService(p => p.GetRequiredService<DalamudUtilService>());
             collection.AddHostedService(p => p.GetRequiredService<PerformanceCollectorService>());
             collection.AddHostedService(p => p.GetRequiredService<DtrEntry>());
-            collection.AddHostedService(p => p.GetRequiredService<MareMediator>());
+            collection.AddHostedService(p => p.GetRequiredService<MarePlugin>());
         })
         .Build()
         .RunAsync(_pluginCts.Token);
