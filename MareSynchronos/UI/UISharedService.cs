@@ -610,6 +610,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                         && Directory.Exists(path)
                         && _isDirectoryWritable
                         && !_isPenumbraDirectory
+                        && !_isOneDrive
                         && !_cacheDirectoryHasOtherFilesThanCache
                         && _cacheDirectoryIsValidPath)
                     {
