@@ -603,7 +603,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                     _isOneDrive = path.Contains("onedrive", StringComparison.OrdinalIgnoreCase);
                     _isPenumbraDirectory = string.Equals(path.ToLowerInvariant(), _ipcManager.PenumbraModDirectory?.ToLowerInvariant(), StringComparison.Ordinal);
                     _isDirectoryWritable = IsDirectoryWritable(path);
-                    _cacheDirectoryHasOtherFilesThanCache = Directory.GetFiles(path, "*", SearchOption.AllDirectories).Any(f => Path.GetFileNameWithoutExtension(f).Length != 40);
+                    _cacheDirectoryHasOtherFilesThanCache = Directory.GetFiles(path, "*", SearchOption.AllDirectories).Any(f => Path.GetFileNameWithoutExtension(f).Length != 40)
+                        || Directory.GetDirectories(path).Any();
                     _cacheDirectoryIsValidPath = PathRegex().IsMatch(path);
 
                     if (!string.IsNullOrEmpty(path)
@@ -641,7 +642,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         }
         else if (_cacheDirectoryHasOtherFilesThanCache)
         {
-            ColorTextWrapped("Your selected directory has files inside that are not Loporrit related. Use an empty directory or a previous storage directory only.", ImGuiColors.DalamudRed);
+            ColorTextWrapped("Your selected directory has files or directories inside that are not Loporrit related. Use an empty directory or a previous storage directory only.", ImGuiColors.DalamudRed);
         }
         else if (!_cacheDirectoryIsValidPath)
         {
