@@ -21,6 +21,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
     private Task? _cacheCreationTask;
     private CancellationTokenSource _honorificCts = new();
     private CancellationTokenSource _petNicknamesCts = new();
+    private CancellationTokenSource _moodlesCts = new();
     private bool _isZoning = false;
     private readonly Dictionary<ObjectKind, CancellationTokenSource> _glamourerCts = new();
 
@@ -122,7 +123,17 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
                 PetNicknamesChanged();
             }
         });
-        Mediator.Subscribe<PenumbraModSettingChangedMessage>(this, (msg) =>
+        Mediator.Subscribe<MoodlesMessage>(this, (msg) =>
+        {
+            if (_isZoning) return;
+            var changedType = _playerRelatedObjects.FirstOrDefault(f => f.Value.Address == msg.Address);
+            if (!default(KeyValuePair<ObjectKind, GameObjectHandler>).Equals(changedType) && changedType.Key == ObjectKind.Player)
+            {
+                Logger.LogDebug("Received Moodles change, updating player");
+                MoodlesChanged();
+            }
+        });
+        Mediator.Subscribe<PenumbraModSettingChangedMessage>(this, async (msg) =>
         {
             Logger.LogDebug("Received Penumbra Mod settings change, updating player");
             _ = AddPlayerCacheToCreate();
@@ -187,6 +198,20 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
         _ = Task.Run(async () =>
         {
             await Task.Delay(TimeSpan.FromSeconds(3), token).ConfigureAwait(false);
+            await AddPlayerCacheToCreate().ConfigureAwait(false);
+        }, token);
+    }
+
+    private void MoodlesChanged()
+    {
+        _moodlesCts?.Cancel();
+        _moodlesCts?.Dispose();
+        _moodlesCts = new();
+        var token = _moodlesCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), token).ConfigureAwait(false);
             await AddPlayerCacheToCreate().ConfigureAwait(false);
         }, token);
     }

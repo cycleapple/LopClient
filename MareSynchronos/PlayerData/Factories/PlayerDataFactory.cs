@@ -218,6 +218,7 @@ public class PlayerDataFactory
         {
             previousData.PetNamesData = _ipcManager.PetNames.GetLocalNames();
             _logger.LogDebug("Pet Nicknames is now: {petnames}", previousData.PetNamesData);
+            previousData.MoodlesData = await _ipcManager.Moodles.GetStatusAsync(playerRelatedObject.Address).ConfigureAwait(false) ?? string.Empty;
         }
 
         if (previousData.FileReplacements.TryGetValue(objectKind, out HashSet<FileReplacement>? fileReplacements))

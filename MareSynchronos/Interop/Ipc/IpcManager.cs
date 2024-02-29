@@ -7,7 +7,7 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
 {
     public IpcManager(ILogger<IpcManager> logger, MareMediator mediator,
         IpcCallerPenumbra penumbraIpc, IpcCallerGlamourer glamourerIpc, IpcCallerCustomize customizeIpc, IpcCallerHeels heelsIpc,
-        IpcCallerHonorific honorificIpc, IpcCallerPetNames ipcCallerPetNames) : base(logger, mediator)
+        IpcCallerHonorific honorificIpc, IpcCallerPetNames ipcCallerPetNames, IpcCallerMoodles moodlesIpc) : base(logger, mediator)
     {
         CustomizePlus = customizeIpc;
         Heels = heelsIpc;
@@ -15,6 +15,7 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
         Penumbra = penumbraIpc;
         Honorific = honorificIpc;
         PetNames = ipcCallerPetNames;
+        Moodles = moodlesIpc;
 
         if (Initialized)
         {
@@ -41,6 +42,7 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
     public IpcCallerGlamourer Glamourer { get; }
     public IpcCallerPenumbra Penumbra { get; }
     public IpcCallerPetNames PetNames { get; }
+    public IpcCallerMoodles Moodles { get; }
 
     private void PeriodicApiStateCheck()
     {
@@ -51,5 +53,6 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
         CustomizePlus.CheckAPI();
         Honorific.CheckAPI();
         PetNames.CheckAPI();
+        Moodles.CheckAPI();
     }
 }

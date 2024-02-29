@@ -404,6 +404,10 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                         await _ipcManager.PetNames.SetPlayerData(handler.Address, charaData.PetNamesData).ConfigureAwait(false);
                         break;
 
+                    case PlayerChanges.Moodles:
+                        await _ipcManager.Moodles.SetStatusAsync(handler.Address, charaData.MoodlesData).ConfigureAwait(false);
+                        break;
+
                     case PlayerChanges.ForcedRedraw:
                         await _ipcManager.Penumbra.RedrawAsync(Logger, handler, applicationId, token).ConfigureAwait(false);
                         break;
@@ -714,6 +718,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             await _ipcManager.Honorific.ClearTitleAsync(address).ConfigureAwait(false);
             Logger.LogDebug("[{applicationId}] Restoring Pet Nicknames for {alias}/{name}", applicationId, Pair.UserData.AliasOrUID, name);
             await _ipcManager.PetNames.ClearPlayerData(address).ConfigureAwait(false);
+            Logger.LogDebug("[{applicationId}] Restoring Moodles for {alias}/{name}", applicationId, Pair.UserData.AliasOrUID, name);
+            await _ipcManager.Moodles.RevertStatusAsync(address).ConfigureAwait(false);
         }
         else if (objectKind == ObjectKind.MinionOrMount)
         {

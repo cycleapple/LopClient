@@ -2,8 +2,6 @@
 
 using MareSynchronos.API.Data.Enum;
 
-using System.Text;
-
 namespace MareSynchronos.PlayerData.Data;
 
 public class CharacterData
@@ -15,6 +13,7 @@ public class CharacterData
     public string HonorificData { get; set; } = string.Empty;
     public string ManipulationString { get; set; } = string.Empty;
     public string PetNamesData { get; set; } = string.Empty;
+    public string MoodlesData { get; set; } = string.Empty;
 
     public API.Data.CharacterData ToAPI()
     {
@@ -44,17 +43,8 @@ public class CharacterData
             HeelsData = HeelsData,
             CustomizePlusData = CustomizePlusScale.ToDictionary(d => d.Key, d => d.Value),
             HonorificData = HonorificData,
-            PetNamesData = PetNamesData
+            PetNamesData = PetNamesData,
+            MoodlesData = MoodlesData
         };
-    }
-
-    public override string ToString()
-    {
-        StringBuilder stringBuilder = new();
-        foreach (var fileReplacement in FileReplacements.SelectMany(k => k.Value).OrderBy(a => a.GamePaths.First(), StringComparer.Ordinal))
-        {
-            stringBuilder.Append(fileReplacement).AppendLine();
-        }
-        return stringBuilder.ToString();
     }
 }
