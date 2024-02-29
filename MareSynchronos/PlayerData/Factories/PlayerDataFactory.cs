@@ -1,12 +1,11 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using MareSynchronos.API.Data.Enum;
 using MareSynchronos.FileCache;
-using MareSynchronos.Interop;
+using MareSynchronos.Interop.Ipc;
 using MareSynchronos.PlayerData.Data;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.Services;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 using CharacterData = MareSynchronos.PlayerData.Data.CharacterData;
 
 namespace MareSynchronos.PlayerData.Factories;
@@ -141,7 +140,7 @@ public class PlayerDataFactory
         // penumbra call, it's currently broken
         Dictionary<string, HashSet<string>>? resolvedPaths;
 
-        resolvedPaths = await _ipcManager.PenumbraGetCharacterData(_logger, playerRelatedObject).ConfigureAwait(false);
+        resolvedPaths = await _ipcManager.Penumbra.GetCharacterData(_logger, playerRelatedObject).ConfigureAwait(false);
         if (resolvedPaths == null) throw new InvalidOperationException("Penumbra returned null data");
 
         previousData.FileReplacements[objectKind] =
@@ -192,16 +191,16 @@ public class PlayerDataFactory
         }
 
         // gather up data from ipc
-        previousData.ManipulationString = _ipcManager.PenumbraGetMetaManipulations();
-        Task<string> getHeelsOffset = _ipcManager.GetHeelsOffsetAsync();
-        Task<string> getGlamourerData = _ipcManager.GlamourerGetCharacterCustomizationAsync(playerRelatedObject.Address);
-        Task<string?> getCustomizeData = _ipcManager.GetCustomizePlusScaleAsync(playerRelatedObject.Address);
+        previousData.ManipulationString = _ipcManager.Penumbra.GetMetaManipulations();
+        Task<string> getHeelsOffset = _ipcManager.Heels.GetOffsetAsync();
+        Task<string> getGlamourerData = _ipcManager.Glamourer.GetCharacterCustomizationAsync(playerRelatedObject.Address);
+        Task<string?> getCustomizeData = _ipcManager.CustomizePlus.GetScaleAsync(playerRelatedObject.Address);
         previousData.GlamourerString[playerRelatedObject.ObjectKind] = await getGlamourerData.ConfigureAwait(false);
         _logger.LogDebug("Glamourer is now: {data}", previousData.GlamourerString[playerRelatedObject.ObjectKind]);
         var customizeScale = await getCustomizeData.ConfigureAwait(false);
         previousData.CustomizePlusScale[playerRelatedObject.ObjectKind] = customizeScale ?? string.Empty;
         _logger.LogDebug("Customize is now: {data}", previousData.CustomizePlusScale[playerRelatedObject.ObjectKind]);
-        previousData.HonorificData = _ipcManager.HonorificGetTitle();
+        previousData.HonorificData = _ipcManager.Honorific.GetTitle();
         _logger.LogDebug("Honorific is now: {data}", previousData.HonorificData);
         previousData.HeelsData = await getHeelsOffset.ConfigureAwait(false);
         _logger.LogDebug("Heels is now: {heels}", previousData.HeelsData);
@@ -232,7 +231,7 @@ public class PlayerDataFactory
         var forwardPaths = forwardResolve.ToArray();
         var reversePaths = reverseResolve.ToArray();
         Dictionary<string, List<string>> resolvedPaths = new(StringComparer.Ordinal);
-        var (forward, reverse) = await _ipcManager.PenumbraResolvePathsAsync(forwardPaths, reversePaths).ConfigureAwait(false);
+        var (forward, reverse) = await _ipcManager.Penumbra.ResolvePathsAsync(forwardPaths, reversePaths).ConfigureAwait(false);
         for (int i = 0; i < forwardPaths.Length; i++)
         {
             var filePath = forward[i].ToLowerInvariant();

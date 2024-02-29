@@ -1,3 +1,4 @@
+﻿using Dalamud.Game.ClientState.Objects.Types;
 ﻿using Dalamud.Interface.ImGuiNotification;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Dto;
@@ -81,7 +82,7 @@ public record CombatStartMessage : MessageBase;
 public record CombatEndMessage : MessageBase;
 public record EventMessage(Event Event) : MessageBase;
 public record PenumbraDirectoryChangedMessage(string? ModDirectory) : MessageBase;
-
+public record PenumbraRedrawCharacterMessage(ICharacter Character) : SameThreadMessage;
 public record UserChatMsgMessage(SignedChatMessage ChatMsg) : MessageBase;
 public record GroupChatMsgMessage(GroupDto GroupInfo, SignedChatMessage ChatMsg) : MessageBase;
 #pragma warning restore S2094

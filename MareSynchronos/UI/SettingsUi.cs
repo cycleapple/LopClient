@@ -10,7 +10,7 @@ using MareSynchronos.API.Data.Comparer;
 using MareSynchronos.API.Dto.Account;
 using MareSynchronos.API.Routes;
 using MareSynchronos.FileCache;
-using MareSynchronos.Interop;
+using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Export;
@@ -750,7 +750,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             using var id = ImRaii.PushId("penumbraMonitor");
             if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ArrowsToCircle, "Try to reinitialize Monitor"))
             {
-                _cacheMonitor.StartPenumbraWatcher(_ipcManager.PenumbraModDirectory);
+                _cacheMonitor.StartPenumbraWatcher(_ipcManager.Penumbra.PenumbraModDirectory);
             }
         }
 
@@ -770,7 +770,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Play, "Resume Monitoring"))
             {
                 _cacheMonitor.StartMareWatcher(_configService.Current.CacheFolder);
-                _cacheMonitor.StartPenumbraWatcher(_ipcManager.PenumbraModDirectory);
+                _cacheMonitor.StartPenumbraWatcher(_ipcManager.Penumbra.PenumbraModDirectory);
                 _cacheMonitor.InvokeScan();
             }
             UiSharedService.AttachToolTip("Attempts to resume monitoring for both Penumbra and Loporrit Storage. "
