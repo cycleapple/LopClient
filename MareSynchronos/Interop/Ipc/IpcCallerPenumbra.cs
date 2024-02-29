@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface.ImGuiNotification;
+using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Handlers;
@@ -20,7 +20,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private readonly RedrawManager _redrawManager;
     private bool _shownPenumbraUnavailable = false;
     private string? _penumbraModDirectory;
-    public string? PenumbraModDirectory
+    public string? ModDirectory
     {
         get => _penumbraModDirectory;
         private set
@@ -128,11 +128,11 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     {
         if (!APIAvailable)
         {
-            PenumbraModDirectory = string.Empty;
+            ModDirectory = string.Empty;
         }
         else
         {
-            PenumbraModDirectory = _penumbraResolveModDir!.Invoke().ToLowerInvariant();
+            ModDirectory = _penumbraResolveModDir!.Invoke().ToLowerInvariant();
         }
     }
 
@@ -327,7 +327,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private void PenumbraInit()
     {
         APIAvailable = true;
-        PenumbraModDirectory = _penumbraResolveModDir.Invoke();
+        ModDirectory = _penumbraResolveModDir.Invoke();
         _mareMediator.Publish(new PenumbraInitializedMessage());
         _penumbraRedraw!.Invoke(0, setting: RedrawType.Redraw);
     }
