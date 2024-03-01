@@ -46,6 +46,8 @@ public class DownloadUi : WindowMediatorSubscriberBase
         Flags |= ImGuiWindowFlags.NoDecoration;
         Flags |= ImGuiWindowFlags.NoFocusOnAppearing;
 
+        DisableWindowSounds = true;
+
         ForceMainWindow = true;
 
         IsOpen = true;
