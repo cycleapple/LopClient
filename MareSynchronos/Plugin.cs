@@ -90,7 +90,8 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<UidDisplayHandler>();
             collection.AddSingleton((s) => new IpcProvider(s.GetRequiredService<ILogger<IpcProvider>>(),
                 pluginInterface,
-                s.GetRequiredService<MareCharaFileManager>(), s.GetRequiredService<DalamudUtilService>()));
+                s.GetRequiredService<MareCharaFileManager>(), s.GetRequiredService<DalamudUtilService>(),
+                s.GetRequiredService<MareMediator>()));
             collection.AddSingleton<PlayerPerformanceService>();
             collection.AddSingleton((s) => new EventAggregator(s.GetRequiredService<MareConfigService>(),
                 s.GetRequiredService<ILogger<EventAggregator>>(), s.GetRequiredService<MareMediator>()));

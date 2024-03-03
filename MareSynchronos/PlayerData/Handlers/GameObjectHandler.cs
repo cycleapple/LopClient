@@ -48,7 +48,6 @@ public sealed class GameObjectHandler : DisposableMediatorSubscriberBase
                     Mediator.Publish(new CreateCacheForObjectMessage(this));
                 }
             });
-            Mediator.Publish(new AddWatchedGameObjectHandler(this));
         }
 
         Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
@@ -85,6 +84,8 @@ public sealed class GameObjectHandler : DisposableMediatorSubscriberBase
                 });
             }
         });
+
+        Mediator.Publish(new GameObjectHandlerCreatedMessage(this, _isOwnedObject));
 
         _dalamudUtil.RunOnFrameworkThread(CheckAndUpdateObject).GetAwaiter().GetResult();
     }
@@ -173,8 +174,7 @@ public sealed class GameObjectHandler : DisposableMediatorSubscriberBase
     {
         base.Dispose(disposing);
 
-        if (_isOwnedObject)
-            Mediator.Publish(new RemoveWatchedGameObjectHandler(this));
+        Mediator.Publish(new GameObjectHandlerDestroyedMessage(this, _isOwnedObject));
     }
 
     private unsafe void CheckAndUpdateObject()
