@@ -28,6 +28,7 @@ public class IntroUi : WindowMediatorSubscriberBase
     private readonly CacheMonitor _cacheMonitor;
     private readonly Dictionary<string, string> _languages = new(StringComparer.Ordinal) { { "English", "en" }, { "Deutsch", "de" }, { "Français", "fr" } };
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly DalamudUtilService _dalamudUtilService;
     private readonly UiSharedService _uiShared;
     private int _currentLanguage;
     private bool _readFirstPage;
@@ -43,14 +44,14 @@ public class IntroUi : WindowMediatorSubscriberBase
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController,
         CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator,
-        PerformanceCollectorService performanceCollectorService) : base(logger, mareMediator, "Loporrit Setup", performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService) : base(logger, mareMediator, "Loporrit Setup", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;
         _apiController = apiController;
         _cacheMonitor = fileCacheManager;
         _serverConfigurationManager = serverConfigurationManager;
-
+        _dalamudUtilService = dalamudUtilService;
         IsOpen = false;
         ShowCloseButton = false;
         RespectCloseHotkey = false;
@@ -66,7 +67,7 @@ public class IntroUi : WindowMediatorSubscriberBase
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (_) => IsOpen = false);
         Mediator.Subscribe<SwitchToIntroUiMessage>(this, (_) =>
         {
-            _configService.Current.UseCompactor = !Util.IsWine();
+            _configService.Current.UseCompactor = !dalamudUtilService.IsWine;
             IsOpen = true;
         });
     }
@@ -189,7 +190,7 @@ public class IntroUi : WindowMediatorSubscriberBase
             {
                 _uiShared.DrawFileScanState();
             }
-            if (!Util.IsWine())
+            if (!_dalamudUtilService.IsWine)
             {
                 var useFileCompactor = _configService.Current.UseCompactor;
                 if (ImGui.Checkbox("Use File Compactor", ref useFileCompactor))

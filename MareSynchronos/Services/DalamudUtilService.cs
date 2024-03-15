@@ -1,6 +1,7 @@
 ﻿using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
@@ -92,8 +93,10 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
                     _toastGui.ShowError("Player out of range.");
             }).ConfigureAwait(false);
         });
+        IsWine = Util.IsWine();
     }
 
+    public bool IsWine { get; init; }
     public unsafe GameObject* GposeTarget => TargetSystem.Instance()->GPoseTarget;
     public unsafe DalamudGameObject? GposeTargetGameObject => GposeTarget == null ? null : _objectTable[GposeTarget->ObjectIndex];
     public bool IsAnythingDrawing { get; private set; } = false;

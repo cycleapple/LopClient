@@ -39,10 +39,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private readonly ApiController _apiController;
     private readonly IpcManager _ipcManager;
     private readonly CacheMonitor _cacheMonitor;
+    private readonly DalamudUtilService _dalamudUtilService;
     private readonly MareConfigService _configService;
     private readonly ConcurrentDictionary<GameObjectHandler, Dictionary<string, FileDownloadStatus>> _currentDownloads = new();
     private readonly FileCompactor _fileCompactor;
-    private readonly DalamudUtilService _dalamudUtilService;
     private readonly FileUploadManager _fileTransferManager;
     private readonly FileTransferOrchestrator _fileTransferOrchestrator;
     private readonly FileCacheManager _fileCacheManager;
@@ -96,6 +96,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _apiController = apiController;
         _ipcManager = ipcManager;
         _cacheMonitor = cacheMonitor;
+        _dalamudUtilService = dalamudUtilService;
         _fileCompactor = fileCompactor;
         _uiShared = uiShared;
         AllowClickthrough = false;
@@ -798,7 +799,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.TextUnformatted($"Currently utilized local storage: {UiSharedService.ByteToString(_cacheMonitor.FileCacheSize)}");
         else
             ImGui.TextUnformatted($"Currently utilized local storage: Calculating...");
-        bool isLinux = Util.IsWine();
+        bool isLinux = _dalamudUtilService.IsWine;
         if (!isLinux)
             ImGui.TextUnformatted($"Remaining space free on drive: {UiSharedService.ByteToString(_cacheMonitor.FileCacheDriveFree)}");
         bool useFileCompactor = _configService.Current.UseCompactor;
@@ -822,8 +823,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _ = Task.Run(() =>
                 {
                     _fileCompactor.CompactStorage(compress: true);
-                    CancellationTokenSource cts = new();
-                    _cacheMonitor.RecalculateFileCacheSize(cts.Token);
+                    _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
                 });
             }
             UiSharedService.AttachToolTip("This will run compression on all files in your current storage folder." + Environment.NewLine
@@ -835,7 +835,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 {
                     _fileCompactor.CompactStorage(compress: false);
                     CancellationTokenSource cts = new();
-                    _cacheMonitor.RecalculateFileCacheSize(cts.Token);
+                    _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
                 });
             }
             UiSharedService.AttachToolTip("This will run decompression on all files in your current storage folder.");
