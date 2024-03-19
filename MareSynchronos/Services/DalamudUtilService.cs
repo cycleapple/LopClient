@@ -270,7 +270,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     public async Task RunOnFrameworkThread(Action act, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0)
     {
         var fileName = Path.GetFileNameWithoutExtension(callerFilePath);
-        await _performanceCollector.LogPerformance(this, "RunOnFramework:Act/" + fileName + ">" + callerMember + ":" + callerLineNumber, async () =>
+        await _performanceCollector.LogPerformance(this, $"RunOnFramework:Act/{fileName}>{callerMember}:{callerLineNumber}", async () =>
         {
             if (!_framework.IsInFrameworkUpdateThread)
             {
@@ -289,7 +289,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     public async Task<T> RunOnFrameworkThread<T>(Func<T> func, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0)
     {
         var fileName = Path.GetFileNameWithoutExtension(callerFilePath);
-        return await _performanceCollector.LogPerformance(this, "RunOnFramework:Func<" + typeof(T) + ">/" + fileName + ">" + callerMember + ":" + callerLineNumber, async () =>
+        return await _performanceCollector.LogPerformance(this, $"RunOnFramework:Func<{typeof(T)}>/{fileName}>{callerMember}:{callerLineNumber}", async () =>
         {
             if (!_framework.IsInFrameworkUpdateThread)
             {
@@ -467,7 +467,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
 
     private void FrameworkOnUpdate(IFramework framework)
     {
-        _performanceCollector.LogPerformance(this, "FrameworkOnUpdate", FrameworkOnUpdateInternal);
+        _performanceCollector.LogPerformance(this, $"FrameworkOnUpdate", FrameworkOnUpdateInternal);
     }
 
     private unsafe void FrameworkOnUpdateInternal()
@@ -479,10 +479,10 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
 
         bool isNormalFrameworkUpdate = DateTime.Now < _delayedFrameworkUpdateCheck.AddSeconds(1);
 
-        _performanceCollector.LogPerformance(this, "FrameworkOnUpdateInternal+" + (isNormalFrameworkUpdate ? "Regular" : "Delayed"), () =>
+        _performanceCollector.LogPerformance(this, $"FrameworkOnUpdateInternal+{(isNormalFrameworkUpdate ? "Regular" : "Delayed")}", () =>
         {
             IsAnythingDrawing = false;
-            _performanceCollector.LogPerformance(this, "ObjTableToCharas",
+            _performanceCollector.LogPerformance(this, $"ObjTableToCharas",
                 () =>
                 {
                     if (_sentBetweenAreas)
