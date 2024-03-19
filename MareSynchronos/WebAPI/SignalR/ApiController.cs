@@ -194,7 +194,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
                         $"Your client is outdated ({currentClientVer.Major}.{currentClientVer.Minor}.{currentClientVer.Build}), current is: " +
                         $"{_connectionDto.CurrentClientVersion.Major}.{_connectionDto.CurrentClientVersion.Minor}.{_connectionDto.CurrentClientVersion.Build}. " +
                         $"Please keep your Loporrit client up-to-date.",
-                        NotificationType.Warning));
+                        NotificationType.Warning, TimeSpan.FromSeconds(15)));
                 }
 
                 await LoadIninitialPairs().ConfigureAwait(false);

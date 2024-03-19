@@ -108,12 +108,13 @@ public class NotificationService : DisposableMediatorSubscriberBase
 
     private void ShowToast(NotificationMessage msg)
     {
-        var notification = new Notification{
+        _notificationManager.AddNotification(new Dalamud.Interface.ImGuiNotification.Notification()
+        {
             Content = msg.Message ?? string.Empty,
-            Title = "[LoporritSync] " + msg.Title,
+            Title = msg.Title,
             Type = msg.Type,
-            InitialDuration = TimeSpan.FromMilliseconds(msg.TimeShownOnScreen)
-        };
-        _notificationManager.AddNotification(notification);
+            Minimized = false,
+            InitialDuration = msg.TimeShownOnScreen ?? TimeSpan.FromSeconds(3)
+        });
     }
 }
