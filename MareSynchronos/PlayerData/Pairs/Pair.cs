@@ -50,6 +50,7 @@ public class Pair
     public string? PlayerName => GetPlayerName();
     public uint PlayerCharacterId => GetPlayerCharacterId();
     public long LastAppliedDataSize => CachedPlayer?.LastAppliedDataSize ?? -1;
+    public long LastAppliedDataTris => CachedPlayer?.LastAppliedDataTris ?? -1;
 
     public UserData UserData => UserPair?.User ?? GroupPair.First().Value.User;
 

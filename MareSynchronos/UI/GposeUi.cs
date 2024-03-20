@@ -27,7 +27,6 @@ public class GposeUi : WindowMediatorSubscriberBase
         _dalamudUtil = dalamudUtil;
         _fileDialogManager = fileDialogManager;
         _configService = configService;
-
         Mediator.Subscribe<GposeStartMessage>(this, (_) => StartGpose());
         Mediator.Subscribe<GposeEndMessage>(this, (_) => EndGpose());
         IsOpen = _dalamudUtil.IsInGpose;

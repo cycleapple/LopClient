@@ -74,8 +74,14 @@ public class DrawUserPair : DrawPairBase
             var visibleTooltip = _pair.UserData.AliasOrUID + " is visible: " + _pair.PlayerName! + Environment.NewLine + "Click to target this player";
             if (_pair.LastAppliedDataSize >= 0)
             {
-                visibleTooltip += UiSharedService.TooltipSeparator +
-                    "Loaded Mods Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataSize, true);
+                visibleTooltip += UiSharedService.TooltipSeparator;
+                visibleTooltip += ((!_pair.IsVisible) ? "(Last) " : string.Empty) + "Mods Info" + Environment.NewLine;
+                visibleTooltip += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataSize, true);
+                if (_pair.LastAppliedDataTris >= 0)
+                {
+                    visibleTooltip += Environment.NewLine + "Triangle Count (excl. Vanilla): "
+                        + (_pair.LastAppliedDataTris > 1000 ? (_pair.LastAppliedDataTris / 1000d).ToString("0.0'k'") : _pair.LastAppliedDataTris);
+            }
             }
 
             UiSharedService.AttachToolTip(visibleTooltip);

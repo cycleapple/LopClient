@@ -20,13 +20,14 @@ public class PairHandlerFactory
     private readonly IpcManager _ipcManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly MareMediator _mareMediator;
+    private readonly XivDataAnalyzer _xivDataAnalyzer;
     private readonly PluginWarningNotificationService _pluginWarningNotificationManager;
     private readonly ServerConfigurationManager _serverConfigurationManager;
 
     public PairHandlerFactory(ILoggerFactory loggerFactory, GameObjectHandlerFactory gameObjectHandlerFactory, IpcManager ipcManager,
         FileDownloadManagerFactory fileDownloadManagerFactory, DalamudUtilService dalamudUtilService,
         PluginWarningNotificationService pluginWarningNotificationManager, ServerConfigurationManager serverConfigurationManager,
-        CancellationToken dalamudLifetime, FileCacheManager fileCacheManager, MareMediator mareMediator)
+        CancellationToken dalamudLifetime, FileCacheManager fileCacheManager, MareMediator mareMediator, XivDataAnalyzer modelAnalyzer)
     {
         _loggerFactory = loggerFactory;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -38,12 +39,13 @@ public class PairHandlerFactory
         _dalamudLifetimeToken = dalamudLifetime;
         _fileCacheManager = fileCacheManager;
         _mareMediator = mareMediator;
+        _xivDataAnalyzer = modelAnalyzer;
     }
 
     public PairHandler Create(OnlineUserIdentDto onlineUserIdentDto)
     {
         return new PairHandler(_loggerFactory.CreateLogger<PairHandler>(), onlineUserIdentDto, _gameObjectHandlerFactory,
             _ipcManager, _fileDownloadManagerFactory.Create(), _pluginWarningNotificationManager, _serverConfigurationManager, _dalamudUtilService,
-            _dalamudLifetimeToken, _fileCacheManager, _mareMediator);
+            _dalamudLifetimeToken, _fileCacheManager, _mareMediator, _xivDataAnalyzer);
     }
 }

@@ -277,4 +277,14 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
             Mediator.Publish(new TransientResourceChangedMessage(gameObject));
         }
     }
+
+    internal void RemoveTransientResource(ObjectKind objectKind, string path)
+    {
+        if (SemiTransientResources.TryGetValue(objectKind, out var resources))
+        {
+            resources.RemoveWhere(f => string.Equals(path, f, StringComparison.OrdinalIgnoreCase));
+            _configurationService.Current.PlayerPersistentTransientCache[PlayerPersistentDataKey] = resources;
+            _configurationService.Save();
+        }
+    }
 }

@@ -76,8 +76,14 @@ public class DrawGroupPair : DrawPairBase
             }
             if (_pair.LastAppliedDataSize >= 0)
             {
-                presenceText += UiSharedService.TooltipSeparator +
-                    "Loaded Mods Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataSize, true);
+                presenceText += UiSharedService.TooltipSeparator;
+                presenceText += ((!_pair.IsVisible) ? "(Last) " : string.Empty) + "Mods Info" + Environment.NewLine;
+                presenceText += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataSize, true);
+                if (_pair.LastAppliedDataTris >= 0)
+                {
+                    presenceText += Environment.NewLine + "Triangle Count (excl. Vanilla): "
+                        + (_pair.LastAppliedDataTris > 1000 ? (_pair.LastAppliedDataTris / 1000d).ToString("0.0'k'") : _pair.LastAppliedDataTris);
+                }
             }
         }
         UiSharedService.AttachToolTip(presenceText);

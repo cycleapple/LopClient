@@ -85,8 +85,10 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<IpcManager>(), s.GetRequiredService<FileDownloadManagerFactory>(), s.GetRequiredService<DalamudUtilService>(),
                 s.GetRequiredService<PluginWarningNotificationService>(), s.GetRequiredService<ServerConfigurationManager>(),
                 CancellationTokenSource.CreateLinkedTokenSource(addonLifecycle.GameShuttingDownToken, addonLifecycle.DalamudUnloadingToken).Token,
-                s.GetRequiredService<FileCacheManager>(), s.GetRequiredService<MareMediator>()));
+                s.GetRequiredService<FileCacheManager>(), s.GetRequiredService<MareMediator>(), s.GetRequiredService<XivDataAnalyzer>()));
             collection.AddSingleton<PairFactory>();
+            collection.AddSingleton<XivDataAnalyzer>(s => new(s.GetRequiredService<ILogger<XivDataAnalyzer>>(), s.GetRequiredService<FileCacheManager>(),
+                s.GetRequiredService<XivDataStorageService>(), gameData));
             collection.AddSingleton<CharacterAnalyzer>();
             collection.AddSingleton<TokenProvider>();
             collection.AddSingleton<PluginWarningNotificationService>();
@@ -124,6 +126,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton((s) => new ServerTagConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new SyncshellConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new TransientConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton((s) => new XivDataStorageService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new ConfigurationMigrator(s.GetRequiredService<ILogger<ConfigurationMigrator>>(), pluginInterface, s.GetRequiredService<NotesConfigService>()));
             collection.AddSingleton<HubFactory>();
 

@@ -83,7 +83,11 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             {
                 stream.Dispose();
             }
-            catch { }
+            catch
+            {
+                // do nothing
+                //
+            }
         }
         base.Dispose(disposing);
     }
