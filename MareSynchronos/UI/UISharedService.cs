@@ -620,7 +620,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                         _cacheMonitor.StartMareWatcher(path);
                         _cacheMonitor.InvokeScan();
                     }
-                });
+                }, _dalamudUtil.IsWine ? @"Z:\" : @"C:\");
             }
         }
         if (_cacheMonitor.MareWatcher != null)
