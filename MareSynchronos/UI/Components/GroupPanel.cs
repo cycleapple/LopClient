@@ -617,7 +617,7 @@ internal sealed class GroupPanel
                 ImGui.CloseCurrentPopup();
                 ImGui.SetClipboardText(UiSharedService.GetNotes(groupPairs));
             }
-            UiSharedService.AttachToolTip("Copies all your notes for all users in this Syncshell to the clipboard." + Environment.NewLine + "They can be imported via Settings -> Privacy -> Import Notes from Clipboard");
+            UiSharedService.AttachToolTip("Copies all your notes for all users in this Syncshell to the clipboard." + Environment.NewLine + "They can be imported via Settings -> General -> Notes -> Import notes from clipboard");
 
             var soundsText = userSoundsDisabled ? "Enable sound sync" : "Disable sound sync";
             if (UiSharedService.NormalizedIconTextButton(userSoundsIcon, soundsText))
