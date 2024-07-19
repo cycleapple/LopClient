@@ -1273,7 +1273,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         }
                         var friendlyName = secretKey.FriendlyName;
 
-                        if (ImGui.TreeNode($"chara", $"Character: {item.CharacterName}, World: {worldPreview}, Secret Key: {friendlyName}"))
+                        bool thisIsYou = false;
+                        if (string.Equals(_dalamudUtilService.GetPlayerName(), item.CharacterName, StringComparison.OrdinalIgnoreCase)
+                            && _dalamudUtilService.GetWorldId() == worldIdx)
+                        {
+                            thisIsYou = true;
+                        }
+                        if (ImGui.TreeNode($"chara", (thisIsYou ? "[CURRENT] " : "") + $"Character: {item.CharacterName}, World: {worldPreview}, Secret Key: {friendlyName}"))
                         {
                             var charaName = item.CharacterName;
                             if (ImGui.InputText("Character Name", ref charaName, 64))
