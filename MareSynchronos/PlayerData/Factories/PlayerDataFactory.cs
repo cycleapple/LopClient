@@ -37,7 +37,7 @@ public class PlayerDataFactory
     {
         if (!_ipcManager.Initialized)
         {
-            throw new InvalidOperationException("Penumbra is not connected");
+            throw new InvalidOperationException("Penumbra or Glamourer is not connected");
         }
 
         if (playerRelatedObject == null) return;
