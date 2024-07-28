@@ -16,7 +16,6 @@ using MareSynchronos.Services.Events;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.UI;
-using MareSynchronos.UI.Components;
 using MareSynchronos.UI.Components.Popup;
 using MareSynchronos.UI.Handlers;
 using MareSynchronos.WebAPI;
@@ -26,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MareSynchronos.Services.CharaData;
+using NReco.Logging.File;
 
 using MareSynchronos;
 
@@ -53,12 +53,47 @@ public sealed class Plugin : IDalamudPlugin
         INamePlateGui namePlateGui, IGameConfig gameConfig, IPartyList partyList)
     {
         Plugin.Self = this;
+
+        if (!Directory.Exists(pluginInterface.ConfigDirectory.FullName))
+            Directory.CreateDirectory(pluginInterface.ConfigDirectory.FullName);
+        var traceDir = Path.Join(pluginInterface.ConfigDirectory.FullName, "tracelog");
+        if (!Directory.Exists(traceDir))
+            Directory.CreateDirectory(traceDir);
+
+        int deleteAttempts = 0;
+        foreach (var file in Directory.EnumerateFiles(traceDir)
+            .Select(f => new FileInfo(f))
+            .OrderByDescending(f => f.LastWriteTimeUtc).Skip(9))
+        {
+            bool deleted = false;
+            while (!deleted && deleteAttempts < 5)
+            {
+                try
+                {
+                    file.Delete();
+                    deleted = true;
+                }
+                catch
+                {
+                    deleteAttempts++;
+                    Thread.Sleep(500);
+                }
+            }
+        }
+
         _host = new HostBuilder()
         .UseContentRoot(pluginInterface.ConfigDirectory.FullName)
         .ConfigureLogging(lb =>
         {
             lb.ClearProviders();
             lb.AddDalamudLogging(pluginLog);
+            lb.AddFile(Path.Combine(traceDir, $"mare-trace-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), (opt) =>
+            {
+                opt.Append = true;
+                opt.RollingFilesConvention = FileLoggerOptions.FileRollingConvention.Ascending;
+                opt.MinLevel = LogLevel.Trace;
+                opt.FileSizeLimitBytes = 50 * 1024 * 1024;
+            });
             lb.SetMinimumLevel(LogLevel.Trace);
         })
         .ConfigureServices(collection =>

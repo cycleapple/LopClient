@@ -14,7 +14,6 @@ public static class DalamudLoggingProviderExtensions
 
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, DalamudLoggingProvider>
             (b => new DalamudLoggingProvider(b.GetRequiredService<MareConfigService>(), pluginLog)));
-
         return builder;
     }
 }
