@@ -979,6 +979,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         var enableDtrEntry = _configService.Current.EnableDtrEntry;
         var showUidInDtrTooltip = _configService.Current.ShowUidInDtrTooltip;
         var preferNoteInDtrTooltip = _configService.Current.PreferNoteInDtrTooltip;
+        var useColorsInDtr = _configService.Current.UseColorsInDtr;
 
         if (ImGui.Checkbox("Enable Game Right Click Menu Entries", ref enableRightClickMenu))
         {
@@ -1016,6 +1017,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _configService.Current.DtrStyle = i;
                 _configService.Save();
             }, _configService.Current.DtrStyle);
+
+            if (ImGui.Checkbox("Color-code the Server Info Bar entry according to status", ref useColorsInDtr))
+            {
+                _configService.Current.UseColorsInDtr = useColorsInDtr;
+                _configService.Save();
+            }
         }
 
         if (ImGui.Checkbox("Show separate Visible group", ref showVisibleSeparate))
