@@ -166,20 +166,25 @@ public class PlayerDataFactory
         // or we get into redraw city for every change and nothing works properly
         if (objectKind == ObjectKind.Pet)
         {
-            foreach (var item in previousData.FileReplacements[objectKind].Where(i => i.HasFileReplacement).SelectMany(p => p.GamePaths))
+            foreach (var item in previousData.FileReplacements[ObjectKind.Pet].Where(i => i.HasFileReplacement).SelectMany(p => p.GamePaths))
             {
-                _logger.LogDebug("Persisting {item}", item);
-                _transientResourceManager.AddSemiTransientResource(objectKind, item);
+                if (_transientResourceManager.AddTransientResource(objectKind, item))
+                {
+                    _logger.LogDebug("Marking static {item} for Pet as transient", item);
+                }
             }
+
+            _logger.LogTrace("Clearing {count} Static Replacements for Pet", previousData.FileReplacements[ObjectKind.Pet].Count);
+            previousData.FileReplacements[ObjectKind.Pet].Clear();
         }
 
         _logger.LogDebug("Handling transient update for {obj}", playerRelatedObject);
 
         // remove all potentially gathered paths from the transient resource manager that are resolved through static resolving
-        _transientResourceManager.ClearTransientPaths(playerRelatedObject.Address, previousData.FileReplacements[objectKind].SelectMany(c => c.GamePaths).ToList());
+        _transientResourceManager.ClearTransientPaths(objectKind, previousData.FileReplacements[objectKind].SelectMany(c => c.GamePaths).ToList());
 
         // get all remaining paths and resolve them
-        var transientPaths = ManageSemiTransientData(objectKind, playerRelatedObject.Address);
+        var transientPaths = ManageSemiTransientData(objectKind);
         var resolvedTransientPaths = await GetFileReplacementsFromPaths(transientPaths, new HashSet<string>(StringComparer.Ordinal)).ConfigureAwait(false);
 
         _logger.LogDebug("== Transient Replacements ==");
@@ -349,9 +354,9 @@ public class PlayerDataFactory
         return resolvedPaths.ToDictionary(k => k.Key, k => k.Value.ToArray(), StringComparer.OrdinalIgnoreCase).AsReadOnly();
     }
 
-    private HashSet<string> ManageSemiTransientData(ObjectKind objectKind, IntPtr charaPointer)
+    private HashSet<string> ManageSemiTransientData(ObjectKind objectKind)
     {
-        _transientResourceManager.PersistTransientResources(charaPointer, objectKind);
+        _transientResourceManager.PersistTransientResources(objectKind);
 
         HashSet<string> pathsToResolve = new(StringComparer.Ordinal);
         foreach (var path in _transientResourceManager.GetSemiTransientResources(objectKind).Where(path => !string.IsNullOrEmpty(path)))
