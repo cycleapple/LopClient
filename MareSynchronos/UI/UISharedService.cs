@@ -75,6 +75,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private bool _isOneDrive = false;
 
     private bool _penumbraExists = false;
+    private bool _petNamesExists = false;
 
     private int _serverSelectionIndex = -1;
 
@@ -116,6 +117,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             _customizePlusExists = _ipcManager.CustomizePlus.APIAvailable;
             _heelsExists = _ipcManager.Heels.APIAvailable;
             _honorificExists = _ipcManager.Honorific.APIAvailable;
+            _petNamesExists = _ipcManager.PetNames.APIAvailable;
         });
     }
 
@@ -795,6 +797,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         var heelsColor = _heelsExists ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
         var customizeColor = _customizePlusExists ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
         var honorificColor = _honorificExists ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
+        var petNamesColor = _petNamesExists ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
         var check = FontAwesomeIcon.Check.ToIconString();
         var cross = FontAwesomeIcon.SquareXmark.ToIconString();
 
@@ -859,6 +862,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         FontText(_honorificExists ? check : cross, UiBuilder.IconFont, honorificColor);
         ImGui.SameLine();
         AttachToolTip($"Honorific is " + (_honorificExists ? "available and up to date." : "unavailable or not up to date."));
+        ImGui.Spacing();
+
+        ImGui.SameLine();
+        ImGui.TextUnformatted("PetNicknames");
+        ImGui.SameLine();
+        FontText(_petNamesExists ? check : cross, UiBuilder.IconFont,petNamesColor);
+        ImGui.SameLine();
+        AttachToolTip($"PetNicknames is " + (_petNamesExists ? "available and up to date." : "unavailable or not up to date."));
         ImGui.Spacing();
 
         if (!_penumbraExists || !_glamourerExists)
