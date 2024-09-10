@@ -204,6 +204,11 @@ public class PlayerDataFactory
         _logger.LogDebug("Honorific is now: {data}", previousData.HonorificData);
         previousData.HeelsData = await getHeelsOffset.ConfigureAwait(false);
         _logger.LogDebug("Heels is now: {heels}", previousData.HeelsData);
+        if (objectKind == ObjectKind.Player)
+        {
+            previousData.PetNamesData = _ipcManager.PetNames.GetLocalNames();
+            _logger.LogDebug("Pet Nicknames is now: {moodles}", previousData.PetNamesData);
+        }
 
         if (previousData.FileReplacements.TryGetValue(objectKind, out HashSet<FileReplacement>? fileReplacements))
         {

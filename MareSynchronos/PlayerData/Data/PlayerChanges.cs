@@ -9,4 +9,5 @@ public enum PlayerChanges
     Heels = 5,
     Honorific = 7,
     ForcedRedraw = 8,
+    PetNames = 10,
 }
