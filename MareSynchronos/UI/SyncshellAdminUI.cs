@@ -348,7 +348,8 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                             ImGui.TableNextColumn();
                             UiSharedService.TextWrapped(bannedUser.Reason);
                             ImGui.TableNextColumn();
-                            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Check, "Unban#" + bannedUser.UID))
+                            using var pushId = ImRaii.PushId(bannedUser.UID);
+                            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Check, "Unban"))
                             {
                                 _ = _apiController.GroupUnbanUser(bannedUser);
                                 _bannedUsers.RemoveAll(b => string.Equals(b.UID, bannedUser.UID, StringComparison.Ordinal));
