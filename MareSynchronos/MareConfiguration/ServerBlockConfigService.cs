@@ -10,5 +10,5 @@ public class ServerBlockConfigService : ConfigurationServiceBase<ServerBlockConf
     {
     }
 
-    protected override string ConfigurationName => ConfigName;
+    public override string ConfigurationName => ConfigName;
 }

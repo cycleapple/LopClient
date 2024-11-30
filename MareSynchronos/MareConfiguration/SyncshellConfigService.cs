@@ -10,5 +10,5 @@ public class SyncshellConfigService : ConfigurationServiceBase<SyncshellConfig>
     {
     }
 
-    protected override string ConfigurationName => ConfigName;
+    public override string ConfigurationName => ConfigName;
 }
