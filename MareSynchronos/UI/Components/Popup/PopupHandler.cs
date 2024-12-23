@@ -25,7 +25,9 @@ public class PopupHandler : WindowMediatorSubscriberBase
           | ImGuiWindowFlags.NoBackground
           | ImGuiWindowFlags.NoMove
           | ImGuiWindowFlags.NoNav
-          | ImGuiWindowFlags.NoTitleBar;
+          | ImGuiWindowFlags.NoTitleBar
+          | ImGuiWindowFlags.NoFocusOnAppearing;
+
         IsOpen = true;
 
         _handlers = popupHandlers.ToHashSet();
