@@ -78,6 +78,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     private bool _moodlesExists = false;
     private bool _penumbraExists = false;
     private bool _petNamesExists = false;
+    private bool _brioExists = false;
 
     private int _serverSelectionIndex = -1;
 
@@ -111,6 +112,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             _honorificExists = _ipcManager.Honorific.APIAvailable;
             _petNamesExists = _ipcManager.PetNames.APIAvailable;
             _moodlesExists = _ipcManager.Moodles.APIAvailable;
+            _brioExists = _ipcManager.Brio.APIAvailable;
         });
 
         UidFont = _pluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e =>
@@ -133,7 +135,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public bool HasValidPenumbraModPath => !(_ipcManager.Penumbra.ModDirectory ?? string.Empty).IsNullOrEmpty() && Directory.Exists(_ipcManager.Penumbra.ModDirectory);
 
     public IFontHandle IconFont { get; init; }
-    public bool IsInGpose => _dalamudUtil.IsInCutscene;
+    public bool IsInGpose => _dalamudUtil.IsInGpose;
 
     public string PlayerName => _dalamudUtil.GetPlayerName();
 
@@ -207,13 +209,45 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGui.TextUnformatted(text);
     }
 
-    public static void ColorTextWrapped(string text, Vector4 color)
+    public static void ColorTextWrapped(string text, Vector4 color, float wrapPos = 0)
     {
         using var raiicolor = ImRaii.PushColor(ImGuiCol.Text, color);
-        TextWrapped(text);
+        TextWrapped(text, wrapPos);
     }
 
     public static bool CtrlPressed() => (GetKeyState(0xA2) & 0x8000) != 0 || (GetKeyState(0xA3) & 0x8000) != 0;
+
+    public static void DrawGrouped(Action imguiDrawAction, float rounding = 5f, float? expectedWidth = null)
+    {
+        var cursorPos = ImGui.GetCursorPos();
+        using (ImRaii.Group())
+        {
+            if (expectedWidth != null)
+            {
+                ImGui.Dummy(new(expectedWidth.Value, 0));
+                ImGui.SetCursorPos(cursorPos);
+            }
+
+            imguiDrawAction.Invoke();
+        }
+
+        ImGui.GetWindowDrawList().AddRect(
+            ImGui.GetItemRectMin() - ImGui.GetStyle().ItemInnerSpacing,
+            ImGui.GetItemRectMax() + ImGui.GetStyle().ItemInnerSpacing,
+            Color(ImGuiColors.DalamudGrey2), rounding);
+    }
+
+    public static void DrawGroupedCenteredColorText(string text, Vector4 color, float? maxWidth = null)
+    {
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        var textWidth = ImGui.CalcTextSize(text, availWidth).X;
+        if (maxWidth != null && textWidth > maxWidth * ImGuiHelpers.GlobalScale) textWidth = maxWidth.Value * ImGuiHelpers.GlobalScale;
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth / 2f) - (textWidth / 2f));
+        DrawGrouped(() =>
+        {
+            ColorTextWrapped(text, color, ImGui.GetCursorPosX() + textWidth);
+        }, expectedWidth: maxWidth == null ? null : maxWidth * ImGuiHelpers.GlobalScale);
+    }
 
     public static void DrawOutlinedFont(string text, Vector4 fontColor, Vector4 outlineColor, int thickness)
     {
@@ -269,6 +303,15 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
         drawList.AddText(textPos, fontColor, text);
         drawList.AddText(textPos, fontColor, text);
+    }
+
+    public static void DrawTree(string leafName, Action drawOnOpened, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
+    {
+        using var tree = ImRaii.TreeNode(leafName, flags);
+        if (tree)
+        {
+            drawOnOpened();
+        }
     }
 
     public static Vector4 GetBoolColor(bool input) => input ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
@@ -428,9 +471,9 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
     public static bool ShiftPressed() => (GetKeyState(0xA1) & 0x8000) != 0 || (GetKeyState(0xA0) & 0x8000) != 0;
 
-    public static void TextWrapped(string text)
+    public static void TextWrapped(string text, float wrapPos = 0)
     {
-        ImGui.PushTextWrapPos(0);
+        ImGui.PushTextWrapPos(wrapPos);
         ImGui.TextUnformatted(text);
         ImGui.PopTextWrapPos();
     }
@@ -739,15 +782,10 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         IconText(_penumbraExists ? check : cross, GetBoolColor(_penumbraExists));
         ImGui.SameLine();
         AttachToolTip($"Penumbra is " + (_penumbraExists ? "available and up to date." : "unavailable or not up to date."));
-        ImGui.Spacing();
 
         ImGui.SameLine();
-        ImGui.TextUnformatted("Glamourer");
-        ImGui.SameLine();
-        IconText(_glamourerExists ? check : cross, GetBoolColor(_glamourerExists));
-        ImGui.SameLine();
+        ColorText("Glamourer", GetBoolColor(_glamourerExists));
         AttachToolTip($"Glamourer is " + (_glamourerExists ? "available and up to date." : "unavailable or not up to date."));
-        ImGui.Spacing();
 
         if (intro)
         {
@@ -801,6 +839,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         IconText(_moodlesExists ? check : cross, GetBoolColor(_moodlesExists));
         ImGui.SameLine();
         AttachToolTip($"Moodles is " + (_moodlesExists ? "available and up to date." : "unavailable or not up to date."));
+        ImGui.Spacing();
+
+        ImGui.SameLine();
+        ImGui.TextUnformatted("Brio");
+        ImGui.SameLine();
+        IconText(_brioExists ? check : cross, GetBoolColor(_brioExists));
+        ImGui.SameLine();
+        AttachToolTip($"Brio is " + (_moodlesExists ? "available and up to date." : "unavailable or not up to date."));
         ImGui.Spacing();
 
         if (!_penumbraExists || !_glamourerExists)
@@ -921,6 +967,13 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     {
         _localization.SetupWithLangCode(languageCode);
         Strings.ToS = new Strings.ToSStrings();
+    }
+
+    internal static void DistanceSeparator()
+    {
+        ImGuiHelpers.ScaledDummy(5);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(5);
     }
 
     [LibraryImport("user32")]

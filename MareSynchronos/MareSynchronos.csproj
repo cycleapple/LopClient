@@ -69,4 +69,8 @@
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="PlayerData\Export\" />
+  </ItemGroup>
+
 </Project>

@@ -8,7 +8,6 @@ using MareSynchronos.Interop;
 using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Configurations;
-using MareSynchronos.PlayerData.Export;
 using MareSynchronos.PlayerData.Factories;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.PlayerData.Services;
@@ -93,7 +92,6 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<FileCacheManager>();
             collection.AddSingleton<ServerConfigurationManager>();
             collection.AddSingleton<ApiController>();
-            collection.AddSingleton<MareCharaFileManager>();
             collection.AddSingleton<PerformanceCollectorService>();
             collection.AddSingleton<HubFactory>();
             collection.AddSingleton<FileUploadManager>();
@@ -112,10 +110,17 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<FileCompactor>();
             collection.AddSingleton<TagHandler>();
             collection.AddSingleton<UidDisplayHandler>();
-            collection.AddSingleton<BlockedCharacterHandler>();
-            collection.AddSingleton<IpcProvider>();
             collection.AddSingleton<PluginWatcherService>();
             collection.AddSingleton<PlayerPerformanceService>();
+
+            collection.AddSingleton<CharaDataManager>();
+            collection.AddSingleton<CharaDataFileHandler>();
+            collection.AddSingleton<CharaDataCharacterHandler>();
+            collection.AddSingleton<CharaDataNearbyManager>();
+
+            collection.AddSingleton<VfxSpawnManager>();
+            collection.AddSingleton<BlockedCharacterHandler>();
+            collection.AddSingleton<IpcProvider>();
             collection.AddSingleton<VisibilityService>();
             collection.AddSingleton<EventAggregator>();
             collection.AddSingleton<DalamudUtilService>();
@@ -127,8 +132,9 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<IpcCallerCustomize>();
             collection.AddSingleton<IpcCallerHeels>();
             collection.AddSingleton<IpcCallerHonorific>();
-            collection.AddSingleton<IpcCallerPetNames>();
             collection.AddSingleton<IpcCallerMoodles>();
+            collection.AddSingleton<IpcCallerPetNames>();
+            collection.AddSingleton<IpcCallerBrio>();
             collection.AddSingleton<IpcManager>();
             collection.AddSingleton<NotificationService>();
 
@@ -141,6 +147,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton((s) => new XivDataStorageService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new PlayerPerformanceConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new ServerBlockConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton((s) => new CharaDataConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<MareConfigService>());
             collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<ServerConfigService>());
             collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<NotesConfigService>());
@@ -150,6 +157,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<XivDataStorageService>());
             collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<PlayerPerformanceConfigService>());
             collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<ServerBlockConfigService>());
+            collection.AddSingleton<IConfigService<IMareConfiguration>>(s => s.GetRequiredService<CharaDataConfigService>());
             collection.AddSingleton<ConfigurationMigrator>();
             collection.AddSingleton<ConfigurationSaveService>();
 
@@ -160,12 +168,12 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddScoped<UiFactory>();
             collection.AddScoped<WindowMediatorSubscriberBase, SettingsUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, CompactUi>();
-            collection.AddScoped<WindowMediatorSubscriberBase, GposeUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, IntroUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, DownloadUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, PopoutProfileUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, DataAnalysisUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, EventViewerUI>();
+            collection.AddScoped<WindowMediatorSubscriberBase, CharaDataHubUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, EditProfileUi>();
             collection.AddScoped<WindowMediatorSubscriberBase, PopupHandler>();
             collection.AddScoped<IPopupHandler, ReportPopupHandler>();
