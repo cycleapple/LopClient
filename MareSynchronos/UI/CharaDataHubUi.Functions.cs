@@ -11,14 +11,14 @@ internal sealed partial class CharaDataHubUi
 	private static string GetAccessTypeString(AccessTypeDto dto) => dto switch
 	{
 		AccessTypeDto.AllPairs => "All Pairs",
-		AccessTypeDto.ClosePairs => "Close Pairs",
+		AccessTypeDto.ClosePairs => "Direct Pairs",
 		AccessTypeDto.Individuals => "Specified",
 		AccessTypeDto.Public => "Everyone"
 	};
 
 	private static string GetShareTypeString(ShareTypeDto dto) => dto switch
 	{
-		ShareTypeDto.Private => "Private",
+		ShareTypeDto.Private => "Code Only",
 		ShareTypeDto.Shared => "Shared"
 	};
 

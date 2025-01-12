@@ -1367,7 +1367,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         using (ImRaii.Disabled(string.IsNullOrEmpty(_uidToAddForIgnore)))
         {
             ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
-            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add UID to whitelist"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add UID/Vanity ID to whitelist"))
             {
                 if (!_serverConfigurationManager.IsUidWhitelisted(_uidToAddForIgnore))
                 {
@@ -1432,7 +1432,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         using (ImRaii.Disabled(string.IsNullOrEmpty(_uidToAddForIgnoreBlacklist)))
         {
             ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
-            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add UID to blacklist"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add UID/Vanity ID to blacklist"))
             {
                 if (!_serverConfigurationManager.IsUidBlacklisted(_uidToAddForIgnoreBlacklist))
                 {

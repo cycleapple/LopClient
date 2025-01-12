@@ -6,6 +6,7 @@ using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Factories;
 using MareSynchronos.PlayerData.Handlers;
+using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services.CharaData.Models;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Utils;
@@ -15,7 +16,7 @@ using System.Text;
 
 namespace MareSynchronos.Services;
 
-internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
+public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly CharaDataConfigService _configService;
@@ -26,6 +27,7 @@ internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBas
     private readonly List<CharaDataMetaInfoExtendedDto> _nearbyData = [];
     private readonly CharaDataNearbyManager _nearbyManager;
     private readonly CharaDataCharacterHandler _characterHandler;
+    private readonly PairManager _pairManager;
     private readonly Dictionary<string, CharaDataFullExtendedDto> _ownCharaData = [];
     private readonly Dictionary<string, Task> _sharedMetaInfoTimeoutTasks = [];
     private readonly Dictionary<UserData, List<CharaDataMetaInfoExtendedDto>> _sharedWithYouData = [];
@@ -42,7 +44,7 @@ internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBas
         MareMediator mareMediator, IpcManager ipcManager, DalamudUtilService dalamudUtilService,
         FileDownloadManagerFactory fileDownloadManagerFactory,
         CharaDataConfigService charaDataConfigService, CharaDataNearbyManager charaDataNearbyManager,
-        CharaDataCharacterHandler charaDataCharacterHandler) : base(logger, mareMediator)
+        CharaDataCharacterHandler charaDataCharacterHandler, PairManager pairManager) : base(logger, mareMediator)
     {
         _apiController = apiController;
         _fileHandler = charaDataFileHandler;
@@ -51,6 +53,7 @@ internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBas
         _configService = charaDataConfigService;
         _nearbyManager = charaDataNearbyManager;
         _characterHandler = charaDataCharacterHandler;
+        _pairManager = pairManager;
         mareMediator.Subscribe<ConnectedMessage>(this, (msg) =>
         {
             _connectCts?.Cancel();
@@ -393,6 +396,8 @@ internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBas
         var result = await GetSharedWithYouTask.ConfigureAwait(false);
         foreach (var grouping in result.GroupBy(r => r.Uploader))
         {
+            var pair = _pairManager.GetPairByUID(grouping.Key.UID);
+            if (pair?.IsPaused ?? false) continue;
             List<CharaDataMetaInfoExtendedDto> newList = new();
             foreach (var item in grouping)
             {
@@ -427,12 +432,12 @@ internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBas
         LoadedMcdfHeader = _fileHandler.LoadCharaFileHeader(filePath);
     }
 
-    public void McdfApplyToGposeTarget()
+    public void McdfApplyToTarget(string charaName)
     {
         if (LoadedMcdfHeader == null || !LoadedMcdfHeader.IsCompletedSuccessfully) return;
-        var charaName = _dalamudUtilService.GposeTargetGameObject?.Name.TextValue ?? string.Empty;
 
         List<string> actuallyExtractedFiles = [];
+
         UiBlockingComputation = McdfApplicationTask = Task.Run(async () =>
         {
             Guid applicationId = Guid.NewGuid();
@@ -476,6 +481,14 @@ internal sealed partial class CharaDataManager : DisposableMediatorSubscriberBas
                 }
             }
         });
+    }
+
+    public void McdfApplyToGposeTarget()
+    {
+        if (CanApplyInGpose(out string target))
+        {
+            McdfApplyToTarget(target);
+        }
     }
 
     public void SaveMareCharaFile(string description, string filePath)

@@ -6,14 +6,13 @@ using MareSynchronos.Services.CharaData.Models;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics.Eventing.Reader;
 using System.Numerics;
 
 namespace MareSynchronos.Services;
 
-internal sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
+public sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
 {
-    internal record NearbyCharaDataEntry
+    public record NearbyCharaDataEntry
     {
         public float Direction { get; init; }
         public float Distance { get; init; }
@@ -29,6 +28,7 @@ internal sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
     private Task? _filterEntriesRunningTask;
     private (Guid VfxId, PoseEntryExtended Pose)? _hoveredVfx = null;
     private DateTime _lastExecutionTime = DateTime.UtcNow;
+    private SemaphoreSlim _sharedDataUpdateSemaphore = new(1, 1);
     public CharaDataNearbyManager(ILogger<CharaDataNearbyManager> logger, MareMediator mediator,
         DalamudUtilService dalamudUtilService, VfxSpawnManager vfxSpawnManager,
         ServerConfigurationManager serverConfigurationManager,
@@ -51,17 +51,25 @@ internal sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
 
     public void UpdateSharedData(Dictionary<string, CharaDataMetaInfoExtendedDto?> newData)
     {
-        _metaInfoCache.Clear();
-        foreach (var kvp in newData)
+        _sharedDataUpdateSemaphore.Wait();
+        try
         {
-            if (kvp.Value == null) continue;
-
-            if (!_metaInfoCache.TryGetValue(kvp.Value.Uploader, out var list))
+            _metaInfoCache.Clear();
+            foreach (var kvp in newData)
             {
-                _metaInfoCache[kvp.Value.Uploader] = list = [];
-            }
+                if (kvp.Value == null) continue;
 
-            list.Add(kvp.Value);
+                if (!_metaInfoCache.TryGetValue(kvp.Value.Uploader, out var list))
+                {
+                    _metaInfoCache[kvp.Value.Uploader] = list = [];
+                }
+
+                list.Add(kvp.Value);
+            }
+        }
+        finally
+        {
+            _sharedDataUpdateSemaphore.Release();
         }
     }
 
@@ -228,7 +236,7 @@ internal sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
             }
         }
 
-        if (_charaDataConfigService.Current.NearbyDrawWisps && !_dalamudUtilService.IsInGpose)
+        if (_charaDataConfigService.Current.NearbyDrawWisps && !_dalamudUtilService.IsInGpose && !_dalamudUtilService.IsInCombatOrPerforming)
             await _dalamudUtilService.RunOnFrameworkThread(() => ManageWispsNearby(previousPoses)).ConfigureAwait(false);
     }
 
@@ -236,7 +244,7 @@ internal sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
     {
         if (_lastExecutionTime.AddSeconds(0.5) > DateTime.UtcNow) return;
         _lastExecutionTime = DateTime.UtcNow;
-        if (!ComputeNearbyData)
+        if (!ComputeNearbyData && !_charaDataConfigService.Current.NearbyShowAlways)
         {
             if (_nearbyData.Any())
                 _nearbyData.Clear();
@@ -245,14 +253,14 @@ internal sealed class CharaDataNearbyManager : DisposableMediatorSubscriberBase
             return;
         }
 
-        if (!_charaDataConfigService.Current.NearbyDrawWisps || _dalamudUtilService.IsInGpose)
+        if (!_charaDataConfigService.Current.NearbyDrawWisps || _dalamudUtilService.IsInGpose || _dalamudUtilService.IsInCombatOrPerforming)
             ClearAllVfx();
 
         var camera = CameraManager.Instance()->CurrentCamera;
         Vector3 cameraPos = new(camera->Position.X, camera->Position.Y, camera->Position.Z);
         Vector3 lookAt = new(camera->LookAtVector.X, camera->LookAtVector.Y, camera->LookAtVector.Z);
 
-        if (_filterEntriesRunningTask?.IsCompleted ?? true)
+        if (_filterEntriesRunningTask?.IsCompleted ?? true && _dalamudUtilService.IsLoggedIn)
             _filterEntriesRunningTask = FilterEntriesAsync(cameraPos, lookAt);
     }
 

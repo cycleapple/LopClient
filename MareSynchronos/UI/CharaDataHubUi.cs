@@ -7,6 +7,7 @@ using ImGuiNET;
 using MareSynchronos.API.Dto.CharaData;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
+using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
 using MareSynchronos.Services.CharaData.Models;
 using MareSynchronos.Services.Mediator;
@@ -24,6 +25,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     private readonly CharaDataConfigService _configService;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly FileDialogManager _fileDialogManager;
+    private readonly PairManager _pairManager;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiSharedService;
     private CancellationTokenSource _closalCts = new();
@@ -45,17 +47,22 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     private bool _openMcdOnlineOnNextRun = false;
     private bool _readExport;
     private string _selectedDtoId = string.Empty;
-    private string _selectedSpecificIndividual = string.Empty;
+    private string _selectedSpecificUserIndividual = string.Empty;
+    private string _selectedSpecificGroupIndividual = string.Empty;
     private string _sharedWithYouDescriptionFilter = string.Empty;
     private bool _sharedWithYouDownloadableFilter = false;
     private string _sharedWithYouOwnerFilter = string.Empty;
     private string _specificIndividualAdd = string.Empty;
+    private string _specificGroupAdd = string.Empty;
     private bool _abbreviateCharaName = false;
+    private string? _openComboHybridId = null;
+    private (string Id, string? Alias, string AliasOrId, string? Note)[]? _openComboHybridEntries = null;
+    private bool _comboHybridUsedLastFrame = false;
 
     public CharaDataHubUi(ILogger<CharaDataHubUi> logger, MareMediator mediator, PerformanceCollectorService performanceCollectorService,
                          CharaDataManager charaDataManager, CharaDataNearbyManager charaDataNearbyManager, CharaDataConfigService configService,
                          UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager,
-                         DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager)
+                         DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager, PairManager pairManager)
         : base(logger, mediator, "Mare Synchronos Character Data Hub###MareSynchronosCharaDataUI", performanceCollectorService)
     {
         SetWindowSizeConstraints();
@@ -67,6 +74,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _serverConfigurationManager = serverConfigurationManager;
         _dalamudUtilService = dalamudUtilService;
         _fileDialogManager = fileDialogManager;
+        _pairManager = pairManager;
         Mediator.Subscribe<GposeStartMessage>(this, (_) => IsOpen |= _configService.Current.OpenMareHubOnGposeStart);
     }
 
@@ -95,6 +103,8 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _sharedWithYouOwnerFilter = string.Empty;
         _importCode = string.Empty;
         _charaDataNearbyManager.ComputeNearbyData = false;
+        _openComboHybridId = null;
+        _openComboHybridEntries = null;
     }
 
     public override void OnOpen()
@@ -115,6 +125,13 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
 
     protected override void DrawInternal()
     {
+        if (!_comboHybridUsedLastFrame)
+        {
+            _openComboHybridId = null;
+            _openComboHybridEntries = null;
+        }
+        _comboHybridUsedLastFrame = false;
+
         _disableUI = !(_charaDataManager.UiBlockingComputation?.IsCompleted ?? true);
         if (DateTime.UtcNow.Subtract(_lastFavoriteUpdateTime).TotalSeconds > 2)
         {
@@ -588,6 +605,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                 ImGui.AlignTextToFramePadding();
                 DrawAddOrRemoveFavorite(_charaDataManager.LastDownloadedMetaInfo);
 
+                ImGui.NewLine();
                 if (!_charaDataManager.DownloadMetaInfoTask?.IsCompleted ?? false)
                 {
                     UiSharedService.ColorTextWrapped("Downloading meta info. Please wait.", ImGuiColors.DalamudYellow);
@@ -666,7 +684,8 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
             {
                 DrawHelpFoldout("You can apply character data shared with you implicitly in this tab. Shared Character Data are Character Data entries that have \"Sharing\" set to \"Shared\" and you have access through those by meeting the access restrictions, " +
                                 "i.e. you were specified by your UID to gain access or are paired with the other user according to the Access Restrictions setting." + Environment.NewLine + Environment.NewLine
-                                + "Filter if needed to find a specific entry, then just press on \"Apply to <actor>\" and it will download and apply the Character Data to the currently targeted GPose actor.");
+                                + "Filter if needed to find a specific entry, then just press on \"Apply to <actor>\" and it will download and apply the Character Data to the currently targeted GPose actor." + Environment.NewLine + Environment.NewLine
+                                + "Note: Shared Data of Pairs you have paused will not be shown here.");
 
                 ImGuiHelpers.ScaledDummy(5);
 

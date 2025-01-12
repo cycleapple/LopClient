@@ -61,6 +61,17 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         RecreateLazy();
     }
 
+    public Pair? GetPairByUID(string uid)
+    {
+        var existingPair = _allClientPairs.FirstOrDefault(f => f.Key.UID == uid);
+        if (!Equals(existingPair, default(KeyValuePair<UserData, Pair>)))
+        {
+            return existingPair.Value;
+        }
+
+        return null;
+    }
+
     public void AddUserPair(UserPairDto dto, bool addToLastAddedUser = true)
     {
         if (!_allClientPairs.ContainsKey(dto.User))
