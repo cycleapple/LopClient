@@ -86,13 +86,18 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         });
         UiColors = new(() =>
         {
-            return gameData.GetExcelSheet<Lumina.Excel.Sheets.UIColor>(Dalamud.Game.ClientLanguage.English)!
+            return gameData.GetExcelSheet<UIColor>(Dalamud.Game.ClientLanguage.English)!
                 .Where(x => x.RowId != 0 && !(x.RowId >= 500 && (x.Dark & 0xFFFFFF00) == 0))
                 .ToDictionary(x => (int)x.RowId);
         });
+        JobData = new(() =>
+        {
+            return gameData.GetExcelSheet<ClassJob>(Dalamud.Game.ClientLanguage.English)!
+                .ToDictionary(k => k.RowId, k => k.NameEnglish.ToString());
+        });
         TerritoryData = new(() =>
         {
-            return gameData.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>(Dalamud.Game.ClientLanguage.English)!
+            return gameData.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English)!
             .Where(w => w.RowId != 0)
             .ToDictionary(w => w.RowId, w =>
             {
@@ -108,7 +113,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         });
         MapData = new(() =>
         {
-            return gameData.GetExcelSheet<Lumina.Excel.Sheets.Map>(Dalamud.Game.ClientLanguage.English)!
+            return gameData.GetExcelSheet<Map>(Dalamud.Game.ClientLanguage.English)!
             .Where(w => w.RowId != 0)
             .ToDictionary(w => w.RowId, w =>
             {
@@ -172,6 +177,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     public bool IsInCombatOrPerforming { get; private set; } = false;
     public bool HasModifiedGameFiles => _gameData.HasModifiedGameDataFiles;
     public uint ClassJobId => _classJobId!.Value;
+    public Lazy<Dictionary<uint, string>> JobData { get; private set; }
     public Lazy<Dictionary<ushort, string>> WorldData { get; private set; }
     public Lazy<Dictionary<int, Lumina.Excel.Sheets.UIColor>> UiColors { get; private set; }
     public Lazy<Dictionary<uint, string>> TerritoryData { get; private set; }
