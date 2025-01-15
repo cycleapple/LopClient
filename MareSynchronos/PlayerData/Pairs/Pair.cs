@@ -192,11 +192,12 @@ public class Pair
         return UserPair != null || GroupPair.Any();
     }
 
-    public void MarkOffline()
+    public void MarkOffline(bool wait = true)
     {
         try
         {
-            _creationSemaphore.Wait();
+            if (wait)
+                _creationSemaphore.Wait();
             _onlineUserIdentDto = null;
             LastReceivedCharacterData = null;
             var player = CachedPlayer;
@@ -205,7 +206,8 @@ public class Pair
         }
         finally
         {
-            _creationSemaphore.Release();
+            if (wait)
+                _creationSemaphore.Release();
         }
     }
 
