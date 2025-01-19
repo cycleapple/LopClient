@@ -25,6 +25,7 @@ using MareSynchronos.WebAPI.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MareSynchronos.Services.CharaData;
 
 using MareSynchronos;
 
@@ -118,6 +119,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<CharaDataFileHandler>();
             collection.AddSingleton<CharaDataCharacterHandler>();
             collection.AddSingleton<CharaDataNearbyManager>();
+            collection.AddSingleton<CharaDataGposeTogetherManager>();
 
             collection.AddSingleton<VfxSpawnManager>();
             collection.AddSingleton<BlockedCharacterHandler>();

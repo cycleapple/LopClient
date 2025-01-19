@@ -1,6 +1,7 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Dto;
+using MareSynchronos.API.Dto.CharaData;
 using MareSynchronos.API.Dto.Group;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Handlers;
@@ -101,6 +102,11 @@ public record GameObjectHandlerCreatedMessage(GameObjectHandler GameObjectHandle
 public record GameObjectHandlerDestroyedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : MessageBase;
 public record HaltCharaDataCreation(bool Resume = false) : SameThreadMessage;
 public record OpenCharaDataHubWithFilterMessage(UserData UserData) : MessageBase;
+public record GposeLobbyUserJoin(UserData UserData) : MessageBase;
+public record GPoseLobbyUserLeave(UserData UserData) : MessageBase;
+public record GPoseLobbyReceiveCharaData(CharaDataDownloadDto CharaDataDownloadDto) : MessageBase;
+public record GPoseLobbyReceivePoseData(UserData UserData, PoseData PoseData) : MessageBase;
+public record GPoseLobbyReceiveWorldData(UserData UserData, WorldData WorldData) : MessageBase;
 
 public record PluginChangeMessage(string InternalName, Version Version, bool IsLoaded) : KeyedMessage(InternalName);
 #pragma warning restore S2094

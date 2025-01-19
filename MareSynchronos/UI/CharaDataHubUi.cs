@@ -9,6 +9,7 @@ using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
+using MareSynchronos.Services.CharaData;
 using MareSynchronos.Services.CharaData.Models;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
@@ -26,6 +27,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly FileDialogManager _fileDialogManager;
     private readonly PairManager _pairManager;
+    private readonly CharaDataGposeTogetherManager _charaDataGposeTogetherManager;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiSharedService;
     private CancellationTokenSource _closalCts = new();
@@ -75,7 +77,8 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
     public CharaDataHubUi(ILogger<CharaDataHubUi> logger, MareMediator mediator, PerformanceCollectorService performanceCollectorService,
                          CharaDataManager charaDataManager, CharaDataNearbyManager charaDataNearbyManager, CharaDataConfigService configService,
                          UiSharedService uiSharedService, ServerConfigurationManager serverConfigurationManager,
-                         DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager, PairManager pairManager)
+                         DalamudUtilService dalamudUtilService, FileDialogManager fileDialogManager, PairManager pairManager,
+                         CharaDataGposeTogetherManager charaDataGposeTogetherManager)
         : base(logger, mediator, "Loporrit Character Data Hub###LoporritCharaDataUI", performanceCollectorService)
     {
         SetWindowSizeConstraints();
@@ -88,6 +91,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         _dalamudUtilService = dalamudUtilService;
         _fileDialogManager = fileDialogManager;
         _pairManager = pairManager;
+        _charaDataGposeTogetherManager = charaDataGposeTogetherManager;
         Mediator.Subscribe<GposeStartMessage>(this, (_) => IsOpen |= _configService.Current.OpenMareHubOnGposeStart);
         Mediator.Subscribe<OpenCharaDataHubWithFilterMessage>(this, (msg) =>
         {
@@ -201,6 +205,16 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
 
         _isHandlingSelf = _charaDataManager.HandledCharaData.Any(c => c.IsSelf);
         if (_isHandlingSelf) _openMcdOnlineOnNextRun = false;
+
+        using (var gposeTogetherTabItem = ImRaii.TabItem("GPose Together"))
+        {
+            if (gposeTogetherTabItem)
+            {
+                smallUi = true;
+
+                DrawGposeTogether();
+            }
+        }
 
         using (var applicationTabItem = ImRaii.TabItem("Data Application", _openDataApplicationShared ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
         {

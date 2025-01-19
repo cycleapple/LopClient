@@ -364,6 +364,12 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
         OnUserChatMsg((dto) => _ = Client_UserChatMsg(dto));
         OnGroupChatMsg((dto) => _ = Client_GroupChatMsg(dto));
 
+        OnGposeLobbyJoin((dto) => _ = Client_GposeLobbyJoin(dto));
+        OnGposeLobbyLeave((dto) => _ = Client_GposeLobbyLeave(dto));
+        OnGposeLobbyPushCharacterData((dto) => _ = Client_GposeLobbyPushCharacterData(dto));
+        OnGposeLobbyPushPoseData((dto, data) => _ = Client_GposeLobbyPushPoseData(dto, data));
+        OnGposeLobbyPushWorldData((dto, data) => _ = Client_GposeLobbyPushWorldData(dto, data));
+
         _healthCheckTokenSource?.Cancel();
         _healthCheckTokenSource?.Dispose();
         _healthCheckTokenSource = new CancellationTokenSource();
