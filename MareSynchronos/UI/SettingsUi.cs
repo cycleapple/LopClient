@@ -789,9 +789,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.TextUnformatted($"Currently utilized local storage: {UiSharedService.ByteToString(_cacheMonitor.FileCacheSize)}");
         else
             ImGui.TextUnformatted($"Currently utilized local storage: Calculating...");
-        ImGui.TextUnformatted($"Remaining space free on drive: {UiSharedService.ByteToString(_cacheMonitor.FileCacheDriveFree)}");
-        bool useFileCompactor = _configService.Current.UseCompactor;
         bool isLinux = Util.IsWine();
+        if (!isLinux)
+            ImGui.TextUnformatted($"Remaining space free on drive: {UiSharedService.ByteToString(_cacheMonitor.FileCacheDriveFree)}");
+        bool useFileCompactor = _configService.Current.UseCompactor;
         if (!useFileCompactor && !isLinux)
         {
             UiSharedService.ColorTextWrapped("Hint: To free up space when using Mare consider enabling the File Compactor", ImGuiColors.DalamudYellow);
