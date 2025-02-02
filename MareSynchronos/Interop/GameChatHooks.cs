@@ -68,6 +68,8 @@ public unsafe sealed class GameChatHooks : IDisposable
     private ChatChannelOverride? _chatChannelOverride;
     private bool _shouldForceNameLookup = false;
 
+    private DateTime _nextMessageIsReply = DateTime.UnixEpoch;
+
     public ChatChannelOverride? ChatChannelOverride
     {
         get => _chatChannelOverride;
@@ -106,11 +108,21 @@ public unsafe sealed class GameChatHooks : IDisposable
             var messageSpan = message->AsSpan();
 
             bool isCommand = false;
+            bool isReply = false;
+
+            var utcNow = DateTime.UtcNow;
 
             // Check if chat input begins with a command (or auto-translated command)
-            if (messageLength == 0 || messageSpan[0] == (byte)'/' || !messageSpan.ContainsAnyExcept((byte)' '))
+            // Or if we think we're being called to send text via the /r command
+            if (_nextMessageIsReply >= utcNow)
             {
                 isCommand = true;
+            }
+            else if (messageLength == 0 || messageSpan[0] == (byte)'/' || !messageSpan.ContainsAnyExcept((byte)' '))
+            {
+                isCommand = true;
+                if (messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes("/r ")) || messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes("/reply ")))
+                    isReply = true;
             }
             else if (messageSpan[0] == (byte)0x02) /* Payload.START_BYTE */
             {
@@ -118,8 +130,18 @@ public unsafe sealed class GameChatHooks : IDisposable
 
                 // Auto-translate text begins with /
                 if (payload != null && payload.Text.Length > 2 && payload.Text[2] == '/')
+                {
                     isCommand = true;
+                    if (payload.Text[2..].StartsWith("/r ") || payload.Text[2..].StartsWith("/reply "))
+                        isReply = true;
+                }
             }
+
+            // When using /r the game will set a flag and then call this function a second time
+            // The next call to this function will be raw text intended for the IM recipient
+            // This flag's validity is time-limited as a fail-safe
+            if (isReply)
+                _nextMessageIsReply = utcNow + TimeSpan.FromMilliseconds(100);
 
             // If not a command, or no override is set, then call the original chat handler
             if (isCommand || this._chatChannelOverride == null)
