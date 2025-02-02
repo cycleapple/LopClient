@@ -109,8 +109,15 @@ public class ChatService : DisposableMediatorSubscriberBase
         if (color != 0)
             msg.AddUiForeground((ushort)color);
         msg.AddText($"[SS{shellNumber}]<");
-        // TODO: Don't link to the local player because it lets you do invalid things
-        msg.Add(new PlayerPayload(chatMsg.SenderName, chatMsg.SenderHomeWorldId));
+        if (message.ChatMsg.Sender.UID == _apiController.UID)
+        {
+            // Don't link to your own character
+            msg.AddText(chatMsg.SenderName);
+        }
+        else
+        {
+            msg.Add(new PlayerPayload(chatMsg.SenderName, chatMsg.SenderHomeWorldId));
+        }
         msg.AddText("> ");
         msg.Append(SeString.Parse(message.ChatMsg.PayloadContent));
         if (color != 0)
