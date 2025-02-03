@@ -96,6 +96,8 @@ public static class VariousExtensions
                     {
                         logger.LogDebug("[BASE-{appBase}] Updating {object}/{kind} (FileReplacements not equal) => {change}", applicationBase, cachedPlayer, objectKind, PlayerChanges.ModFiles);
                         charaDataToUpdate[objectKind].Add(PlayerChanges.ModFiles);
+                        // XXX: This logic is disabled disabled because it seems to skip redrawing for something as basic as toggling a gear mod
+                        /*
                         if (forceApplyMods || objectKind != ObjectKind.Player)
                         {
                             charaDataToUpdate[objectKind].Add(PlayerChanges.ForcedRedraw);
@@ -133,6 +135,9 @@ public static class VariousExtensions
                                 charaDataToUpdate[objectKind].Add(PlayerChanges.ForcedRedraw);
                             }
                         }
+                        */
+                        // XXX: Redraw on mod file changes always
+                        charaDataToUpdate[objectKind].Add(PlayerChanges.ForcedRedraw);
                     }
                 }
 
