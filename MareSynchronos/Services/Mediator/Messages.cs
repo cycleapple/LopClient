@@ -100,6 +100,7 @@ public record PairDataAnalyzedMessage(string UID) : KeyedMessage(UID);
 public record GameObjectHandlerCreatedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : MessageBase;
 public record GameObjectHandlerDestroyedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : MessageBase;
 public record HaltCharaDataCreation(bool Resume = false) : SameThreadMessage;
+public record OpenCharaDataHubWithFilterMessage(UserData UserData) : MessageBase;
 
 public record PluginChangeMessage(string InternalName, Version Version, bool IsLoaded) : KeyedMessage(InternalName);
 #pragma warning restore S2094
