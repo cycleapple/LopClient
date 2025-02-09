@@ -32,8 +32,7 @@ namespace LoporritSync;
 
 public sealed class Plugin : IDalamudPlugin
 {
-    private readonly CancellationTokenSource _pluginCts = new();
-    private readonly Task _hostBuilderRunTask;
+    private readonly IHost _host;
 
     public static Plugin Self;
     public Action<IFramework> _realOnFrameworkUpdate = null;
@@ -51,7 +50,7 @@ public sealed class Plugin : IDalamudPlugin
         INotificationManager notificationManager, ITextureProvider textureProvider, IContextMenu contextMenu, IGameInteropProvider gameInteropProvider)
     {
         Plugin.Self = this;
-        _hostBuilderRunTask = new HostBuilder()
+        _host = new HostBuilder()
         .UseContentRoot(pluginInterface.ConfigDirectory.FullName)
         .ConfigureLogging(lb =>
         {
@@ -172,14 +171,14 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddHostedService(p => p.GetRequiredService<MarePlugin>());
             collection.AddHostedService(p => p.GetRequiredService<EventAggregator>());
         })
-        .Build()
-        .RunAsync(_pluginCts.Token);
+        .Build();
+
+        _ = _host.StartAsync();
     }
 
     public void Dispose()
     {
-        _pluginCts.Cancel();
-        _pluginCts.Dispose();
-        _hostBuilderRunTask.Wait();
+        _host.StopAsync().GetAwaiter().GetResult();
+        _host.Dispose();
     }
 }
