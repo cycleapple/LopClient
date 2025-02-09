@@ -1,8 +1,8 @@
-﻿using Dalamud.Interface.ImGuiNotification;
-using MareSynchronos.API.Data;
+﻿using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
 using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;
+using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services.Mediator;
 using System.Collections.Concurrent;
 

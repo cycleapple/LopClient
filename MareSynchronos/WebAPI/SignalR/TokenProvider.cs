@@ -1,5 +1,5 @@
-﻿using Dalamud.Interface.ImGuiNotification;
-using MareSynchronos.API.Routes;
+﻿using MareSynchronos.API.Routes;
+using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;

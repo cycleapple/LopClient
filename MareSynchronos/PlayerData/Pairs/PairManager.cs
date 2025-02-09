@@ -1,5 +1,4 @@
 ﻿using Dalamud.Game.Gui.ContextMenu;
-using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin.Services;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
@@ -7,6 +6,7 @@ using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.API.Dto.Group;
 using MareSynchronos.API.Dto.User;
 using MareSynchronos.MareConfiguration;
+using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Factories;
 using MareSynchronos.Services.Events;
 using MareSynchronos.Services.Mediator;

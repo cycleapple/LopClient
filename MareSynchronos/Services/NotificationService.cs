@@ -1,11 +1,11 @@
 ﻿using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Interface;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin.Services;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services.Mediator;
 using Microsoft.Extensions.Logging;
+using NotificationType = MareSynchronos.MareConfiguration.Models.NotificationType;
 
 namespace MareSynchronos.Services;
 
@@ -47,8 +47,6 @@ public class NotificationService : DisposableMediatorSubscriberBase
         switch (msg.Type)
         {
             case NotificationType.Info:
-            case NotificationType.Success:
-            case NotificationType.None:
                 PrintInfoChat(msg.Message);
                 break;
 
@@ -69,8 +67,6 @@ public class NotificationService : DisposableMediatorSubscriberBase
         switch (msg.Type)
         {
             case NotificationType.Info:
-            case NotificationType.Success:
-            case NotificationType.None:
                 ShowNotificationLocationBased(msg, _configurationService.Current.InfoNotification);
                 break;
 
@@ -108,11 +104,19 @@ public class NotificationService : DisposableMediatorSubscriberBase
 
     private void ShowToast(NotificationMessage msg)
     {
-        _notificationManager.AddNotification(new Dalamud.Interface.ImGuiNotification.Notification()
+        Dalamud.Interface.ImGuiNotification.NotificationType dalamudType = msg.Type switch
+        {
+            NotificationType.Error => Dalamud.Interface.ImGuiNotification.NotificationType.Error,
+            NotificationType.Warning => Dalamud.Interface.ImGuiNotification.NotificationType.Warning,
+            NotificationType.Info => Dalamud.Interface.ImGuiNotification.NotificationType.Info,
+            _ => Dalamud.Interface.ImGuiNotification.NotificationType.Info
+        };
+
+        _notificationManager.AddNotification(new Notification()
         {
             Content = msg.Message ?? string.Empty,
             Title = msg.Title,
-            Type = msg.Type,
+            Type = dalamudType,
             Minimized = false,
             InitialDuration = msg.TimeShownOnScreen ?? TimeSpan.FromSeconds(3)
         });

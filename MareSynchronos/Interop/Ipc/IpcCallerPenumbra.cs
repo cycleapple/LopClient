@@ -1,4 +1,3 @@
-using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Handlers;
