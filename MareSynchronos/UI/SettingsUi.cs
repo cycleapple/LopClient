@@ -661,6 +661,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             _performanceCollector.PrintPerformanceStats(60);
         }
+
+        bool logEvents = _configService.Current.LogEvents;
+        if (ImGui.Checkbox("Log Event Viewer Data", ref logEvents))
+        {
+            _configService.Current.LogEvents = logEvents;
+            _configService.Save();
+        }
     }
 
     private void DrawFileStorageSettings()

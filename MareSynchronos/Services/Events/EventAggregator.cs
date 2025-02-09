@@ -1,4 +1,5 @@
-﻿using MareSynchronos.Services.Mediator;
+﻿using MareSynchronos.MareConfiguration;
+using MareSynchronos.Services.Mediator;
 using MareSynchronos.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,19 +19,22 @@ public class EventAggregator : MediatorSubscriberBase, IHostedService
     private string CurrentLogName => $"{DateTime.Now:yyyy-MM-dd}-events.log";
     private DateTime _currentTime;
 
-    public EventAggregator(string configDirectory, ILogger<EventAggregator> logger, MareMediator mareMediator) : base(logger, mareMediator)
+    public EventAggregator(MareConfigService configService, ILogger<EventAggregator> logger, MareMediator mareMediator) : base(logger, mareMediator)
     {
         Logger.LogInformation("Starting EventAggregatorService");
         Logger.LogInformation("Started EventAggregatorService");
+        _configDirectory = configService.ConfigurationDirectory;
+        _logger = logger;
+        _currentTime = DateTime.UnixEpoch;
 
         Mediator.Subscribe<EventMessage>(this, (msg) =>
         {
             _lock.Wait();
             try
             {
-                Logger.LogTrace("Received Event: {evt}", msg.Event.ToString());
                 _events.Add(msg.Event);
-                WriteToFile(msg.Event);
+                if (configService.Current.LogEvents)
+                    WriteToFile(msg.Event);
             }
             finally
             {
@@ -41,9 +45,6 @@ public class EventAggregator : MediatorSubscriberBase, IHostedService
         });
 
         EventList = CreateEventLazy();
-        _configDirectory = configDirectory;
-        _logger = logger;
-        _currentTime = DateTime.Now - TimeSpan.FromDays(1);
     }
 
     private void RecreateLazy()
