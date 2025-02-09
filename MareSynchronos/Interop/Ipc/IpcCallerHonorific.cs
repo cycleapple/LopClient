@@ -80,11 +80,8 @@ public sealed class IpcCallerHonorific : IIpcCaller
     public async Task<string> GetTitle()
     {
         if (!APIAvailable) return string.Empty;
-        return await _dalamudUtil.RunOnFrameworkThread(() =>
-        {
-            string title = _honorificGetLocalCharacterTitle.InvokeFunc();
-            return string.IsNullOrEmpty(title) ? string.Empty : Convert.ToBase64String(Encoding.UTF8.GetBytes(title));
-        }).ConfigureAwait(false);
+        string title = await _dalamudUtil.RunOnFrameworkThread(() => _honorificGetLocalCharacterTitle.InvokeFunc()).ConfigureAwait(false);
+        return string.IsNullOrEmpty(title) ? string.Empty : Convert.ToBase64String(Encoding.UTF8.GetBytes(title));
     }
 
     public async Task SetTitleAsync(IntPtr character, string honorificDataB64)
