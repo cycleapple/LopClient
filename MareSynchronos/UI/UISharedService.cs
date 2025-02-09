@@ -972,4 +972,14 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     [GeneratedRegex(@"^(?:[a-zA-Z]:\\[\w\s\-\\]+?|\/(?:[\w\s\-\/])+?)$", RegexOptions.ECMAScript)]
 #pragma warning restore MA0009 // Add regex evaluation timeout
     private static partial Regex PathRegex();
+
+    protected override void Dispose(bool disposing)
+    {
+        if (!disposing) return;
+
+        base.Dispose(disposing);
+
+        UidFont.Dispose();
+        GameFont.Dispose();
+    }
 }
