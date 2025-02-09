@@ -651,15 +651,17 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
         UiSharedService.DrawHelpText("Enabling this can incur a (slight) performance impact. Enabling this for extended periods of time is not recommended.");
 
-        using var disabled = ImRaii.Disabled(!logPerformance);
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats to /xllog"))
+        using (ImRaii.Disabled(!logPerformance))
         {
-            _performanceCollector.PrintPerformanceStats();
-        }
-        ImGui.SameLine();
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats (last 60s) to /xllog"))
-        {
-            _performanceCollector.PrintPerformanceStats(60);
+            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats to /xllog"))
+            {
+                _performanceCollector.PrintPerformanceStats();
+            }
+            ImGui.SameLine();
+            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats (last 60s) to /xllog"))
+            {
+                _performanceCollector.PrintPerformanceStats(60);
+            }
         }
 
         bool logEvents = _configService.Current.LogEvents;
