@@ -37,7 +37,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private CancellationTokenSource? _downloadCancellationTokenSource = new();
     private bool _forceApplyMods = false;
     private bool _isVisible;
-    private Guid _penumbraCollection;
+    private Guid _penumbraCollection = Guid.Empty;
     private Dictionary<ObjectKind, Guid?> _customizeIds = [];
     private bool _redrawOnNextApplication = false;
     private CombatData? _dataReceivedInCombat;
@@ -59,7 +59,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _dalamudUtil = dalamudUtil;
         _lifetime = lifetime;
         _fileDbManager = fileDbManager;
-        _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, OnlineUser.User.UID).ConfigureAwait(false).GetAwaiter().GetResult();
 
         Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
@@ -70,7 +69,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         });
         Mediator.Subscribe<PenumbraInitializedMessage>(this, (_) =>
         {
-            _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(logger, OnlineUser.User.UID).ConfigureAwait(false).GetAwaiter().GetResult();
             if (!IsVisible && _charaHandler != null)
             {
                 PlayerName = string.Empty;
@@ -238,7 +236,12 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             if (_lifetime.IsCancellationRequested) return;
 
             Logger.LogDebug("[{applicationId}] Removing Temp Collection for {name} ({user})", applicationId, name, OnlineUser);
-            _ipcManager.Penumbra.RemoveTemporaryCollectionAsync(Logger, applicationId, _penumbraCollection).GetAwaiter().GetResult();
+
+            if (_penumbraCollection != Guid.Empty)
+            {
+                _ipcManager.Penumbra.RemoveTemporaryCollectionAsync(Logger, applicationId, _penumbraCollection).GetAwaiter().GetResult();
+                _penumbraCollection = Guid.Empty;
+            }
 
             if (_dalamudUtil is { IsZoning: false, IsInCutscene: false } && !string.IsNullOrEmpty(name))
             {
@@ -534,6 +537,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             await _ipcManager.Honorific.SetTitleAsync(PlayerCharacter, _cachedData.HonorificData).ConfigureAwait(false);
         });
 
+        if (_penumbraCollection == Guid.Empty)
+            _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(Logger, OnlineUser.User.UID).GetAwaiter().GetResult();
         _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, _charaHandler.GetGameObject()!.ObjectIndex).GetAwaiter().GetResult();
         _serverConfigurationManager.SetNameForUid(OnlineUser.User.UID, name);
     }
