@@ -48,6 +48,7 @@ public class Pair
     public bool IsVisible => CachedPlayer?.IsVisible ?? false;
     public CharacterData? LastReceivedCharacterData { get; set; }
     public string? PlayerName => GetPlayerName();
+    public uint PlayerCharacterId => GetPlayerCharacterId();
     public long LastAppliedDataSize => CachedPlayer?.LastAppliedDataSize ?? -1;
 
     public UserData UserData => UserPair?.User ?? GroupPair.First().Value.User;
@@ -171,6 +172,13 @@ public class Pair
             return CachedPlayer.PlayerName;
         else
             return _serverConfigurationManager.GetNameForUid(UserData.UID);
+    }
+
+    public uint GetPlayerCharacterId()
+    {
+        if (CachedPlayer != null)
+            return CachedPlayer.PlayerCharacterId;
+        return uint.MaxValue;
     }
 
     public string? GetNoteOrName()

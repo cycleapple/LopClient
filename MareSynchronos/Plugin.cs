@@ -47,7 +47,8 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commandManager, IDataManager gameData,
         IFramework framework, IObjectTable objectTable, IClientState clientState, ICondition condition, IChatGui chatGui,
         IGameGui gameGui, IDtrBar dtrBar, IToastGui toastGui, IPluginLog pluginLog, ITargetManager targetManager, IGameLifecycle addonLifecycle,
-        INotificationManager notificationManager, ITextureProvider textureProvider, IContextMenu contextMenu, IGameInteropProvider gameInteropProvider)
+        INotificationManager notificationManager, ITextureProvider textureProvider, IContextMenu contextMenu, IGameInteropProvider gameInteropProvider,
+        INamePlateGui namePlateGui)
     {
         Plugin.Self = this;
         _host = new HostBuilder()
@@ -161,6 +162,8 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<MareMediator>(), s.GetRequiredService<ApiController>(), s.GetRequiredService<PairManager>(),
                 s.GetRequiredService<ILogger<GameChatHooks>>(), gameInteropProvider, chatGui,
                 s.GetRequiredService<MareConfigService>(), s.GetRequiredService<ServerConfigurationManager>()));
+            collection.AddScoped((s) => new GuiHookService(s.GetRequiredService<ILogger<GuiHookService>>(), s.GetRequiredService<MareMediator>(),
+                s.GetRequiredService<MareConfigService>(), namePlateGui, s.GetRequiredService<PairManager>()));
 
             collection.AddHostedService(p => p.GetRequiredService<FileCacheManager>());
             collection.AddHostedService(p => p.GetRequiredService<MareMediator>());

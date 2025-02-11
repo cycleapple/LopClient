@@ -152,6 +152,7 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
             _runtimeServiceScope.ServiceProvider.GetRequiredService<OnlinePlayerManager>();
             _runtimeServiceScope.ServiceProvider.GetRequiredService<NotificationService>();
             _runtimeServiceScope.ServiceProvider.GetRequiredService<ChatService>();
+            _runtimeServiceScope.ServiceProvider.GetRequiredService<GuiHookService>();
 
 #if !DEBUG
             if (_mareConfigService.Current.LogLevel != LogLevel.Information)

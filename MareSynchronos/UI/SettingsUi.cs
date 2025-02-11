@@ -49,6 +49,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private readonly MareCharaFileManager _mareCharaFileManager;
     private readonly PairManager _pairManager;
     private readonly ChatService _chatService;
+    private readonly GuiHookService _guiHookService;
     private readonly PerformanceCollectorService _performanceCollector;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiShared;
@@ -73,7 +74,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
     public SettingsUi(ILogger<SettingsUi> logger,
         UiSharedService uiShared, MareConfigService configService,
-        MareCharaFileManager mareCharaFileManager, PairManager pairManager, ChatService chatService,
+        MareCharaFileManager mareCharaFileManager, PairManager pairManager, ChatService chatService, GuiHookService guiHookService,
         ServerConfigurationManager serverConfigurationManager,
         MareMediator mediator, PerformanceCollectorService performanceCollector,
         DalamudUtilService dalamudUtilService,
@@ -87,6 +88,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _mareCharaFileManager = mareCharaFileManager;
         _pairManager = pairManager;
         _chatService = chatService;
+        _guiHookService = guiHookService;
         _serverConfigurationManager = serverConfigurationManager;
         _performanceCollector = performanceCollector;
         _dalamudUtilService = dalamudUtilService;
@@ -1049,6 +1051,26 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     _configService.Current.DtrColorsPairsInRange = dtrColorsPairsInRange;
                     _configService.Save();
                 }
+            }
+        }
+
+        var useNameColors = _configService.Current.UseNameColors;
+        var nameColors = _configService.Current.NameColors;
+        if (ImGui.Checkbox("Color nameplates of paired players", ref useNameColors))
+        {
+            _configService.Current.UseNameColors = useNameColors;
+            _configService.Save();
+            _guiHookService.RequestRedraw();
+        }
+
+        using (ImRaii.Disabled(!useNameColors))
+        {
+            using var indent = ImRaii.PushIndent();
+            if (InputDtrColors("Character Name Color", ref nameColors))
+            {
+                _configService.Current.NameColors = nameColors;
+                _configService.Save();
+                _guiHookService.RequestRedraw();
             }
         }
 

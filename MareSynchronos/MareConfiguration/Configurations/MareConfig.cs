@@ -18,6 +18,8 @@ public class MareConfig : IMareConfiguration
     public DtrEntry.Colors DtrColorsDefault { get; set; } = default;
     public DtrEntry.Colors DtrColorsNotConnected { get; set; } = new(Glow: 0x0428FFu);
     public DtrEntry.Colors DtrColorsPairsInRange { get; set; } = new(Glow: 0xFFBA47u);
+    public bool UseNameColors { get; set; } = false;
+    public DtrEntry.Colors NameColors { get; set; } = new(Foreground: 0xF5EB67u, Glow: 0x78710Fu);
     public bool EnableRightClickMenus { get; set; } = true;
     public NotificationLocation ErrorNotification { get; set; } = NotificationLocation.Both;
     public string ExportFolder { get; set; } = string.Empty;
