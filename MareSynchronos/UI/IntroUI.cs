@@ -18,10 +18,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Numerics;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace MareSynchronos.UI;
 
-public class IntroUi : WindowMediatorSubscriberBase
+public partial class IntroUi : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly MareConfigService _configService;
@@ -42,13 +43,12 @@ public class IntroUi : WindowMediatorSubscriberBase
     private string? _registrationMessage;
     private RegisterReplyDto? _registrationReply;
 
-    public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService, ApiController apiController,
+    public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService,
         CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator,
         PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService) : base(logger, mareMediator, "Loporrit Setup", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;
-        _apiController = apiController;
         _cacheMonitor = fileCacheManager;
         _serverConfigurationManager = serverConfigurationManager;
         _dalamudUtilService = dalamudUtilService;
@@ -87,11 +87,12 @@ public class IntroUi : WindowMediatorSubscriberBase
             UiSharedService.ColorTextWrapped("Note: Any modifications you have applied through anything but Penumbra cannot be shared and your character state on other clients " +
                                  "might look broken because of this or others players mods might not apply on your end altogether. " +
                                  "If you want to use this plugin you will have to move your mods to Penumbra.", ImGuiColors.DalamudYellow);
-            if (!_uiShared.DrawOtherPluginState(true)) return;
+            if (!_uiShared.DrawOtherPluginState(intro: true)) return;
             ImGui.Separator();
             if (ImGui.Button("Next##toAgreement"))
             {
                 _readFirstPage = true;
+#if !DEBUG
                 _timeoutTask = Task.Run(async () =>
                 {
                     for (int i = 10; i > 0; i--)
@@ -100,6 +101,9 @@ public class IntroUi : WindowMediatorSubscriberBase
                         await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                     }
                 });
+#else
+                _timeoutTask = Task.CompletedTask;
+#endif
             }
         }
         else if (!_configService.Current.AcceptedAgreement && _readFirstPage)
@@ -229,7 +233,11 @@ public class IntroUi : WindowMediatorSubscriberBase
             ImGui.InputText("", ref _secretKey, 64);
             if (_secretKey.Length > 0 && _secretKey.Length != 64)
             {
-                UiSharedService.ColorTextWrapped("Your secret key must be exactly 64 characters long. Don't enter your Lodestone auth here.", ImGuiColors.DalamudRed);
+                UiSharedService.ColorTextWrapped("Your secret key must be exactly 64 characters long.", ImGuiColors.DalamudRed);
+            }
+            else if (_secretKey.Length == 64 && !HexRegex().IsMatch(_secretKey))
+            {
+                UiSharedService.ColorTextWrapped("Your secret key can only contain ABCDEF and the numbers 0-9.", ImGuiColors.DalamudRed);
             }
             else if (_secretKey.Length == 64)
             {
@@ -238,7 +246,7 @@ public class IntroUi : WindowMediatorSubscriberBase
                 {
                     string keyName;
                     if (_serverConfigurationManager.CurrentServer == null) _serverConfigurationManager.SelectServer(0);
-                    if (_registrationReply != null && _secretKey == _registrationReply.SecretKey)
+                    if (_registrationReply != null && _secretKey.Equals(_registrationReply.SecretKey, StringComparison.Ordinal))
                         keyName = _registrationReply.UID + $" (registered {DateTime.Now:yyyy-MM-dd})";
                     else
                         keyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})";
@@ -247,13 +255,13 @@ public class IntroUi : WindowMediatorSubscriberBase
                         FriendlyName = keyName,
                         Key = _secretKey,
                     });
-                    _serverConfigurationManager.AddCurrentCharacterToServer(addLastSecretKey: true);
+                    _serverConfigurationManager.AddCurrentCharacterToServer();
                     _secretKey = string.Empty;
                     _ = Task.Run(() => _uiShared.ApiController.CreateConnections());
                 }
             }
 
-            if (_serverConfigurationManager.CurrentApiUrl == ApiController.LoporritServiceUri)
+            if (_serverConfigurationManager.CurrentApiUrl.Equals(ApiController.LoporritServiceUri, StringComparison.Ordinal))
             {
                 ImGui.BeginDisabled(_registrationInProgress || _registrationSuccess || _secretKey.Length > 0);
                 ImGui.Separator();
@@ -270,13 +278,13 @@ public class IntroUi : WindowMediatorSubscriberBase
                             var postUri = MareAuth.AuthRegisterFullPath(new Uri(_serverConfigurationManager.CurrentApiUrl
                                 .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                                 .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                            _logger.LogInformation("Registering new account: " + postUri.ToString());
+                            _logger.LogInformation("Registering new account: {uri}", postUri.ToString());
                             var result = await httpClient.PostAsync(postUri, null).ConfigureAwait(false);
                             result.EnsureSuccessStatusCode();
                             var reply = await result.Content.ReadFromJsonAsync<RegisterReplyDto>().ConfigureAwait(false) ?? new();
                             if (!reply.Success)
                             {
-                                _logger.LogWarning("Registration failed: " + reply.ErrorMessage);
+                                _logger.LogWarning("Registration failed: {err}", reply.ErrorMessage);
                                 _registrationMessage = reply.ErrorMessage;
                                 if (_registrationMessage.IsNullOrEmpty())
                                     _registrationMessage = "An unknown error occured. Please try again later.";
@@ -331,4 +339,7 @@ public class IntroUi : WindowMediatorSubscriberBase
 
         _tosParagraphs = [Strings.ToS.Paragraph1, Strings.ToS.Paragraph2, Strings.ToS.Paragraph3, Strings.ToS.Paragraph4, Strings.ToS.Paragraph5, Strings.ToS.Paragraph6];
     }
+
+    [GeneratedRegex("^([A-F0-9]{2})+")]
+    private static partial Regex HexRegex();
 }

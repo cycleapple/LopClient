@@ -1,5 +1,4 @@
 ﻿using Dalamud.Game.Gui.ContextMenu;
-using Dalamud.Game.Text.SeStringHandling;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
 using MareSynchronos.API.Data.Enum;
@@ -24,9 +23,8 @@ public class Pair
     private readonly MareMediator _mediator;
     private readonly MareConfigService _mareConfig;
     private readonly ServerConfigurationManager _serverConfigurationManager;
-    private CancellationTokenSource _applicationCts = new CancellationTokenSource();
+    private CancellationTokenSource _applicationCts = new();
     private OnlineUserIdentDto? _onlineUserIdentDto = null;
-    private string? _playerName = null;
 
     public Pair(ILogger<Pair> logger, PairHandlerFactory cachedPlayerFactory,
         MareMediator mediator, MareConfigService mareConfig, ServerConfigurationManager serverConfigurationManager)
@@ -49,8 +47,10 @@ public class Pair
     public CharacterData? LastReceivedCharacterData { get; set; }
     public string? PlayerName => GetPlayerName();
     public uint PlayerCharacterId => GetPlayerCharacterId();
-    public long LastAppliedDataSize => CachedPlayer?.LastAppliedDataSize ?? -1;
-    public long LastAppliedDataTris => CachedPlayer?.LastAppliedDataTris ?? -1;
+    public long LastAppliedDataBytes => CachedPlayer?.LastAppliedDataBytes ?? -1;
+    public long LastAppliedDataTris { get; set; } = -1;
+    public long LastAppliedApproximateVRAMBytes { get; set; } = -1;
+    public string Ident => _onlineUserIdentDto?.Ident ?? string.Empty;
 
     public UserData UserData => UserPair?.User ?? GroupPair.First().Value.User;
 
@@ -154,7 +154,7 @@ public class Pair
             }
 
             CachedPlayer?.Dispose();
-            CachedPlayer = _cachedPlayerFactory.Create(new OnlineUserIdentDto(UserData, _onlineUserIdentDto!.Ident));
+            CachedPlayer = _cachedPlayerFactory.Create(this);
         }
         finally
         {
@@ -207,11 +207,11 @@ public class Pair
         {
             if (wait)
                 _creationSemaphore.Wait();
-            _onlineUserIdentDto = null;
             LastReceivedCharacterData = null;
             var player = CachedPlayer;
             CachedPlayer = null;
             player?.Dispose();
+            _onlineUserIdentDto = null;
         }
         finally
         {

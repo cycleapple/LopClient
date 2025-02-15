@@ -139,18 +139,7 @@ public sealed class FileCacheManager : IHostedService
         return Path.Combine(_configService.Current.CacheFolder, hash + "." + extension);
     }
 
-    public async Task<long> GetCompressedFileLength(string fileHash, CancellationToken uploadToken)
-    {
-        var fileCache = GetFileCacheByHash(fileHash)!.ResolvedFilepath;
-        using var fs = File.OpenRead(fileCache);
-        var cs = new CountedStream(Stream.Null);
-        using var encstream = LZ4Stream.Encode(cs, new LZ4EncoderSettings(){CompressionLevel=K4os.Compression.LZ4.LZ4Level.L09_HC});
-        await fs.CopyToAsync(encstream, uploadToken).ConfigureAwait(false);
-        encstream.Close();
-        return uploadToken.IsCancellationRequested ? 0 : cs.BytesWritten;
-    }
-
-    public async Task<byte[]> GetCompressedFileData(string fileHash, CancellationToken uploadToken)
+    public async Task<(string, byte[])> GetCompressedFileData(string fileHash, CancellationToken uploadToken)
     {
         var fileCache = GetFileCacheByHash(fileHash)!.ResolvedFilepath;
         using var fs = File.OpenRead(fileCache);
@@ -158,7 +147,7 @@ public sealed class FileCacheManager : IHostedService
         using var encstream = LZ4Stream.Encode(ms, new LZ4EncoderSettings(){CompressionLevel=K4os.Compression.LZ4.LZ4Level.L09_HC});
         await fs.CopyToAsync(encstream, uploadToken).ConfigureAwait(false);
         encstream.Close();
-        return ms.ToArray();
+        return (fileHash, ms.ToArray());
     }
 
     public FileCacheEntity? GetFileCacheByHash(string hash)
@@ -428,6 +417,13 @@ public sealed class FileCacheManager : IHostedService
 
         if (File.Exists(_csvPath))
         {
+            if (!_ipcManager.Penumbra.APIAvailable || string.IsNullOrEmpty(_ipcManager.Penumbra.ModDirectory))
+            {
+                _mareMediator.Publish(new NotificationMessage("Penumbra not connected",
+                    "Could not load local file cache data. Penumbra is not connected or not properly set up. Please enable and/or configure Penumbra properly to use Loporrit. After, reload Loporrit in the Plugin installer.",
+                    MareConfiguration.Models.NotificationType.Error));
+            }
+
             _logger.LogInformation("{csvPath} found, parsing", _csvPath);
 
             bool success = false;

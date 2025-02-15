@@ -193,16 +193,16 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
         public bool IsComputed => OriginalSize > 0 && CompressedSize > 0;
         public async Task ComputeSizes(FileCacheManager fileCacheManager, CancellationToken token)
         {
-            var compressedsize = await fileCacheManager.GetCompressedFileLength(Hash, token).ConfigureAwait(false);
+            var compressedsize = await fileCacheManager.GetCompressedFileData(Hash, token).ConfigureAwait(false);
             var normalSize = new FileInfo(FilePaths[0]).Length;
             var entries = fileCacheManager.GetAllFileCachesByHash(Hash, ignoreCacheEntries: true, validate: false);
             foreach (var entry in entries)
             {
                 entry.Size = normalSize;
-                entry.CompressedSize = compressedsize;
+                entry.CompressedSize = compressedsize.Item2.LongLength;
             }
             OriginalSize = normalSize;
-            CompressedSize = compressedsize;
+            CompressedSize = compressedsize.Item2.LongLength;
         }
         public long OriginalSize { get; private set; } = OriginalSize;
         public long CompressedSize { get; private set; } = CompressedSize;

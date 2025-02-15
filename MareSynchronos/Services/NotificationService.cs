@@ -4,24 +4,39 @@ using Dalamud.Plugin.Services;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services.Mediator;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NotificationType = MareSynchronos.MareConfiguration.Models.NotificationType;
 
 namespace MareSynchronos.Services;
 
-public class NotificationService : DisposableMediatorSubscriberBase
+public class NotificationService : DisposableMediatorSubscriberBase, IHostedService
 {
+    private readonly DalamudUtilService _dalamudUtilService;
     private readonly INotificationManager _notificationManager;
     private readonly IChatGui _chatGui;
     private readonly MareConfigService _configurationService;
 
-    public NotificationService(ILogger<NotificationService> logger, MareMediator mediator, INotificationManager notificationManager, IChatGui chatGui, MareConfigService configurationService) : base(logger, mediator)
+    public NotificationService(ILogger<NotificationService> logger, MareMediator mediator,
+        DalamudUtilService dalamudUtilService,
+        INotificationManager notificationManager,
+        IChatGui chatGui, MareConfigService configurationService) : base(logger, mediator)
     {
+        _dalamudUtilService = dalamudUtilService;
         _notificationManager = notificationManager;
         _chatGui = chatGui;
         _configurationService = configurationService;
+    }
 
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
         Mediator.Subscribe<NotificationMessage>(this, ShowNotification);
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 
     private void PrintErrorChat(string? message)
@@ -63,6 +78,8 @@ public class NotificationService : DisposableMediatorSubscriberBase
     private void ShowNotification(NotificationMessage msg)
     {
         Logger.LogInformation("{msg}", msg.ToString());
+
+        if (!_dalamudUtilService.IsLoggedIn) return;
 
         switch (msg.Type)
         {

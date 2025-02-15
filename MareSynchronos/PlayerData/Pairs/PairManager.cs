@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Gui.ContextMenu;
-using Dalamud.Plugin.Services;
+﻿using Dalamud.Plugin.Services;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
 using MareSynchronos.API.Data.Extensions;
@@ -37,7 +36,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         _directPairsInternal = DirectPairsLazy();
         _groupPairsInternal = GroupPairsLazy();
 
-        _dalamudContextMenu.OnMenuOpened += DalamudContextMenuOnMenuOpened;
+        _dalamudContextMenu.OnMenuOpened += DalamudContextMenuOnOnOpenGameObjectContextMenu;
     }
 
     public List<Pair> DirectPairs => _directPairsInternal.Value;
@@ -230,7 +229,8 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
             pair.UserPair.OtherPermissions.IsDisableSounds(),
             pair.UserPair.OtherPermissions.IsDisableVFX());
 
-        pair.ApplyLastReceivedData();
+        if (!pair.IsPaused)
+            pair.ApplyLastReceivedData();
 
         RecreateLazy();
     }
@@ -258,7 +258,8 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
             pair.UserPair.OwnPermissions.IsDisableSounds(),
             pair.UserPair.OwnPermissions.IsDisableVFX());
 
-        pair.ApplyLastReceivedData();
+        if (!pair.IsPaused)
+            pair.ApplyLastReceivedData();
 
         RecreateLazy();
     }
@@ -332,14 +333,14 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     {
         base.Dispose(disposing);
 
-        _dalamudContextMenu.OnMenuOpened -= DalamudContextMenuOnMenuOpened;
+        _dalamudContextMenu.OnMenuOpened -= DalamudContextMenuOnOnOpenGameObjectContextMenu;
 
         DisposePairs();
     }
 
-    private void DalamudContextMenuOnMenuOpened(IMenuOpenedArgs args)
+    private void DalamudContextMenuOnOnOpenGameObjectContextMenu(Dalamud.Game.Gui.ContextMenu.IMenuOpenedArgs args)
     {
-        /* TODO: Check empty target */
+        if (args.MenuType == Dalamud.Game.Gui.ContextMenu.ContextMenuType.Inventory) return;
         if (!_configurationService.Current.EnableRightClickMenus) return;
 
         foreach (var pair in _allClientPairs.Where((p => p.Value.IsVisible)))

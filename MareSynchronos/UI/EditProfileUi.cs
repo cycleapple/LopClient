@@ -21,7 +21,6 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     private readonly ApiController _apiController;
     private readonly FileDialogManager _fileDialogManager;
     private readonly MareProfileManager _mareProfileManager;
-    private readonly IUiBuilder _uiBuilder;
     private readonly UiSharedService _uiSharedService;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private bool _adjustedForScollBarsLocalProfile = false;
@@ -34,8 +33,8 @@ public class EditProfileUi : WindowMediatorSubscriberBase
     private bool _wasOpen;
 
     public EditProfileUi(ILogger<EditProfileUi> logger, MareMediator mediator,
-        ApiController apiController, IUiBuilder uiBuilder, UiSharedService uiSharedService,
-        FileDialogManager fileDialogManager, ServerConfigurationManager serverConfigurationManager,
+        ApiController apiController, UiSharedService uiSharedService, FileDialogManager fileDialogManager,
+        ServerConfigurationManager serverConfigurationManager,
         MareProfileManager mareProfileManager, PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Loporrit Edit Profile###LoporritSyncEditProfileUI", performanceCollectorService)
     {
@@ -46,7 +45,6 @@ public class EditProfileUi : WindowMediatorSubscriberBase
             MaximumSize = new(768, 2000)
         };
         _apiController = apiController;
-        _uiBuilder = uiBuilder;
         _uiSharedService = uiSharedService;
         _fileDialogManager = fileDialogManager;
         _serverConfigurationManager = serverConfigurationManager;

@@ -82,7 +82,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public UiSharedService(ILogger<UiSharedService> logger, IpcManager ipcManager, ApiController apiController,
         CacheMonitor cacheMonitor, FileDialogManager fileDialogManager,
         MareConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
-        ITextureProvider textureProvider, Dalamud.Localization localization,
+        ITextureProvider textureProvider,
+        Dalamud.Localization localization,
         ServerConfigurationManager serverManager, MareMediator mediator) : base(logger, mediator)
     {
         _ipcManager = ipcManager;

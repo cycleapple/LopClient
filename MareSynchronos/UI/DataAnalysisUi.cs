@@ -31,7 +31,9 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
     private ObjectKind _selectedObjectTab;
     private bool _showModal = false;
 
-    public DataAnalysisUi(ILogger<DataAnalysisUi> logger, MareMediator mediator, CharacterAnalyzer characterAnalyzer, IpcManager ipcManager, PerformanceCollectorService performanceCollectorService)
+    public DataAnalysisUi(ILogger<DataAnalysisUi> logger, MareMediator mediator,
+        CharacterAnalyzer characterAnalyzer, IpcManager ipcManager,
+        PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "Character Data Analysis", performanceCollectorService)
     {
         _characterAnalyzer = characterAnalyzer;
@@ -152,10 +154,10 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 + ", compressed: " + UiSharedService.ByteToString(f.Sum(v => v.CompressedSize))));
             ImGui.SetTooltip(text);
         }
-        ImGui.TextUnformatted("Total size (uncompressed):");
+        ImGui.TextUnformatted("Total size (actual):");
         ImGui.SameLine();
         ImGui.TextUnformatted(UiSharedService.ByteToString(_cachedAnalysis!.Sum(c => c.Value.Sum(c => c.Value.OriginalSize))));
-        ImGui.TextUnformatted("Total size (compressed):");
+        ImGui.TextUnformatted("Total size (compressed for up/download only):");
         ImGui.SameLine();
         ImGui.TextUnformatted(UiSharedService.ByteToString(_cachedAnalysis!.Sum(c => c.Value.Sum(c => c.Value.CompressedSize))));
         ImGui.TextUnformatted($"Total modded model triangles: {_cachedAnalysis.Sum(c => c.Value.Sum(f => f.Value.Triangles))}");
@@ -170,7 +172,8 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             using var tab = ImRaii.TabItem(tabText + "###" + kvp.Key.ToString());
             if (tab.Success)
             {
-                var groupedfiles = kvp.Value.Select(v => v.Value).GroupBy(f => f.FileType, StringComparer.Ordinal).OrderBy(k => k.Key, StringComparer.Ordinal).ToList();
+                var groupedfiles = kvp.Value.Select(v => v.Value).GroupBy(f => f.FileType, StringComparer.Ordinal)
+                    .OrderBy(k => k.Key, StringComparer.Ordinal).ToList();
 
                 ImGui.TextUnformatted("Files for " + kvp.Key);
                 ImGui.SameLine();
@@ -189,12 +192,19 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                         + ", compressed: " + UiSharedService.ByteToString(f.Sum(v => v.CompressedSize))));
                     ImGui.SetTooltip(text);
                 }
-                ImGui.TextUnformatted($"{kvp.Key} size (uncompressed):");
+                ImGui.TextUnformatted($"{kvp.Key} size (actual):");
                 ImGui.SameLine();
                 ImGui.TextUnformatted(UiSharedService.ByteToString(kvp.Value.Sum(c => c.Value.OriginalSize)));
-                ImGui.TextUnformatted($"{kvp.Key} size (compressed):");
+                ImGui.TextUnformatted($"{kvp.Key} size (compressed for up/download only):");
                 ImGui.SameLine();
                 ImGui.TextUnformatted(UiSharedService.ByteToString(kvp.Value.Sum(c => c.Value.CompressedSize)));
+                ImGui.TextUnformatted($"{kvp.Key} VRAM usage:");
+                ImGui.SameLine();
+                var vramUsage = groupedfiles.SingleOrDefault(v => string.Equals(v.Key, "tex", StringComparison.Ordinal));
+                if (vramUsage != null)
+                {
+                    ImGui.TextUnformatted(UiSharedService.ByteToString(vramUsage.Sum(f => f.OriginalSize)));
+                }
                 ImGui.TextUnformatted($"{kvp.Key} modded model triangles: {kvp.Value.Sum(f => f.Value.Triangles)}");
 
                 ImGui.Separator();
@@ -239,11 +249,11 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                     ImGui.SameLine();
                     ImGui.TextUnformatted(fileGroup.Count().ToString());
 
-                    ImGui.TextUnformatted($"{fileGroup.Key} files size (uncompressed):");
+                    ImGui.TextUnformatted($"{fileGroup.Key} files size (actual):");
                     ImGui.SameLine();
                     ImGui.TextUnformatted(UiSharedService.ByteToString(fileGroup.Sum(c => c.OriginalSize)));
 
-                    ImGui.TextUnformatted($"{fileGroup.Key} files size (compressed):");
+                    ImGui.TextUnformatted($"{fileGroup.Key} files size (compressed for up/download only):");
                     ImGui.SameLine();
                     ImGui.TextUnformatted(UiSharedService.ByteToString(fileGroup.Sum(c => c.CompressedSize)));
 
@@ -383,10 +393,14 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderBy(k => k.Value.CompressedSize).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
             if (idx == 4 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending)
                 _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.CompressedSize).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
+            if (string.Equals(fileGroup.Key, "mdl", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending)
+                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderBy(k => k.Value.Triangles).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
+            if (string.Equals(fileGroup.Key, "mdl", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending)
+                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Triangles).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
             if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending)
-                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderBy(k => k.Value.Format).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
+                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderBy(k => k.Value.Format.Value, StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
             if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal) && idx == 5 && sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending)
-                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Format).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
+                _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Format.Value, StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
 
             sortSpecs.SpecsDirty = false;
         }

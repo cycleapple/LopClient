@@ -4,6 +4,7 @@ using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.API.Dto;
 using MareSynchronos.API.Dto.User;
 using MareSynchronos.API.SignalR;
+using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
@@ -58,6 +59,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
         Mediator.Subscribe<HubReconnectingMessage>(this, (msg) => MareHubOnReconnecting(msg.Exception));
         Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePause(msg.UserData));
         Mediator.Subscribe<CensusUpdateMessage>(this, (msg) => _lastCensus = msg);
+        Mediator.Subscribe<PauseMessage>(this, (msg) => _ = Pause(msg.UserData));
 
         ServerState = ServerState.Offline;
 
@@ -208,6 +210,17 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
                         NotificationType.Warning, TimeSpan.FromSeconds(15)));
                 }
 
+                if (_dalamudUtil.HasModifiedGameFiles)
+                {
+                    Logger.LogError("Detected modified game files on connection");
+                    if (false)
+                        Mediator.Publish(new NotificationMessage("Modified Game Files detected",
+                            "Dalamud has reported modified game files in your FFXIV installation. " +
+                            "You will be able to connect, but the synchronization functionality might be (partially) broken. " +
+                            "Exit the game and repair it through XIVLauncher to get rid of this message.",
+                            NotificationType.Error, TimeSpan.FromSeconds(15)));
+                }
+
                 await LoadIninitialPairs().ConfigureAwait(false);
                 await LoadOnlinePairs().ConfigureAwait(false);
             }
@@ -255,7 +268,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
             var pair = _pairManager.GetOnlineUserPairs().Single(p => p.UserPair != null && p.UserData == userData);
             var perm = pair.UserPair!.OwnPermissions;
             perm.SetPaused(paused: true);
-            await UserSetPairPermissions(new API.Dto.User.UserPermissionsDto(userData, perm)).ConfigureAwait(false);
+            await UserSetPairPermissions(new UserPermissionsDto(userData, perm)).ConfigureAwait(false);
             // wait until it's changed
             while (pair.UserPair!.OwnPermissions != perm)
             {
@@ -263,10 +276,18 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
                 Logger.LogTrace("Waiting for permissions change for {data}", userData);
             }
             perm.SetPaused(paused: false);
-            await UserSetPairPermissions(new API.Dto.User.UserPermissionsDto(userData, perm)).ConfigureAwait(false);
+            await UserSetPairPermissions(new UserPermissionsDto(userData, perm)).ConfigureAwait(false);
         }, cts.Token).ContinueWith((t) => cts.Dispose());
 
         return Task.CompletedTask;
+    }
+
+    public async Task Pause(UserData userData)
+    {
+        var pair = _pairManager.GetOnlineUserPairs().Single(p => p.UserPair != null && p.UserData == userData);
+        var perm = pair.UserPair!.OwnPermissions;
+        perm.SetPaused(paused: true);
+        await UserSetPairPermissions(new UserPermissionsDto(userData, perm)).ConfigureAwait(false);
     }
 
     public Task<ConnectionDto> GetConnectionDto() => GetConnectionDto(true);

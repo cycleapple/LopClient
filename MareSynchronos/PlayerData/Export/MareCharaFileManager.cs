@@ -64,7 +64,7 @@ public class MareCharaFileManager : DisposableMediatorSubscriberBase
             }
             foreach (var id in _gposeCustomizeObjects.Where(d => d != null))
             {
-                await _ipcManager.CustomizePlus.RevertByIdAsync(id).ConfigureAwait(false);
+                await _ipcManager.CustomizePlus.RevertByIdAsync(id.Value);
             }
             _gposeGameObjects.Clear();
         });
@@ -100,7 +100,7 @@ public class MareCharaFileManager : DisposableMediatorSubscriberBase
                 }
                 var applicationId = Guid.NewGuid();
                 var coll = await _ipcManager.Penumbra.CreateTemporaryCollectionAsync(_logger, charaTarget.Name.TextValue).ConfigureAwait(false);
-                await _ipcManager.Penumbra.AssignTemporaryCollectionAsync(_logger, coll, charaTarget.ObjectTableIndex()!.Value).ConfigureAwait(false);
+                await _ipcManager.Penumbra.AssignTemporaryCollectionAsync(_logger, coll, charaTarget.ObjectIndex).ConfigureAwait(false);
                 await _ipcManager.Penumbra.SetTemporaryModsAsync(_logger, applicationId, coll, extractedFiles.Union(fileSwaps).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal)).ConfigureAwait(false);
                 await _ipcManager.Penumbra.SetManipulationDataAsync(_logger, applicationId, coll, LoadedCharaFile.CharaFileData.ManipulationData).ConfigureAwait(false);
 

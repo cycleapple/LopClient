@@ -116,7 +116,6 @@ public class PlayerDataFactory
     private async Task<CharacterData> CreateCharacterData(CharacterData previousData, GameObjectHandler playerRelatedObject, CancellationToken token)
     {
         var objectKind = playerRelatedObject.ObjectKind;
-        var charaPointer = playerRelatedObject.Address;
 
         _logger.LogDebug("Building character data for {obj}", playerRelatedObject);
 
@@ -178,10 +177,10 @@ public class PlayerDataFactory
         _logger.LogDebug("Handling transient update for {obj}", playerRelatedObject);
 
         // remove all potentially gathered paths from the transient resource manager that are resolved through static resolving
-        _transientResourceManager.ClearTransientPaths(charaPointer, previousData.FileReplacements[objectKind].SelectMany(c => c.GamePaths).ToList());
+        _transientResourceManager.ClearTransientPaths(playerRelatedObject.Address, previousData.FileReplacements[objectKind].SelectMany(c => c.GamePaths).ToList());
 
         // get all remaining paths and resolve them
-        var transientPaths = ManageSemiTransientData(objectKind, charaPointer);
+        var transientPaths = ManageSemiTransientData(objectKind, playerRelatedObject.Address);
         var resolvedTransientPaths = await GetFileReplacementsFromPaths(transientPaths, new HashSet<string>(StringComparer.Ordinal)).ConfigureAwait(false);
 
         _logger.LogDebug("== Transient Replacements ==");
@@ -217,7 +216,7 @@ public class PlayerDataFactory
         if (objectKind == ObjectKind.Player)
         {
             previousData.PetNamesData = _ipcManager.PetNames.GetLocalNames();
-            _logger.LogDebug("Pet Nicknames is now: {moodles}", previousData.PetNamesData);
+            _logger.LogDebug("Pet Nicknames is now: {petnames}", previousData.PetNamesData);
         }
 
         if (previousData.FileReplacements.TryGetValue(objectKind, out HashSet<FileReplacement>? fileReplacements))

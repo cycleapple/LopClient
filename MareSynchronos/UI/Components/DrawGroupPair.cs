@@ -74,11 +74,15 @@ public class DrawGroupPair : DrawPairBase
             {
                 _mediator.Publish(new TargetPairMessage(_pair));
             }
-            if (_pair.LastAppliedDataSize >= 0)
+            if (_pair.LastAppliedDataBytes >= 0)
             {
                 presenceText += UiSharedService.TooltipSeparator;
                 presenceText += ((!_pair.IsVisible) ? "(Last) " : string.Empty) + "Mods Info" + Environment.NewLine;
-                presenceText += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataSize, true);
+                presenceText += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataBytes, true);
+                if (_pair.LastAppliedApproximateVRAMBytes >= 0)
+                {
+                    presenceText += Environment.NewLine + "Approx. VRAM Usage: " + UiSharedService.ByteToString(_pair.LastAppliedApproximateVRAMBytes, true);
+                }
                 if (_pair.LastAppliedDataTris >= 0)
                 {
                     presenceText += Environment.NewLine + "Triangle Count (excl. Vanilla): "

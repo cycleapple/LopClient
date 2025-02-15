@@ -77,12 +77,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
         MareCharaFileManager mareCharaFileManager, PairManager pairManager, ChatService chatService, GuiHookService guiHookService,
         ServerConfigurationManager serverConfigurationManager,
         MareMediator mediator, PerformanceCollectorService performanceCollector,
-        DalamudUtilService dalamudUtilService,
         FileUploadManager fileTransferManager,
         FileTransferOrchestrator fileTransferOrchestrator,
         FileCacheManager fileCacheManager,
         FileCompactor fileCompactor, ApiController apiController,
-        IpcManager ipcManager, CacheMonitor cacheMonitor) : base(logger, mediator, "Loporrit Settings", performanceCollector)
+        IpcManager ipcManager, CacheMonitor cacheMonitor,
+        DalamudUtilService dalamudUtilService) : base(logger, mediator, "Loporrit Settings", performanceCollector)
     {
         _configService = configService;
         _mareCharaFileManager = mareCharaFileManager;
@@ -91,7 +91,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _guiHookService = guiHookService;
         _serverConfigurationManager = serverConfigurationManager;
         _performanceCollector = performanceCollector;
-        _dalamudUtilService = dalamudUtilService;
         _fileTransferManager = fileTransferManager;
         _fileTransferOrchestrator = fileTransferOrchestrator;
         _fileCacheManager = fileCacheManager;
@@ -133,6 +132,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     public override void OnClose()
     {
         _uiShared.EditTrackerPosition = false;
+
         base.OnClose();
     }
 
@@ -191,7 +191,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
         ImGui.SameLine();
         ImGui.SetNextItemWidth(100 * ImGuiHelpers.GlobalScale);
-        _uiShared.DrawCombo("###speed", new[] { DownloadSpeeds.Bps, DownloadSpeeds.KBps, DownloadSpeeds.MBps },
+        _uiShared.DrawCombo("###speed", [DownloadSpeeds.Bps, DownloadSpeeds.KBps, DownloadSpeeds.MBps],
             (s) => s switch
             {
                 DownloadSpeeds.Bps => "Byte/s",

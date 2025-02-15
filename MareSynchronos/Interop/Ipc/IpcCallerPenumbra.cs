@@ -1,4 +1,4 @@
-using Dalamud.Plugin;
+﻿using Dalamud.Plugin;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.Services;
@@ -90,6 +90,8 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         {
             _penumbraRedraw.Invoke(msg.Character.ObjectIndex, RedrawType.AfterGPose);
         });
+
+        Mediator.Subscribe<DalamudLoginMessage>(this, (msg) => _shownPenumbraUnavailable = false);
     }
 
     public bool APIAvailable { get; private set; } = false;
@@ -103,7 +105,14 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
                 .FirstOrDefault(p => string.Equals(p.InternalName, "Penumbra", StringComparison.OrdinalIgnoreCase))
                 ?.Version ?? new Version(0, 0, 0, 0));
             penumbraAvailable = penumbraVersion >= new Version(1, 0, 1, 0);
-            penumbraAvailable &= _penumbraEnabled.Invoke();
+            try
+            {
+                penumbraAvailable &= _penumbraEnabled.Invoke();
+            }
+            catch
+            {
+                penumbraAvailable = false;
+            }
             _shownPenumbraUnavailable = _shownPenumbraUnavailable && !penumbraAvailable;
             APIAvailable = penumbraAvailable;
         }
@@ -196,7 +205,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         await _dalamudUtil.RunOnFrameworkThread(async () =>
         {
             var gameObject = await _dalamudUtil.CreateGameObjectAsync(await _dalamudUtil.GetPlayerPointerAsync().ConfigureAwait(false)).ConfigureAwait(false);
-            _penumbraRedraw.Invoke(gameObject!.ObjectIndex, RedrawType.Redraw);
+            _penumbraRedraw.Invoke(gameObject!.ObjectIndex, setting: RedrawType.Redraw);
         }).ConfigureAwait(false);
     }
 
@@ -210,6 +219,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
             var collId = _penumbraCreateNamedTemporaryCollection.Invoke(collName);
             logger.LogTrace("Creating Temp Collection {collName}, GUID: {collId}", collName, collId);
             return collId;
+
         }).ConfigureAwait(false);
     }
 

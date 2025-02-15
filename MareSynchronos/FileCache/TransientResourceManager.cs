@@ -11,13 +11,13 @@ namespace MareSynchronos.FileCache;
 
 public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 {
+    private readonly object _cacheAdditionLock = new();
     private readonly HashSet<string> _cachedHandledPaths = new(StringComparer.Ordinal);
     private readonly TransientConfigService _configurationService;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly string[] _fileTypesToHandle = ["tmb", "pap", "avfx", "atex", "sklb", "eid", "phyb", "scd", "skp", "shpk"];
     private readonly HashSet<GameObjectHandler> _playerRelatedPointers = [];
-    private HashSet<IntPtr> _cachedFrameAddresses = [];
-    private readonly object _cacheAdditionLock = new();
+    private ConcurrentDictionary<IntPtr, ObjectKind> _cachedFrameAddresses = [];
 
     public TransientResourceManager(ILogger<TransientResourceManager> logger, TransientConfigService configurationService,
         DalamudUtilService dalamudUtil, MareMediator mediator) : base(logger, mediator)
@@ -162,7 +162,13 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     {
         if (TransientResources.TryGetValue(ptr, out var set))
         {
-            set.RemoveWhere(p => list.Contains(p, StringComparer.OrdinalIgnoreCase));
+            foreach (var file in set.Where(p => list.Contains(p, StringComparer.OrdinalIgnoreCase)))
+            {
+                Logger.LogTrace("Removing From Transient: {file}", file);
+            }
+
+            int removed = set.RemoveWhere(p => list.Contains(p, StringComparer.OrdinalIgnoreCase));
+            Logger.LogInformation("Removed {removed} previously existing transient paths", removed);
         }
     }
 
@@ -189,7 +195,7 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
 
     private void DalamudUtil_FrameworkUpdate()
     {
-        _cachedFrameAddresses = _playerRelatedPointers.Select(c => c.CurrentAddress()).ToHashSet();
+        _cachedFrameAddresses = _cachedFrameAddresses = new ConcurrentDictionary<nint, ObjectKind>(_playerRelatedPointers.Where(k => k.Address != nint.Zero).ToDictionary(c => c.CurrentAddress(), c => c.ObjectKind));
         lock (_cacheAdditionLock)
         {
             _cachedHandledPaths.Clear();
@@ -250,7 +256,7 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         }
 
         // ignore files not belonging to anything player related
-        if (!_cachedFrameAddresses.Contains(gameObject))
+        if (!_cachedFrameAddresses.TryGetValue(gameObject, out var objectKind))
         {
             lock (_cacheAdditionLock)
             {
@@ -272,9 +278,18 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
         }
         else
         {
+            var thing = _playerRelatedPointers.FirstOrDefault(f => f.Address == gameObject);
             value.Add(replacedGamePath);
-            Logger.LogDebug("Adding {replacedGamePath} for {gameObject} ({filePath})", replacedGamePath, gameObject.ToString("X"), filePath);
-            Mediator.Publish(new TransientResourceChangedMessage(gameObject));
+            Logger.LogDebug("Adding {replacedGamePath} for {gameObject} ({filePath})", replacedGamePath, thing?.ToString() ?? gameObject.ToString("X"), filePath);
+            _ = Task.Run(async () =>
+            {
+                _sendTransientCts?.Cancel();
+                _sendTransientCts?.Dispose();
+                _sendTransientCts = new();
+                var token = _sendTransientCts.Token;
+                await Task.Delay(TimeSpan.FromSeconds(2), token).ConfigureAwait(false);
+                Mediator.Publish(new TransientResourceChangedMessage(gameObject));
+            });
         }
     }
 
@@ -287,4 +302,6 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
             _configurationService.Save();
         }
     }
+
+    private CancellationTokenSource _sendTransientCts = new();
 }

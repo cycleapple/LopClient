@@ -129,7 +129,7 @@ public sealed class IpcCallerCustomize : IIpcCaller
     private void OnCustomizePlusScaleChange(ushort c, Guid g)
     {
         var obj = _dalamudUtil.GetCharacterFromObjectTableByIndex(c);
-        _mareMediator.Publish(new CustomizePlusMessage(obj?.Name.ToString() ?? string.Empty));
+        _mareMediator.Publish(new CustomizePlusMessage(obj?.Address ?? null));
     }
 
     public void Dispose()

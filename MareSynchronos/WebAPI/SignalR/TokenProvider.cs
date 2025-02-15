@@ -92,7 +92,6 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             throw;
         }
 
-        _logger.LogTrace("GetNewToken: JWT {token}", response);
         return response;
     }
 

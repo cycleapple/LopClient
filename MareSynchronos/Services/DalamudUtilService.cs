@@ -36,6 +36,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     private readonly List<uint> _classJobIdsIgnoredForPets = [30];
     private readonly IClientState _clientState;
     private readonly ICondition _condition;
+    private readonly IDataManager _gameData;
     private readonly IFramework _framework;
     private readonly IGameGui _gameGui;
     private readonly IToastGui _toastGui;
@@ -63,6 +64,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         _gameGui = gameGui;
         _toastGui = toastGui;
         _condition = condition;
+        _gameData = gameData;
         Mediator = mediator;
         _performanceCollector = performanceCollector;
         WorldData = new(() =>
@@ -98,27 +100,28 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
 
     public bool IsWine { get; init; }
     public unsafe GameObject* GposeTarget => TargetSystem.Instance()->GPoseTarget;
-    public unsafe DalamudGameObject? GposeTargetGameObject => GposeTarget == null ? null : _objectTable[GposeTarget->ObjectIndex];
+    public unsafe Dalamud.Game.ClientState.Objects.Types.IGameObject? GposeTargetGameObject => GposeTarget == null ? null : _objectTable[GposeTarget->ObjectIndex];
     public bool IsAnythingDrawing { get; private set; } = false;
     public bool IsInCutscene { get; private set; } = false;
     public bool IsInGpose { get; private set; } = false;
     public bool IsLoggedIn { get; private set; }
     public bool IsOnFrameworkThread => _framework.IsInFrameworkUpdateThread;
     public bool IsZoning => _condition[ConditionFlag.BetweenAreas] || _condition[ConditionFlag.BetweenAreas51];
-    public bool IsInCombat { get; private set; } = false;
+    public bool IsInCombatOrPerforming { get; private set; } = false;
+    public bool HasModifiedGameFiles => _gameData.HasModifiedGameDataFiles;
 
     public Lazy<Dictionary<ushort, string>> WorldData { get; private set; }
     public Lazy<Dictionary<int, Lumina.Excel.Sheets.UIColor>> UiColors { get; private set; }
 
     public MareMediator Mediator { get; }
 
-    public DalamudGameObject? CreateGameObject(IntPtr reference)
+    public Dalamud.Game.ClientState.Objects.Types.IGameObject? CreateGameObject(IntPtr reference)
     {
         EnsureIsOnFramework();
         return _objectTable.CreateObjectReference(reference);
     }
 
-    public async Task<DalamudGameObject?> CreateGameObjectAsync(IntPtr reference)
+    public async Task<Dalamud.Game.ClientState.Objects.Types.IGameObject?> CreateGameObjectAsync(IntPtr reference)
     {
         return await RunOnFrameworkThread(() => _objectTable.CreateObjectReference(reference)).ConfigureAwait(false);
     }
@@ -532,19 +535,19 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
                 Mediator.Publish(new GposeEndMessage());
             }
 
-            if (_condition[ConditionFlag.InCombat] && !IsInCombat)
+            if ((_condition[ConditionFlag.Performing] || _condition[ConditionFlag.InCombat]) && !IsInCombatOrPerforming)
             {
-                _logger.LogDebug("Combat start");
-                IsInCombat = true;
-                Mediator.Publish(new CombatStartMessage());
-                Mediator.Publish(new HaltScanMessage(nameof(IsInCombat)));
+                _logger.LogDebug("Combat/Performance start");
+                IsInCombatOrPerforming = true;
+                Mediator.Publish(new CombatOrPerformanceStartMessage());
+                Mediator.Publish(new HaltScanMessage(nameof(IsInCombatOrPerforming)));
             }
-            else if (!_condition[ConditionFlag.InCombat] && IsInCombat)
+            else if ((!_condition[ConditionFlag.Performing] && !_condition[ConditionFlag.InCombat]) && IsInCombatOrPerforming)
             {
-                _logger.LogDebug("Combat end");
-                IsInCombat = false;
-                Mediator.Publish(new CombatEndMessage());
-                Mediator.Publish(new ResumeScanMessage(nameof(IsInCombat)));
+                _logger.LogDebug("Combat/Performance end");
+                IsInCombatOrPerforming = false;
+                Mediator.Publish(new CombatOrPerformanceEndMessage());
+                Mediator.Publish(new ResumeScanMessage(nameof(IsInCombatOrPerforming)));
             }
 
             if (_condition[ConditionFlag.WatchingCutscene] && !IsInCutscene)
@@ -595,15 +598,19 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
                 Mediator.Publish(new ResumeScanMessage(nameof(ConditionFlag.BetweenAreas)));
             }
 
-            if (!IsInCombat)
+            var localPlayer = _clientState.LocalPlayer;
+            if (localPlayer != null)
+            {
+                _classJobId = localPlayer.ClassJob.RowId;
+            }
+
+            if (!IsInCombatOrPerforming)
                 Mediator.Publish(new FrameworkUpdateMessage());
 
             Mediator.Publish(new PriorityFrameworkUpdateMessage());
 
             if (isNormalFrameworkUpdate)
                 return;
-
-            var localPlayer = _clientState.LocalPlayer;
 
             if (localPlayer != null && !IsLoggedIn)
             {
@@ -619,7 +626,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
                 Mediator.Publish(new DalamudLogoutMessage());
             }
 
-            if (IsInCombat)
+            if (IsInCombatOrPerforming)
                 Mediator.Publish(new FrameworkUpdateMessage());
 
             Mediator.Publish(new DelayedFrameworkUpdateMessage());

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MareSynchronos.Interop.Ipc;
 
-public sealed class IpcCallerGlamourer : IIpcCaller
+public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcCaller
 {
     private readonly ILogger<IpcCallerGlamourer> _logger;
     private readonly IDalamudPluginInterface _pi;
@@ -31,15 +31,15 @@ public sealed class IpcCallerGlamourer : IIpcCaller
     private readonly uint LockCode = 0x626E7579;
 
     public IpcCallerGlamourer(ILogger<IpcCallerGlamourer> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil, MareMediator mareMediator,
-        RedrawManager redrawManager)
+        RedrawManager redrawManager) : base(logger, mareMediator)
     {
-        _glamourerApiVersions = new(pi);
-        _glamourerGetAllCustomization = new(pi);
-        _glamourerApplyAll = new(pi);
-        _glamourerRevert = new(pi);
-        _glamourerRevertByName = new(pi);
-        _glamourerUnlock = new(pi);
-        _glamourerUnlockByName = new(pi);
+        _glamourerApiVersions = new ApiVersion(pi);
+        _glamourerGetAllCustomization = new GetStateBase64(pi);
+        _glamourerApplyAll = new ApplyState(pi);
+        _glamourerRevert = new RevertState(pi);
+        _glamourerRevertByName = new RevertStateName(pi);
+        _glamourerUnlock = new UnlockState(pi);
+        _glamourerUnlockByName = new UnlockStateName(pi);
 
         _logger = logger;
         _pi = pi;
@@ -50,6 +50,16 @@ public sealed class IpcCallerGlamourer : IIpcCaller
 
         _glamourerStateChanged = StateChanged.Subscriber(pi, GlamourerChanged);
         _glamourerStateChanged.Enable();
+
+        Mediator.Subscribe<DalamudLoginMessage>(this, s => _shownGlamourerUnavailable = false);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        _redrawManager.Cancel();
+        _glamourerStateChanged?.Dispose();
     }
 
     public bool APIAvailable { get; private set; }
@@ -91,11 +101,6 @@ public sealed class IpcCallerGlamourer : IIpcCaller
                     NotificationType.Error));
             }
         }
-    }
-
-    public void Dispose()
-    {
-        _glamourerStateChanged?.Dispose();
     }
 
     public async Task ApplyAllAsync(ILogger logger, GameObjectHandler handler, string? customization, Guid applicationId, CancellationToken token, bool fireAndForget = false)

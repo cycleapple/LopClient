@@ -1,22 +1,22 @@
-﻿using Dalamud.Plugin;
-using MareSynchronos.MareConfiguration.Configurations;
+﻿using MareSynchronos.WebAPI;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace MareSynchronos.MareConfiguration;
 
-public class ConfigurationMigrator(ILogger<ConfigurationMigrator> logger, IDalamudPluginInterface pi,
+public class ConfigurationMigrator(ILogger<ConfigurationMigrator> logger,
     NotesConfigService notesConfig) : IHostedService
 {
+    private readonly ILogger<ConfigurationMigrator> _logger = logger;
+
     public void Migrate()
     {
-        var oldUri = MareSynchronos.WebAPI.ApiController.LoporritServiceUriOld;
-        var newUri = MareSynchronos.WebAPI.ApiController.LoporritServiceUri;
+        var oldUri = ApiController.LoporritServiceUriOld;
+        var newUri = ApiController.LoporritServiceUri;
 
         if (notesConfig.Current.ServerNotes.TryGetValue(oldUri, out var old))
         {
-            logger.LogDebug("Migrating server notes {old} => {new}", oldUri, newUri);
+            _logger.LogDebug("Migrating server notes {old} => {new}", oldUri, newUri);
             notesConfig.Current.ServerNotes.TryAdd(newUri, new());
             var merged = notesConfig.Current.ServerNotes.GetValueOrDefault(newUri, new());
             foreach (var (k, v) in old.GidServerComments)
@@ -38,11 +38,4 @@ public class ConfigurationMigrator(ILogger<ConfigurationMigrator> logger, IDalam
     {
         return Task.CompletedTask;
     }
-
-    private static void SaveConfig(IMareConfiguration config, string path)
-    {
-        File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
-    }
-
-    private string ConfigurationPath(string configName) => Path.Combine(pi.ConfigDirectory.FullName, configName);
 }

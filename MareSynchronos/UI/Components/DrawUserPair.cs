@@ -72,16 +72,20 @@ public class DrawUserPair : DrawPairBase
             }
             ImGui.PopFont();
             var visibleTooltip = _pair.UserData.AliasOrUID + " is visible: " + _pair.PlayerName! + Environment.NewLine + "Click to target this player";
-            if (_pair.LastAppliedDataSize >= 0)
+            if (_pair.LastAppliedDataBytes >= 0)
             {
                 visibleTooltip += UiSharedService.TooltipSeparator;
                 visibleTooltip += ((!_pair.IsVisible) ? "(Last) " : string.Empty) + "Mods Info" + Environment.NewLine;
-                visibleTooltip += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataSize, true);
+                visibleTooltip += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataBytes, true);
+                if (_pair.LastAppliedApproximateVRAMBytes >= 0)
+                {
+                    visibleTooltip += Environment.NewLine + "Approx. VRAM Usage: " + UiSharedService.ByteToString(_pair.LastAppliedApproximateVRAMBytes, true);
+                }
                 if (_pair.LastAppliedDataTris >= 0)
                 {
                     visibleTooltip += Environment.NewLine + "Triangle Count (excl. Vanilla): "
                         + (_pair.LastAppliedDataTris > 1000 ? (_pair.LastAppliedDataTris / 1000d).ToString("0.0'k'") : _pair.LastAppliedDataTris);
-            }
+                }
             }
 
             UiSharedService.AttachToolTip(visibleTooltip);
@@ -273,16 +277,5 @@ public class DrawUserPair : DrawPairBase
             _ = _apiController.UserRemovePair(new(entry.UserData));
         }
         UiSharedService.AttachToolTip("Hold CTRL and click to unpair permanently from " + entryUID);
-
-        ImGui.Separator();
-        if (!entry.IsPaused)
-        {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ExclamationTriangle, "Report Profile"))
-            {
-                ImGui.CloseCurrentPopup();
-                _mediator.Publish(new OpenReportPopupMessage(_pair));
-            }
-            UiSharedService.AttachToolTip("Report this users profile to the administrative team");
-        }
     }
 }

@@ -1,11 +1,11 @@
-﻿using MareSynchronos.API.Dto.User;
-using MareSynchronos.FileCache;
+﻿using MareSynchronos.FileCache;
 using MareSynchronos.Interop.Ipc;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace MareSynchronos.PlayerData.Factories;
@@ -16,18 +16,19 @@ public class PairHandlerFactory
     private readonly FileCacheManager _fileCacheManager;
     private readonly FileDownloadManagerFactory _fileDownloadManagerFactory;
     private readonly GameObjectHandlerFactory _gameObjectHandlerFactory;
-    private readonly CancellationToken _dalamudLifetimeToken;
+    private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly IpcManager _ipcManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly MareMediator _mareMediator;
-    private readonly XivDataAnalyzer _xivDataAnalyzer;
+    private readonly PlayerPerformanceService _playerPerformanceService;
+    private readonly ServerConfigurationManager _serverConfigManager;
     private readonly PluginWarningNotificationService _pluginWarningNotificationManager;
-    private readonly ServerConfigurationManager _serverConfigurationManager;
 
     public PairHandlerFactory(ILoggerFactory loggerFactory, GameObjectHandlerFactory gameObjectHandlerFactory, IpcManager ipcManager,
         FileDownloadManagerFactory fileDownloadManagerFactory, DalamudUtilService dalamudUtilService,
-        PluginWarningNotificationService pluginWarningNotificationManager, ServerConfigurationManager serverConfigurationManager,
-        CancellationToken dalamudLifetime, FileCacheManager fileCacheManager, MareMediator mareMediator, XivDataAnalyzer modelAnalyzer)
+        PluginWarningNotificationService pluginWarningNotificationManager, IHostApplicationLifetime hostApplicationLifetime,
+        FileCacheManager fileCacheManager, MareMediator mareMediator, PlayerPerformanceService playerPerformanceService,
+        ServerConfigurationManager serverConfigManager)
     {
         _loggerFactory = loggerFactory;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -35,17 +36,17 @@ public class PairHandlerFactory
         _fileDownloadManagerFactory = fileDownloadManagerFactory;
         _dalamudUtilService = dalamudUtilService;
         _pluginWarningNotificationManager = pluginWarningNotificationManager;
-        _serverConfigurationManager = serverConfigurationManager;
-        _dalamudLifetimeToken = dalamudLifetime;
+        _hostApplicationLifetime = hostApplicationLifetime;
         _fileCacheManager = fileCacheManager;
         _mareMediator = mareMediator;
-        _xivDataAnalyzer = modelAnalyzer;
+        _playerPerformanceService = playerPerformanceService;
+        _serverConfigManager = serverConfigManager;
     }
 
-    public PairHandler Create(OnlineUserIdentDto onlineUserIdentDto)
+    public PairHandler Create(Pair pair)
     {
-        return new PairHandler(_loggerFactory.CreateLogger<PairHandler>(), onlineUserIdentDto, _gameObjectHandlerFactory,
-            _ipcManager, _fileDownloadManagerFactory.Create(), _pluginWarningNotificationManager, _serverConfigurationManager, _dalamudUtilService,
-            _dalamudLifetimeToken, _fileCacheManager, _mareMediator, _xivDataAnalyzer);
+        return new PairHandler(_loggerFactory.CreateLogger<PairHandler>(), pair, _gameObjectHandlerFactory,
+            _ipcManager, _fileDownloadManagerFactory.Create(), _pluginWarningNotificationManager, _dalamudUtilService, _hostApplicationLifetime,
+            _fileCacheManager, _mareMediator, _playerPerformanceService, _serverConfigManager);
     }
 }
