@@ -171,7 +171,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 UiSharedService.AttachToolTip("Click \"Start analysis\" to calculate download size");
             }
         }
-        ImGui.TextUnformatted($"Total modded model triangles: {_cachedAnalysis.Sum(c => c.Value.Sum(f => f.Value.Triangles))}");
+        ImGui.TextUnformatted($"Total modded model triangles: {UiSharedService.TrisToString(_cachedAnalysis.Sum(c => c.Value.Sum(f => f.Value.Triangles)))}");
         ImGui.Separator();
 
         using var tabbar = ImRaii.TabBar("objectSelection");
@@ -226,7 +226,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 {
                     ImGui.TextUnformatted(UiSharedService.ByteToString(vramUsage.Sum(f => f.OriginalSize)));
                 }
-                ImGui.TextUnformatted($"{kvp.Key} modded model triangles: {kvp.Value.Sum(f => f.Value.Triangles)}");
+                ImGui.TextUnformatted($"{kvp.Key} modded model triangles: {UiSharedService.TrisToString(kvp.Value.Sum(f => f.Value.Triangles))}");
 
                 ImGui.Separator();
                 if (_selectedObjectTab != kvp.Key)
@@ -482,7 +482,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             if (string.Equals(fileGroup.Key, "mdl", StringComparison.Ordinal))
             {
                 ImGui.TableNextColumn();
-                ImGui.TextUnformatted(item.Triangles.ToString());
+                ImGui.TextUnformatted(UiSharedService.TrisToString(item.Triangles));
                 if (ImGui.IsItemClicked()) _selectedHash = item.Hash;
             }
         }

@@ -184,15 +184,16 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
     public static string ByteToString(long bytes, bool addSuffix = true)
     {
-        string[] suffix = ["B", "KiB", "MiB", "GiB", "TiB"];
-        int i;
-        double dblSByte = bytes;
-        for (i = 0; i < suffix.Length && bytes >= 1024; i++, bytes /= 1024)
-        {
-            dblSByte = bytes / 1024.0;
-        }
+        _ = addSuffix;
+        double dblSByte = bytes / 1048576.0;
+        if (dblSByte > 0.0 && dblSByte < 0.01)
+            dblSByte = 0.01;
+        return $"{dblSByte:0.00} MiB";
+    }
 
-        return addSuffix ? $"{dblSByte:0.00} {suffix[i]}" : $"{dblSByte:0.00}";
+    public static string TrisToString(long tris)
+    {
+        return tris > 1000 ? $"{tris / 1000.0:0.0}k" : $"{tris}";
     }
 
     public static void CenterNextWindow(float width, float height, ImGuiCond cond = ImGuiCond.None)

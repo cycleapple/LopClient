@@ -798,12 +798,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.DrawCacheDirectorySetting();
         ImGui.AlignTextToFramePadding();
         if (_cacheMonitor.FileCacheSize >= 0)
-            ImGui.TextUnformatted($"Currently utilized local storage: {UiSharedService.ByteToString(_cacheMonitor.FileCacheSize)}");
+            ImGui.TextUnformatted($"Currently utilized local storage: {_cacheMonitor.FileCacheSize / 1024.0 / 1024.0 / 1024.0:0.00} GiB");
         else
             ImGui.TextUnformatted($"Currently utilized local storage: Calculating...");
         bool isLinux = _dalamudUtilService.IsWine;
         if (!isLinux)
-            ImGui.TextUnformatted($"Remaining space free on drive: {UiSharedService.ByteToString(_cacheMonitor.FileCacheDriveFree)}");
+            ImGui.TextUnformatted($"Remaining space free on drive: {_cacheMonitor.FileCacheDriveFree / 1024.0 / 1024.0 / 1024.0:0.00} GiB");
         bool useFileCompactor = _configService.Current.UseCompactor;
         if (!useFileCompactor && !isLinux)
         {
