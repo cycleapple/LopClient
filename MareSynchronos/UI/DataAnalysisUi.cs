@@ -106,6 +106,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         if (_cachedAnalysis!.Count == 0) return;
 
         bool isAnalyzing = _characterAnalyzer.IsAnalysisRunning;
+        bool needAnalysis = _cachedAnalysis!.Any(c => c.Value.Any(f => !f.Value.IsComputed));
         if (isAnalyzing)
         {
             UiSharedService.ColorTextWrapped($"Analyzing {_characterAnalyzer.CurrentFile}/{_characterAnalyzer.TotalFiles}",
@@ -117,7 +118,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         }
         else
         {
-            if (_cachedAnalysis!.Any(c => c.Value.Any(f => !f.Value.IsComputed)))
+            if (needAnalysis)
             {
                 UiSharedService.ColorTextWrapped("Some entries in the analysis have file size not determined yet, press the button below to analyze your current data",
                     ImGuiColors.DalamudYellow);
@@ -159,7 +160,17 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         ImGui.TextUnformatted(UiSharedService.ByteToString(_cachedAnalysis!.Sum(c => c.Value.Sum(c => c.Value.OriginalSize))));
         ImGui.TextUnformatted("Total size (compressed for up/download only):");
         ImGui.SameLine();
-        ImGui.TextUnformatted(UiSharedService.ByteToString(_cachedAnalysis!.Sum(c => c.Value.Sum(c => c.Value.CompressedSize))));
+        using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, needAnalysis))
+        {
+            ImGui.TextUnformatted(UiSharedService.ByteToString(_cachedAnalysis!.Sum(c => c.Value.Sum(c => c.Value.CompressedSize))));
+            if (needAnalysis && !isAnalyzing)
+            {
+                ImGui.SameLine();
+                using (ImRaii.PushFont(UiBuilder.IconFont))
+                    ImGui.TextUnformatted(FontAwesomeIcon.ExclamationCircle.ToIconString());
+                UiSharedService.AttachToolTip("Click \"Start analysis\" to calculate download size");
+            }
+        }
         ImGui.TextUnformatted($"Total modded model triangles: {_cachedAnalysis.Sum(c => c.Value.Sum(f => f.Value.Triangles))}");
         ImGui.Separator();
 
@@ -197,7 +208,17 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 ImGui.TextUnformatted(UiSharedService.ByteToString(kvp.Value.Sum(c => c.Value.OriginalSize)));
                 ImGui.TextUnformatted($"{kvp.Key} size (compressed for up/download only):");
                 ImGui.SameLine();
-                ImGui.TextUnformatted(UiSharedService.ByteToString(kvp.Value.Sum(c => c.Value.CompressedSize)));
+                using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, needAnalysis))
+                {
+                    ImGui.TextUnformatted(UiSharedService.ByteToString(kvp.Value.Sum(c => c.Value.CompressedSize)));
+                    if (needAnalysis && !isAnalyzing)
+                    {
+                        ImGui.SameLine();
+                        using (ImRaii.PushFont(UiBuilder.IconFont))
+                            ImGui.TextUnformatted(FontAwesomeIcon.ExclamationCircle.ToIconString());
+                        UiSharedService.AttachToolTip("Click \"Start analysis\" to calculate download size");
+                    }
+                }
                 ImGui.TextUnformatted($"{kvp.Key} VRAM usage:");
                 ImGui.SameLine();
                 var vramUsage = groupedfiles.SingleOrDefault(v => string.Equals(v.Key, "tex", StringComparison.Ordinal));
@@ -410,11 +431,6 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             using var text = ImRaii.PushColor(ImGuiCol.Text, new Vector4(0, 0, 0, 1), string.Equals(item.Hash, _selectedHash, StringComparison.Ordinal));
             using var text2 = ImRaii.PushColor(ImGuiCol.Text, new Vector4(1, 1, 1, 1), !item.IsComputed);
             ImGui.TableNextColumn();
-            if (!item.IsComputed)
-            {
-                ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, UiSharedService.Color(ImGuiColors.DalamudRed));
-                ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, UiSharedService.Color(ImGuiColors.DalamudRed));
-            }
             if (string.Equals(_selectedHash, item.Hash, StringComparison.Ordinal))
             {
                 ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, UiSharedService.Color(ImGuiColors.DalamudYellow));
@@ -432,7 +448,8 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             ImGui.TextUnformatted(UiSharedService.ByteToString(item.OriginalSize));
             if (ImGui.IsItemClicked()) _selectedHash = item.Hash;
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted(UiSharedService.ByteToString(item.CompressedSize));
+            using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, !item.IsComputed))
+                ImGui.TextUnformatted(UiSharedService.ByteToString(item.CompressedSize));
             if (ImGui.IsItemClicked()) _selectedHash = item.Hash;
             if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal))
             {
