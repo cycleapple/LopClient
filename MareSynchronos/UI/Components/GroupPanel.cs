@@ -19,6 +19,7 @@ using MareSynchronos.UI.Handlers;
 using Dalamud.Interface.Utility;
 using MareSynchronos.Services;
 using MareSynchronos.MareConfiguration;
+using Dalamud.Interface.Colors;
 
 namespace MareSynchronos.UI;
 
@@ -410,6 +411,8 @@ internal sealed class GroupPanel
             ImGui.EndPopup();
         }
 
+        bool hideOfflineUsers = pairsInGroup.Count > 1000;
+
         ImGui.Indent(20);
         if (_expandedGroupState[groupDto.GID])
         {
@@ -460,7 +463,14 @@ internal sealed class GroupPanel
             {
                 ImGui.TextUnformatted("Offline/Unknown");
                 ImGui.Separator();
-                _uidDisplayHandler.RenderPairList(offlineUsers);
+                if (hideOfflineUsers)
+                {
+                    UiSharedService.ColorText($"    {offlineUsers.Count} users omitted from display.", ImGuiColors.DalamudGrey);
+                }
+                else
+                {
+                    _uidDisplayHandler.RenderPairList(offlineUsers);
+                }
             }
 
             ImGui.Separator();
