@@ -41,7 +41,8 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
 
     public EventViewerUI(ILogger<EventViewerUI> logger, MareMediator mediator,
         EventAggregator eventAggregator, UiSharedService uiSharedService, MareConfigService configService,
-        PerformanceCollectorService performanceCollectorService) : base(logger, mediator, "Event Viewer", performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService)
+        : base(logger, mediator, "Event Viewer", performanceCollectorService)
     {
         _eventAggregator = eventAggregator;
         _uiSharedService = uiSharedService;
@@ -82,12 +83,12 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
     {
         var newEventsAvailable = _eventAggregator.NewEventsAvailable;
 
-        var freezeSize = UiSharedService.GetNormalizedIconTextButtonSize(FontAwesomeIcon.PlayCircle, "Unfreeze View").X;
+        var freezeSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.PlayCircle, "Unfreeze View");
         if (_isPaused)
         {
             using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, newEventsAvailable))
             {
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.PlayCircle, "Unfreeze View"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.PlayCircle, "Unfreeze View"))
                     _isPaused = false;
                 if (newEventsAvailable)
                     UiSharedService.AttachToolTip("New events are available. Click to resume updating.");
@@ -95,7 +96,7 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
         }
         else
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.PauseCircle, "Freeze View"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.PauseCircle, "Freeze View"))
                 _isPaused = true;
         }
 
@@ -121,10 +122,10 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
 
         if (_configService.Current.LogEvents)
         {
-            var buttonSize = UiSharedService.GetNormalizedIconTextButtonSize(FontAwesomeIcon.FolderOpen, "Open EventLog Folder");
-            var dist = ImGui.GetWindowContentRegionMax().X - buttonSize.X;
+            var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.FolderOpen, "Open EventLog Folder");
+            var dist = ImGui.GetWindowContentRegionMax().X - buttonSize;
             ImGui.SameLine(dist);
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.FolderOpen, "Open EventLog folder"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.FolderOpen, "Open EventLog folder"))
             {
                 ProcessStartInfo ps = new()
                 {
@@ -181,7 +182,7 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
                 };
 
                 ImGui.TableNextColumn();
-                UiSharedService.NormalizedIcon(icon, iconColor == new Vector4() ? null : iconColor);
+                _uiSharedService.IconText(icon, iconColor == new Vector4() ? null : iconColor);
                 UiSharedService.AttachToolTip(ev.EventSeverity.ToString());
                 ImGui.TableNextColumn();
                 ImGui.AlignTextToFramePadding();

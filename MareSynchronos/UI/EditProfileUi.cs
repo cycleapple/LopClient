@@ -95,27 +95,28 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         ImGuiHelpers.ScaledRelativeSameLine(256, spacing);
-        _uiSharedService.GameFont.Push();
-        var descriptionTextSize = ImGui.CalcTextSize(profile.Description, 256f);
-        var childFrame = ImGuiHelpers.ScaledVector2(256 + ImGui.GetStyle().WindowPadding.X + ImGui.GetStyle().WindowBorderSize, 256);
-        if (descriptionTextSize.Y > childFrame.Y)
+        using (_uiSharedService.GameFont.Push())
         {
-            _adjustedForScollBarsOnlineProfile = true;
+            var descriptionTextSize = ImGui.CalcTextSize(profile.Description, 256f);
+            var childFrame = ImGuiHelpers.ScaledVector2(256 + ImGui.GetStyle().WindowPadding.X + ImGui.GetStyle().WindowBorderSize, 256);
+            if (descriptionTextSize.Y > childFrame.Y)
+            {
+                _adjustedForScollBarsOnlineProfile = true;
+            }
+            else
+            {
+                _adjustedForScollBarsOnlineProfile = false;
+            }
+            childFrame = childFrame with
+            {
+                X = childFrame.X + (_adjustedForScollBarsOnlineProfile ? ImGui.GetStyle().ScrollbarSize : 0),
+            };
+            if (ImGui.BeginChildFrame(101, childFrame))
+            {
+                UiSharedService.TextWrapped(profile.Description);
+            }
+            ImGui.EndChildFrame();
         }
-        else
-        {
-            _adjustedForScollBarsOnlineProfile = false;
-        }
-        childFrame = childFrame with
-        {
-            X = childFrame.X + (_adjustedForScollBarsOnlineProfile ? ImGui.GetStyle().ScrollbarSize : 0),
-        };
-        if (ImGui.BeginChildFrame(101, childFrame))
-        {
-            UiSharedService.TextWrapped(profile.Description);
-        }
-        ImGui.EndChildFrame();
-        _uiSharedService.GameFont.Pop();
 
         var nsfw = profile.IsNSFW;
         ImGui.BeginDisabled();
@@ -139,7 +140,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         ImGui.Separator();
         _uiSharedService.BigText("Profile Settings");
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.FileUpload, "Upload new profile picture"))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.FileUpload, "Upload new profile picture"))
         {
             _fileDialogManager.OpenFileDialog("Select new Profile picture", ".png", (success, file) =>
             {
@@ -170,7 +171,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         }
         UiSharedService.AttachToolTip("Select and upload a new profile picture");
         ImGui.SameLine();
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Clear uploaded profile picture"))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Clear uploaded profile picture"))
         {
             _ = _apiController.UserSetProfile(new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, "", Description: null));
         }
@@ -184,7 +185,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         {
             _ = _apiController.UserSetProfile(new UserProfileDto(new UserData(_apiController.UID), Disabled: false, isNsfw, ProfilePictureBase64: null, Description: null));
         }
-        UiSharedService.DrawHelpText("If your profile description or image can be considered NSFW, toggle this to ON");
+        _uiSharedService.DrawHelpText("If your profile description or image can be considered NSFW, toggle this to ON");
         var widthTextBox = 400;
         var posX = ImGui.GetCursorPosX();
         ImGui.TextUnformatted($"Description {_descriptionText.Length}/1500");
@@ -196,35 +197,36 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
         ImGui.SameLine();
 
-        _uiSharedService.GameFont.Push();
-        var descriptionTextSizeLocal = ImGui.CalcTextSize(_descriptionText, 256f);
-        var childFrameLocal = ImGuiHelpers.ScaledVector2(256 + ImGui.GetStyle().WindowPadding.X + ImGui.GetStyle().WindowBorderSize, 200);
-        if (descriptionTextSizeLocal.Y > childFrameLocal.Y)
+        using (_uiSharedService.GameFont.Push())
         {
-            _adjustedForScollBarsLocalProfile = true;
+            var descriptionTextSizeLocal = ImGui.CalcTextSize(_descriptionText, 256f);
+            var childFrameLocal = ImGuiHelpers.ScaledVector2(256 + ImGui.GetStyle().WindowPadding.X + ImGui.GetStyle().WindowBorderSize, 200);
+            if (descriptionTextSizeLocal.Y > childFrameLocal.Y)
+            {
+                _adjustedForScollBarsLocalProfile = true;
+            }
+            else
+            {
+                _adjustedForScollBarsLocalProfile = false;
+            }
+            childFrameLocal = childFrameLocal with
+            {
+                X = childFrameLocal.X + (_adjustedForScollBarsLocalProfile ? ImGui.GetStyle().ScrollbarSize : 0),
+            };
+            if (ImGui.BeginChildFrame(102, childFrameLocal))
+            {
+                UiSharedService.TextWrapped(_descriptionText);
+            }
+            ImGui.EndChildFrame();
         }
-        else
-        {
-            _adjustedForScollBarsLocalProfile = false;
-        }
-        childFrameLocal = childFrameLocal with
-        {
-            X = childFrameLocal.X + (_adjustedForScollBarsLocalProfile ? ImGui.GetStyle().ScrollbarSize : 0),
-        };
-        if (ImGui.BeginChildFrame(102, childFrameLocal))
-        {
-            UiSharedService.TextWrapped(_descriptionText);
-        }
-        ImGui.EndChildFrame();
-        _uiSharedService.GameFont.Pop();
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Save, "Save Description"))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Save, "Save Description"))
         {
             _ = _apiController.UserSetProfile(new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, ProfilePictureBase64: null, _descriptionText));
         }
         UiSharedService.AttachToolTip("Sets your profile description text");
         ImGui.SameLine();
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Clear Description"))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Clear Description"))
         {
             _ = _apiController.UserSetProfile(new UserProfileDto(new UserData(_apiController.UID), Disabled: false, IsNSFW: null, ProfilePictureBase64: null, ""));
         }

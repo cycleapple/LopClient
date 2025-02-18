@@ -77,7 +77,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
             {
                 bool isInvitesDisabled = perm.IsDisableInvites();
 
-                if (UiSharedService.NormalizedIconTextButton(isInvitesDisabled ? FontAwesomeIcon.Unlock : FontAwesomeIcon.Lock,
+                if (_uiSharedService.IconTextButton(isInvitesDisabled ? FontAwesomeIcon.Unlock : FontAwesomeIcon.Lock,
                     isInvitesDisabled ? "Unlock Syncshell" : "Lock Syncshell"))
                 {
                     perm.SetDisableInvites(!isInvitesDisabled);
@@ -87,7 +87,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 ImGuiHelpers.ScaledDummy(2f);
 
                 UiSharedService.TextWrapped("One-time invites work as single-use passwords. Use those if you do not want to distribute your Syncshell password.");
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Envelope, "Single one-time invite"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Envelope, "Single one-time invite"))
                 {
                     ImGui.SetClipboardText(_apiController.GroupCreateTempInvite(new(GroupFullInfo.Group), 1).Result.FirstOrDefault() ?? string.Empty);
                 }
@@ -96,7 +96,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 ImGui.SameLine();
                 using (ImRaii.Disabled(_multiInvites <= 1 || _multiInvites > 100))
                 {
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Envelope, "Generate " + _multiInvites + " one-time invites"))
+                    if (_uiSharedService.IconTextButton(FontAwesomeIcon.Envelope, "Generate " + _multiInvites + " one-time invites"))
                     {
                         _oneTimeInvites.AddRange(_apiController.GroupCreateTempInvite(new(GroupFullInfo.Group), _multiInvites).Result);
                     }
@@ -106,7 +106,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 {
                     var invites = string.Join(Environment.NewLine, _oneTimeInvites);
                     ImGui.InputTextMultiline("Generated Multi Invites", ref invites, 5000, new(0, 0), ImGuiInputTextFlags.ReadOnly);
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Copy, "Copy Invites to clipboard"))
+                    if (_uiSharedService.IconTextButton(FontAwesomeIcon.Copy, "Copy Invites to clipboard"))
                     {
                         ImGui.SetClipboardText(invites);
                     }
@@ -170,24 +170,24 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                                 {
                                     if (pair.Value.Value.IsModerator())
                                     {
-                                        UiSharedService.NormalizedIcon(FontAwesomeIcon.UserShield);
+                                        _uiSharedService.IconText(FontAwesomeIcon.UserShield);
                                         UiSharedService.AttachToolTip("Moderator");
                                     }
                                     if (pair.Value.Value.IsPinned())
                                     {
-                                        UiSharedService.NormalizedIcon(FontAwesomeIcon.Thumbtack);
+                                        _uiSharedService.IconText(FontAwesomeIcon.Thumbtack);
                                         UiSharedService.AttachToolTip("Pinned");
                                     }
                                 }
                                 else
                                 {
-                                    UiSharedService.FontText(FontAwesomeIcon.None.ToIconString(), UiBuilder.IconFont);
+                                    _uiSharedService.IconText(FontAwesomeIcon.None);
                                 }
 
                                 ImGui.TableNextColumn(); // actions
                                 if (_isOwner)
                                 {
-                                    if (UiSharedService.NormalizedIconButton(FontAwesomeIcon.UserShield))
+                                    if (_uiSharedService.IconButton(FontAwesomeIcon.UserShield))
                                     {
                                         GroupUserInfo userInfo = pair.Value ?? GroupUserInfo.None;
 
@@ -201,7 +201,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
                                 if (_isOwner || (pair.Value == null || (pair.Value != null && !pair.Value.Value.IsModerator())))
                                 {
-                                    if (UiSharedService.NormalizedIconButton(FontAwesomeIcon.Thumbtack))
+                                    if (_uiSharedService.IconButton(FontAwesomeIcon.Thumbtack))
                                     {
                                         GroupUserInfo userInfo = pair.Value ?? GroupUserInfo.None;
 
@@ -214,7 +214,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
                                     using (ImRaii.Disabled(!UiSharedService.CtrlPressed()))
                                     {
-                                        if (UiSharedService.NormalizedIconButton(FontAwesomeIcon.Trash))
+                                        if (_uiSharedService.IconButton(FontAwesomeIcon.Trash))
                                         {
                                             _ = _apiController.GroupRemoveUser(new GroupPairDto(GroupFullInfo.Group, pair.Key.UserData));
                                         }
@@ -225,7 +225,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                                     ImGui.SameLine();
                                     using (ImRaii.Disabled(!UiSharedService.CtrlPressed()))
                                     {
-                                        if (UiSharedService.NormalizedIconButton(FontAwesomeIcon.Ban))
+                                        if (_uiSharedService.IconButton(FontAwesomeIcon.Ban))
                                         {
                                             Mediator.Publish(new OpenBanUserPopupMessage(pair.Key, GroupFullInfo));
                                         }
@@ -243,7 +243,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 {
                     using (ImRaii.Disabled(!UiSharedService.CtrlPressed()))
                     {
-                        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Broom, "Clear Syncshell"))
+                        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Broom, "Clear Syncshell"))
                         {
                             _ = _apiController.GroupClear(new(GroupFullInfo.Group));
                         }
@@ -255,7 +255,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                     ImGui.Separator();
                     ImGuiHelpers.ScaledDummy(2f);
 
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Unlink, "Check for Inactive Users"))
+                    if (_uiSharedService.IconTextButton(FontAwesomeIcon.Unlink, "Check for Inactive Users"))
                     {
                         _pruneTestTask = _apiController.GroupPrune(new(GroupFullInfo.Group), _pruneDays, execute: false);
                         _pruneTask = null;
@@ -291,7 +291,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                             {
                                 using (ImRaii.Disabled(!UiSharedService.CtrlPressed()))
                                 {
-                                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Broom, "Prune Inactive Users"))
+                                    if (_uiSharedService.IconTextButton(FontAwesomeIcon.Broom, "Prune Inactive Users"))
                                     {
                                         _pruneTask = _apiController.GroupPrune(new(GroupFullInfo.Group), _pruneDays, execute: true);
                                         _pruneTestTask = null;
@@ -319,7 +319,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 var banNode = ImRaii.TreeNode("User Bans");
                 if (banNode)
                 {
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Retweet, "Refresh Banlist from Server"))
+                    if (_uiSharedService.IconTextButton(FontAwesomeIcon.Retweet, "Refresh Banlist from Server"))
                     {
                         _bannedUsers = _apiController.GroupGetBannedUsers(new GroupDto(GroupFullInfo.Group)).Result;
                     }
@@ -349,7 +349,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                             UiSharedService.TextWrapped(bannedUser.Reason);
                             ImGui.TableNextColumn();
                             using var pushId = ImRaii.PushId(bannedUser.UID);
-                            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Check, "Unban"))
+                            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Check, "Unban"))
                             {
                                 _ = _apiController.GroupUnbanUser(bannedUser);
                                 _bannedUsers.RemoveAll(b => string.Equals(b.UID, bannedUser.UID, StringComparison.Ordinal));
@@ -372,9 +372,9 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
                 ImGui.AlignTextToFramePadding();
                 ImGui.Text("Sound Sync");
-                UiSharedService.BooleanToColoredIcon(!isDisableSounds);
+                _uiSharedService.BooleanToColoredIcon(!isDisableSounds);
                 ImGui.SameLine(230);
-                if (UiSharedService.NormalizedIconTextButton(isDisableSounds ? FontAwesomeIcon.VolumeUp : FontAwesomeIcon.VolumeMute,
+                if (_uiSharedService.IconTextButton(isDisableSounds ? FontAwesomeIcon.VolumeUp : FontAwesomeIcon.VolumeMute,
                     isDisableSounds ? "Enable sound sync" : "Disable sound sync"))
                 {
                     perm.SetDisableSounds(!perm.IsDisableSounds());
@@ -383,9 +383,9 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
                 ImGui.AlignTextToFramePadding();
                 ImGui.Text("Animation Sync");
-                UiSharedService.BooleanToColoredIcon(!isDisableAnimations);
+                _uiSharedService.BooleanToColoredIcon(!isDisableAnimations);
                 ImGui.SameLine(230);
-                if (UiSharedService.NormalizedIconTextButton(isDisableAnimations ? FontAwesomeIcon.Running : FontAwesomeIcon.Stop,
+                if (_uiSharedService.IconTextButton(isDisableAnimations ? FontAwesomeIcon.Running : FontAwesomeIcon.Stop,
                     isDisableAnimations ? "Enable animation sync" : "Disable animation sync"))
                 {
                     perm.SetDisableAnimations(!perm.IsDisableAnimations());
@@ -394,9 +394,9 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
                 ImGui.AlignTextToFramePadding();
                 ImGui.Text("VFX Sync");
-                UiSharedService.BooleanToColoredIcon(!isDisableVfx);
+                _uiSharedService.BooleanToColoredIcon(!isDisableVfx);
                 ImGui.SameLine(230);
-                if (UiSharedService.NormalizedIconTextButton(isDisableVfx ? FontAwesomeIcon.Sun : FontAwesomeIcon.Circle,
+                if (_uiSharedService.IconTextButton(isDisableVfx ? FontAwesomeIcon.Sun : FontAwesomeIcon.Circle,
                     isDisableVfx ? "Enable VFX sync" : "Disable VFX sync"))
                 {
                     perm.SetDisableVFX(!perm.IsDisableVFX());
@@ -413,7 +413,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                     ImGui.AlignTextToFramePadding();
                     ImGui.TextUnformatted("New Password");
                     var availableWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X;
-                    var buttonSize = UiSharedService.GetNormalizedIconTextButtonSize(FontAwesomeIcon.Passport, "Change Password").X;
+                    var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.Passport, "Change Password");
                     var textSize = ImGui.CalcTextSize("New Password").X;
                     var spacing = ImGui.GetStyle().ItemSpacing.X;
 
@@ -423,7 +423,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                     ImGui.SameLine();
                     using (ImRaii.Disabled(_newPassword.Length < 10))
                     {
-                        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Passport, "Change Password"))
+                        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Passport, "Change Password"))
                         {
                             _pwChangeSuccess = _apiController.GroupChangePassword(new GroupPasswordDto(GroupFullInfo.Group, _newPassword)).Result;
                             _newPassword = string.Empty;
@@ -436,7 +436,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                         UiSharedService.ColorTextWrapped("Failed to change the password. Password requires to be at least 10 characters long.", ImGuiColors.DalamudYellow);
                     }
 
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Delete Syncshell") && UiSharedService.CtrlPressed() && UiSharedService.ShiftPressed())
+                    if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Delete Syncshell") && UiSharedService.CtrlPressed() && UiSharedService.ShiftPressed())
                     {
                         IsOpen = false;
                         _ = _apiController.GroupDelete(new(GroupFullInfo.Group));

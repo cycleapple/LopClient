@@ -173,7 +173,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private void DrawCurrentTransfers()
     {
         _lastTab = "Transfers";
-        UiSharedService.FontText("Transfer Settings", _uiShared.UidFont);
+        _uiShared.BigText("Transfer Settings");
 
         int maxParallelDownloads = _configService.Current.ParallelDownloads;
         bool useAlternativeUpload = _configService.Current.UseAlternativeFileUpload;
@@ -220,10 +220,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.UseAlternativeFileUpload = useAlternativeUpload;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will attempt to upload files in one go instead of a stream. Typically not necessary to enable. Use if you have upload issues.");
+        _uiShared.DrawHelpText("This will attempt to upload files in one go instead of a stream. Typically not necessary to enable. Use if you have upload issues.");
 
         ImGui.Separator();
-        UiSharedService.FontText("Transfer UI", _uiShared.UidFont);
+        _uiShared.BigText("Transfer UI");
 
         bool showTransferWindow = _configService.Current.ShowTransferWindow;
         if (ImGui.Checkbox("Show separate transfer window", ref showTransferWindow))
@@ -231,7 +231,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ShowTransferWindow = showTransferWindow;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText($"The download window will show the current progress of outstanding downloads.{Environment.NewLine}{Environment.NewLine}" +
+        _uiShared.DrawHelpText($"The download window will show the current progress of outstanding downloads.{Environment.NewLine}{Environment.NewLine}" +
             $"What do W/Q/P/D stand for?{Environment.NewLine}W = Waiting for Slot (see Maximum Parallel Downloads){Environment.NewLine}" +
             $"Q = Queued on Server, waiting for queue ready signal{Environment.NewLine}" +
             $"P = Processing download (aka downloading){Environment.NewLine}" +
@@ -252,7 +252,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ShowTransferBars = showTransferBars;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will render a progress bar during the download at the feet of the player you are downloading from.");
+        _uiShared.DrawHelpText("This will render a progress bar during the download at the feet of the player you are downloading from.");
 
         if (!showTransferBars) ImGui.BeginDisabled();
         ImGui.Indent();
@@ -262,7 +262,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.TransferBarsShowText = transferBarShowText;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Shows download text (amount of MiB downloaded) in the transfer bars");
+        _uiShared.DrawHelpText("Shows download text (amount of MiB downloaded) in the transfer bars");
         int transferBarWidth = _configService.Current.TransferBarsWidth;
         ImGui.SetNextItemWidth(250 * ImGuiHelpers.GlobalScale);
         if (ImGui.SliderInt("Transfer Bar Width", ref transferBarWidth, 0, 500))
@@ -272,7 +272,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.TransferBarsWidth = transferBarWidth;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Width of the displayed transfer bars (will never be less wide than the displayed text)");
+        _uiShared.DrawHelpText("Width of the displayed transfer bars (will never be less wide than the displayed text)");
         int transferBarHeight = _configService.Current.TransferBarsHeight;
         ImGui.SetNextItemWidth(250 * ImGuiHelpers.GlobalScale);
         if (ImGui.SliderInt("Transfer Bar Height", ref transferBarHeight, 0, 50))
@@ -282,14 +282,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.TransferBarsHeight = transferBarHeight;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Height of the displayed transfer bars (will never be less tall than the displayed text)");
+        _uiShared.DrawHelpText("Height of the displayed transfer bars (will never be less tall than the displayed text)");
         bool showUploading = _configService.Current.ShowUploading;
         if (ImGui.Checkbox("Show 'Uploading' text below players that are currently uploading", ref showUploading))
         {
             _configService.Current.ShowUploading = showUploading;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will render an 'Uploading' text at the feet of the player that is in progress of uploading data.");
+        _uiShared.DrawHelpText("This will render an 'Uploading' text at the feet of the player that is in progress of uploading data.");
 
         ImGui.Unindent();
         if (!showUploading) ImGui.BeginDisabled();
@@ -300,7 +300,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ShowUploadingBigText = showUploadingBigText;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will render an 'Uploading' text in a larger font.");
+        _uiShared.DrawHelpText("This will render an 'Uploading' text in a larger font.");
 
         ImGui.Unindent();
 
@@ -308,7 +308,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         if (!showTransferBars) ImGui.EndDisabled();
 
         ImGui.Separator();
-        UiSharedService.FontText("Current Transfers", _uiShared.UidFont);
+        _uiShared.BigText("Current Transfers");
 
         if (ImGui.BeginTabBar("TransfersTabBar"))
         {
@@ -400,7 +400,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     {
         _lastTab = "Chat";
 
-        UiSharedService.FontText("Chat Settings", _uiShared.UidFont);
+        _uiShared.BigText("Chat Settings");
 
         var disableSyncshellChat = _configService.Current.DisableSyncshellChat;
 
@@ -409,7 +409,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.DisableSyncshellChat = disableSyncshellChat;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Global setting to disable chat for all syncshells.");
+        _uiShared.DrawHelpText("Global setting to disable chat for all syncshells.");
 
         using var pushDisableGlobal = ImRaii.Disabled(disableSyncshellChat);
 
@@ -450,10 +450,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _chatService.PrintChannelExample($"Selected channel: {_syncshellChatTypes[i].Item2}");
             _configService.Save();
         }, globalChatTypeIdx);
-        UiSharedService.DrawHelpText("FFXIV chat channel to output chat messages on.");
+        _uiShared.DrawHelpText("FFXIV chat channel to output chat messages on.");
 
         ImGui.SetWindowFontScale(0.6f);
-        UiSharedService.FontText("\"Chat 2\" Plugin Integration", _uiShared.UidFont);
+        _uiShared.BigText("\"Chat 2\" Plugin Integration");
         ImGui.SetWindowFontScale(1.0f);
 
         // TODO: ExtraChat API impersonation
@@ -478,11 +478,11 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _configService.Current.ExtraChatAPI = false;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("If enabled, messages will be filtered under the category \"ExtraChat channels: All\".\n\nThis works even if ExtraChat is also installed and enabled.");
+        _uiShared.DrawHelpText("If enabled, messages will be filtered under the category \"ExtraChat channels: All\".\n\nThis works even if ExtraChat is also installed and enabled.");
 
         ImGui.Separator();
 
-        UiSharedService.FontText("Syncshell Settings", _uiShared.UidFont);
+        _uiShared.BigText("Syncshell Settings");
 
         if (!ApiController.ServerAlive)
         {
@@ -504,7 +504,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 shellName = $"[{shellNumber}] {shellName}";
 
             ImGui.SetWindowFontScale(0.6f);
-            UiSharedService.FontText(shellName, _uiShared.UidFont);
+            _uiShared.BigText(shellName);
             ImGui.SetWindowFontScale(1.0f);
 
             using var pushIndent = ImRaii.PushIndent();
@@ -607,7 +607,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 shellConfig.LogKind = (int)_syncshellChatTypes[i].Item1;
                 _serverConfigurationManager.SaveShellConfigForGid(gid, shellConfig);
             }, shellChatTypeIdx);
-            UiSharedService.DrawHelpText("Override the FFXIV chat channel used for this syncshell.");
+            _uiShared.DrawHelpText("Override the FFXIV chat channel used for this syncshell.");
         }
     }
 
@@ -615,7 +615,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     {
         _lastTab = "Debug";
 
-        UiSharedService.FontText("Debug", _uiShared.UidFont);
+        _uiShared.BigText("Debug");
 #if DEBUG
         if (LastCreatedCharacterData != null && ImGui.TreeNode("Last created character data"))
         {
@@ -627,7 +627,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.TreePop();
         }
 #endif
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Copy, "[DEBUG] Copy Last created Character Data to clipboard"))
+        if (_uiShared.IconTextButton(FontAwesomeIcon.Copy, "[DEBUG] Copy Last created Character Data to clipboard"))
         {
             if (LastCreatedCharacterData != null)
             {
@@ -652,16 +652,16 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.LogPerformance = logPerformance;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Enabling this can incur a (slight) performance impact. Enabling this for extended periods of time is not recommended.");
+        _uiShared.DrawHelpText("Enabling this can incur a (slight) performance impact. Enabling this for extended periods of time is not recommended.");
 
         using (ImRaii.Disabled(!logPerformance))
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats to /xllog"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats to /xllog"))
             {
                 _performanceCollector.PrintPerformanceStats();
             }
             ImGui.SameLine();
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats (last 60s) to /xllog"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.StickyNote, "Print Performance Stats (last 60s) to /xllog"))
             {
                 _performanceCollector.PrintPerformanceStats(60);
             }
@@ -679,7 +679,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     {
         _lastTab = "FileCache";
 
-        UiSharedService.FontText("Export MCDF", _uiShared.UidFont);
+        _uiShared.BigText("Export MCDF");
 
         UiSharedService.TextWrapped("This feature allows you to pack your character appearance into a MCDF file and manually send it to other people. MCDF files can imported during GPose.");
 
@@ -694,7 +694,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (!_mareCharaFileManager.CurrentlyWorking)
             {
                 ImGui.InputTextWithHint("Export Descriptor", "This description will be shown on loading the data", ref _exportDescription, 255);
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Save, "Export Character as MCDF"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Save, "Export Character as MCDF"))
                 {
                     string defaultFileName = string.IsNullOrEmpty(_exportDescription)
                         ? "export.mcdf"
@@ -735,11 +735,11 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.OpenGposeImportOnGposeStart = openInGpose;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will automatically open the import menu when loading into Gpose. If unchecked you can open the menu manually with /sync gpose");
+        _uiShared.DrawHelpText("This will automatically open the import menu when loading into Gpose. If unchecked you can open the menu manually with /sync gpose");
 
         ImGui.Separator();
 
-        UiSharedService.FontText("Storage", _uiShared.UidFont);
+        _uiShared.BigText("Storage");
 
         UiSharedService.TextWrapped("Loporrit stores downloaded files from paired people permanently. This is to improve loading performance and requiring less downloads. " +
             "The storage governs itself by clearing data beyond the set storage size. Please set the storage size accordingly. It is not necessary to manually clear the storage.");
@@ -751,7 +751,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             ImGui.SameLine();
             using var id = ImRaii.PushId("penumbraMonitor");
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ArrowsToCircle, "Try to reinitialize Monitor"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.ArrowsToCircle, "Try to reinitialize Monitor"))
             {
                 _cacheMonitor.StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
             }
@@ -763,14 +763,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             ImGui.SameLine();
             using var id = ImRaii.PushId("mareMonitor");
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ArrowsToCircle, "Try to reinitialize Monitor"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.ArrowsToCircle, "Try to reinitialize Monitor"))
             {
                 _cacheMonitor.StartMareWatcher(_configService.Current.CacheFolder);
             }
         }
         if (_cacheMonitor.MareWatcher == null || _cacheMonitor.PenumbraWatcher == null)
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Play, "Resume Monitoring"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Play, "Resume Monitoring"))
             {
                 _cacheMonitor.StartMareWatcher(_configService.Current.CacheFolder);
                 _cacheMonitor.StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
@@ -784,7 +784,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             using (ImRaii.Disabled(!UiSharedService.CtrlPressed()))
             {
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Stop, "Stop Monitoring"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Stop, "Stop Monitoring"))
                 {
                     _cacheMonitor.StopMonitoring();
                 }
@@ -815,12 +815,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.UseCompactor = useFileCompactor;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("The file compactor can massively reduce your saved files. It might incur a minor penalty on loading files on a slow CPU." + Environment.NewLine
+        _uiShared.DrawHelpText("The file compactor can massively reduce your saved files. It might incur a minor penalty on loading files on a slow CPU." + Environment.NewLine
             + "It is recommended to leave it enabled to save on space.");
 
         if (!_fileCompactor.MassCompactRunning)
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.FileArchive, "Compact all files in storage"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.FileArchive, "Compact all files in storage"))
             {
                 _ = Task.Run(() =>
                 {
@@ -831,12 +831,11 @@ public class SettingsUi : WindowMediatorSubscriberBase
             UiSharedService.AttachToolTip("This will run compression on all files in your current storage folder." + Environment.NewLine
                 + "You do not need to run this manually if you keep the file compactor enabled.");
             ImGui.SameLine();
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.File, "Decompact all files in storage"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.File, "Decompact all files in storage"))
             {
                 _ = Task.Run(() =>
                 {
                     _fileCompactor.CompactStorage(compress: false);
-                    CancellationTokenSource cts = new();
                     _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
                 });
             }
@@ -859,7 +858,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             "This operation, depending on how many files you have in your storage, can take a while and will be CPU and drive intensive.");
         using (ImRaii.Disabled(_validationTask != null && !_validationTask.IsCompleted))
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Check, "Start File Storage Validation"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Check, "Start File Storage Validation"))
             {
                 _validationCts?.Cancel();
                 _validationCts?.Dispose();
@@ -871,7 +870,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         if (_validationTask != null && !_validationTask.IsCompleted)
         {
             ImGui.SameLine();
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Times, "Cancel"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Times, "Cancel"))
             {
                 _validationCts?.Cancel();
             }
@@ -905,7 +904,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             + Environment.NewLine + "- This can make the situation of not getting other players data worse in situations of heavy file server load.");
         if (!_readClearCache)
             ImGui.BeginDisabled();
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Clear local storage") && UiSharedService.CtrlPressed() && _readClearCache)
+        if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Clear local storage") && UiSharedService.CtrlPressed() && _readClearCache)
         {
             _ = Task.Run(() =>
             {
@@ -935,12 +934,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
         //UiSharedService.FontText("Experimental", _uiShared.UidFont);
         //ImGui.Separator();
 
-        UiSharedService.FontText("Notes", _uiShared.UidFont);
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Export all your user notes to clipboard"))
+        _uiShared.BigText("Notes");
+        if (_uiShared.IconTextButton(FontAwesomeIcon.StickyNote, "Export all your user notes to clipboard"))
         {
             ImGui.SetClipboardText(UiSharedService.GetNotes(_pairManager.DirectPairs.UnionBy(_pairManager.GroupPairs.SelectMany(p => p.Value), p => p.UserData, UserDataComparer.Instance).ToList()));
         }
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.FileImport, "Import notes from clipboard"))
+        if (_uiShared.IconTextButton(FontAwesomeIcon.FileImport, "Import notes from clipboard"))
         {
             _notesSuccessfullyApplied = null;
             var notes = ImGui.GetClipboardText();
@@ -949,7 +948,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         ImGui.SameLine();
         ImGui.Checkbox("Overwrite existing notes", ref _overwriteExistingLabels);
-        UiSharedService.DrawHelpText("If this option is selected all already existing notes for UIDs will be overwritten by the imported notes.");
+        _uiShared.DrawHelpText("If this option is selected all already existing notes for UIDs will be overwritten by the imported notes.");
         if (_notesSuccessfullyApplied.HasValue && _notesSuccessfullyApplied.Value)
         {
             UiSharedService.ColorTextWrapped("User Notes successfully imported", ImGuiColors.HealerGreen);
@@ -966,10 +965,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.OpenPopupOnAdd = openPopupOnAddition;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will open a popup that allows you to set the notes for a user after successfully adding them to your individual pairs.");
+        _uiShared.DrawHelpText("This will open a popup that allows you to set the notes for a user after successfully adding them to your individual pairs.");
 
         ImGui.Separator();
-        UiSharedService.FontText("UI", _uiShared.UidFont);
+        _uiShared.BigText("UI");
         var showCharacterNames = _configService.Current.ShowCharacterNames;
         var showVisibleSeparate = _configService.Current.ShowVisibleUsersSeparately;
         var showOfflineSeparate = _configService.Current.ShowOfflineUsersSeparately;
@@ -991,14 +990,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.EnableRightClickMenus = enableRightClickMenu;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will add Loporrit related right click menu entries in the game UI on paired players.");
+        _uiShared.DrawHelpText("This will add Loporrit related right click menu entries in the game UI on paired players.");
 
         if (ImGui.Checkbox("Display status and visible pair count in Server Info Bar", ref enableDtrEntry))
         {
             _configService.Current.EnableDtrEntry = enableDtrEntry;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will add Loporrit connection status and visible pair count in the Server Info Bar.\nYou can further configure this through your Dalamud Settings.");
+        _uiShared.DrawHelpText("This will add Loporrit connection status and visible pair count in the Server Info Bar.\nYou can further configure this through your Dalamud Settings.");
 
         using (ImRaii.Disabled(!enableDtrEntry))
         {
@@ -1079,21 +1078,21 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ShowVisibleUsersSeparately = showVisibleSeparate;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will show all currently visible users in a special 'Visible' group in the main UI.");
+        _uiShared.DrawHelpText("This will show all currently visible users in a special 'Visible' group in the main UI.");
 
         if (ImGui.Checkbox("Show separate Offline group", ref showOfflineSeparate))
         {
             _configService.Current.ShowOfflineUsersSeparately = showOfflineSeparate;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will show all currently offline users in a special 'Offline' group in the main UI.");
+        _uiShared.DrawHelpText("This will show all currently offline users in a special 'Offline' group in the main UI.");
 
         if (ImGui.Checkbox("Show player names", ref showCharacterNames))
         {
             _configService.Current.ShowCharacterNames = showCharacterNames;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will show character names instead of UIDs when possible");
+        _uiShared.DrawHelpText("This will show character names instead of UIDs when possible");
 
         if (ImGui.Checkbox("Show Profiles on Hover", ref showProfiles))
         {
@@ -1101,7 +1100,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ProfilesShow = showProfiles;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("This will show the configured user profile after a set delay");
+        _uiShared.DrawHelpText("This will show the configured user profile after a set delay");
         ImGui.Indent();
         if (!showProfiles) ImGui.BeginDisabled();
         if (ImGui.Checkbox("Popout profiles on the right", ref profileOnRight))
@@ -1110,14 +1109,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Save();
             Mediator.Publish(new CompactUiChange(Vector2.Zero, Vector2.Zero));
         }
-        UiSharedService.DrawHelpText("Will show profiles on the right side of the main UI");
+        _uiShared.DrawHelpText("Will show profiles on the right side of the main UI");
         ImGui.SetNextItemWidth(250 * ImGuiHelpers.GlobalScale);
         if (ImGui.SliderFloat("Hover Delay", ref profileDelay, 1, 10))
         {
             _configService.Current.ProfileDelay = profileDelay;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Delay until the profile should be displayed");
+        _uiShared.DrawHelpText("Delay until the profile should be displayed");
         if (!showProfiles) ImGui.EndDisabled();
         ImGui.Unindent();
         if (ImGui.Checkbox("Show profiles marked as NSFW", ref showNsfwProfiles))
@@ -1126,7 +1125,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ProfilesAllowNsfw = showNsfwProfiles;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Will show profiles that have the NSFW tag enabled");
+        _uiShared.DrawHelpText("Will show profiles that have the NSFW tag enabled");
 
         ImGui.Separator();
 
@@ -1134,7 +1133,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         var onlineNotifs = _configService.Current.ShowOnlineNotifications;
         var onlineNotifsPairsOnly = _configService.Current.ShowOnlineNotificationsOnlyForIndividualPairs;
         var onlineNotifsNamedOnly = _configService.Current.ShowOnlineNotificationsOnlyForNamedPairs;
-        UiSharedService.FontText("Notifications", _uiShared.UidFont);
+        _uiShared.BigText("Notifications");
 
         ImGui.SetNextItemWidth(250 * ImGuiHelpers.GlobalScale);
         _uiShared.DrawCombo("Info Notification Display##settingsUi", (NotificationLocation[])Enum.GetValues(typeof(NotificationLocation)), (i) => i.ToString(),
@@ -1143,7 +1142,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.InfoNotification = i;
             _configService.Save();
         }, _configService.Current.InfoNotification);
-        UiSharedService.DrawHelpText("The location where \"Info\" notifications will display."
+        _uiShared.DrawHelpText("The location where \"Info\" notifications will display."
                       + Environment.NewLine + "'Nowhere' will not show any Info notifications"
                       + Environment.NewLine + "'Chat' will print Info notifications in chat"
                       + Environment.NewLine + "'Toast' will show Warning toast notifications in the bottom right corner"
@@ -1156,7 +1155,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.WarningNotification = i;
             _configService.Save();
         }, _configService.Current.WarningNotification);
-        UiSharedService.DrawHelpText("The location where \"Warning\" notifications will display."
+        _uiShared.DrawHelpText("The location where \"Warning\" notifications will display."
                               + Environment.NewLine + "'Nowhere' will not show any Warning notifications"
                               + Environment.NewLine + "'Chat' will print Warning notifications in chat"
                               + Environment.NewLine + "'Toast' will show Warning toast notifications in the bottom right corner"
@@ -1169,7 +1168,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ErrorNotification = i;
             _configService.Save();
         }, _configService.Current.ErrorNotification);
-        UiSharedService.DrawHelpText("The location where \"Error\" notifications will display."
+        _uiShared.DrawHelpText("The location where \"Error\" notifications will display."
                               + Environment.NewLine + "'Nowhere' will not show any Error notifications"
                               + Environment.NewLine + "'Chat' will print Error notifications in chat"
                               + Environment.NewLine + "'Toast' will show Error toast notifications in the bottom right corner"
@@ -1180,13 +1179,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.DisableOptionalPluginWarnings = disableOptionalPluginWarnings;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Enabling this will not show any \"Warning\" labeled messages for missing optional plugins.");
+        _uiShared.DrawHelpText("Enabling this will not show any \"Warning\" labeled messages for missing optional plugins.");
         if (ImGui.Checkbox("Enable online notifications", ref onlineNotifs))
         {
             _configService.Current.ShowOnlineNotifications = onlineNotifs;
             _configService.Save();
         }
-        UiSharedService.DrawHelpText("Enabling this will show a small notification (type: Info) in the bottom right corner when pairs go online.");
+        _uiShared.DrawHelpText("Enabling this will show a small notification (type: Info) in the bottom right corner when pairs go online.");
 
         using (ImRaii.Disabled(!onlineNotifs))
         {
@@ -1196,13 +1195,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 _configService.Current.ShowOnlineNotificationsOnlyForIndividualPairs = onlineNotifsPairsOnly;
                 _configService.Save();
             }
-            UiSharedService.DrawHelpText("Enabling this will only show online notifications (type: Info) for individual pairs.");
+            _uiShared.DrawHelpText("Enabling this will only show online notifications (type: Info) for individual pairs.");
             if (ImGui.Checkbox("Notify only for named pairs", ref onlineNotifsNamedOnly))
             {
                 _configService.Current.ShowOnlineNotificationsOnlyForNamedPairs = onlineNotifsNamedOnly;
                 _configService.Save();
             }
-            UiSharedService.DrawHelpText("Enabling this will only show online notifications (type: Info) for pairs where you have set an individual note.");
+            _uiShared.DrawHelpText("Enabling this will only show online notifications (type: Info) for pairs where you have set an individual note.");
         }
     }
 
@@ -1242,7 +1241,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _lastTab = "Service Settings";
         if (ApiController.ServerAlive)
         {
-            UiSharedService.FontText("Service Actions", _uiShared.UidFont);
+            _uiShared.BigText("Service Actions");
             ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
             if (ImGui.Button("Delete all my files"))
             {
@@ -1250,7 +1249,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 ImGui.OpenPopup("Delete all your files?");
             }
 
-            UiSharedService.DrawHelpText("Completely deletes all your uploaded files on the service.");
+            _uiShared.DrawHelpText("Completely deletes all your uploaded files on the service.");
 
             if (ImGui.BeginPopupModal("Delete all your files?", ref _deleteFilesPopupModalShown, UiSharedService.PopupWindowFlags))
             {
@@ -1286,7 +1285,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 ImGui.OpenPopup("Delete your account?");
             }
 
-            UiSharedService.DrawHelpText("Completely deletes your account and all uploaded files to the service.");
+            _uiShared.DrawHelpText("Completely deletes your account and all uploaded files to the service.");
 
             if (ImGui.BeginPopupModal("Delete your account?", ref _deleteAccountPopupModalShown, UiSharedService.PopupWindowFlags))
             {
@@ -1320,7 +1319,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.Separator();
         }
 
-        UiSharedService.FontText("Service & Character Settings", _uiShared.UidFont);
+        _uiShared.BigText("Service & Character Settings");
 
         var idx = _uiShared.DrawServiceSelection();
 
@@ -1395,7 +1394,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                                     }
                                 }, EqualityComparer<KeyValuePair<int, SecretKey>>.Default.Equals(keys.FirstOrDefault(f => f.Key == item.SecretKeyIdx), default) ? keys.First() : keys.First(f => f.Key == item.SecretKeyIdx));
 
-                            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Delete Character") && UiSharedService.CtrlPressed())
+                            if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Character") && UiSharedService.CtrlPressed())
                                 _serverConfigurationManager.RemoveCharacterFromServer(idx, item);
                             UiSharedService.AttachToolTip("Hold CTRL to delete this entry.");
 
@@ -1409,14 +1408,14 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (!selectedServer.Authentications.Exists(c => string.Equals(c.CharacterName, _uiShared.PlayerName, StringComparison.Ordinal)
                         && c.WorldId == _uiShared.WorldId))
                     {
-                        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.User, "Add current character"))
+                        if (_uiShared.IconTextButton(FontAwesomeIcon.User, "Add current character"))
                         {
                             _serverConfigurationManager.AddCurrentCharacterToServer(idx);
                         }
                         ImGui.SameLine();
                     }
 
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Plus, "Add new character"))
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add new character"))
                     {
                         _serverConfigurationManager.AddEmptyCharacterToServer(idx);
                     }
@@ -1451,7 +1450,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     if (keyInUse) ImGui.PopStyleColor();
                     if (!keyInUse)
                     {
-                        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Delete Secret Key") && UiSharedService.CtrlPressed())
+                        if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Secret Key") && UiSharedService.CtrlPressed())
                         {
                             selectedServer.SecretKeys.Remove(item.Key);
                             _serverConfigurationManager.Save();
@@ -1468,7 +1467,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 }
 
                 ImGui.Separator();
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Plus, "Add new Secret Key"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add new Secret Key"))
                 {
                     selectedServer.SecretKeys.Add(selectedServer.SecretKeys.Any() ? selectedServer.SecretKeys.Max(p => p.Key) + 1 : 0, new SecretKey()
                     {
@@ -1480,7 +1479,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 if (selectedServer.ServerUri == ApiController.LoporritServiceUri)
                 {
                     ImGui.SameLine();
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Plus, "Register a new Loporrit account"))
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Register a new Loporrit account"))
                     {
                         _registrationInProgress = true;
                         _ = Task.Run(async () => {
@@ -1554,7 +1553,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 }
                 if (isMain)
                 {
-                    UiSharedService.DrawHelpText("You cannot edit the URI of the main service.");
+                    _uiShared.DrawHelpText("You cannot edit the URI of the main service.");
                 }
 
                 if (ImGui.InputText("Service Name", ref serverName, 255, flags))
@@ -1564,16 +1563,16 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 }
                 if (isMain)
                 {
-                    UiSharedService.DrawHelpText("You cannot edit the name of the main service.");
+                    _uiShared.DrawHelpText("You cannot edit the name of the main service.");
                 }
 
                 if (!isMain && selectedServer != _serverConfigurationManager.CurrentServer)
                 {
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Service") && UiSharedService.CtrlPressed())
                     {
                         _serverConfigurationManager.DeleteServer(selectedServer);
                     }
-                    UiSharedService.DrawHelpText("Hold CTRL to delete this service");
+                    _uiShared.DrawHelpText("Hold CTRL to delete this service");
                 }
                 ImGui.EndTabItem();
             }

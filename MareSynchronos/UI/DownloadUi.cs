@@ -190,7 +190,7 @@ public class DownloadUi : WindowMediatorSubscriberBase
 
                     try
                     {
-                        if (_configService.Current.ShowUploadingBigText) _uiShared.UidFont.Push();
+                        using var _ = _uiShared.UidFont.Push();
                         var uploadText = "Uploading";
 
                         var textSize = ImGui.CalcTextSize(uploadText);
@@ -204,10 +204,6 @@ public class DownloadUi : WindowMediatorSubscriberBase
                     catch
                     {
                         // ignore errors thrown on UI
-                    }
-                    finally
-                    {
-                        if (_configService.Current.ShowUploadingBigText) _uiShared.UidFont.Pop();
                     }
                 }
             }

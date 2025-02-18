@@ -19,7 +19,10 @@ public class DrawUserPair : DrawPairBase
     protected readonly MareMediator _mediator;
     private readonly SelectGroupForPairUi _selectGroupForPairUi;
 
-    public DrawUserPair(string id, Pair entry, UidDisplayHandler displayHandler, ApiController apiController, MareMediator mareMediator, SelectGroupForPairUi selectGroupForPairUi) : base(id, entry, apiController, displayHandler)
+    public DrawUserPair(string id, Pair entry, UidDisplayHandler displayHandler, ApiController apiController,
+        MareMediator mareMediator, SelectGroupForPairUi selectGroupForPairUi,
+        UiSharedService uiSharedService)
+        : base(id, entry, apiController, displayHandler, uiSharedService)
     {
         if (_pair.UserPair == null) throw new ArgumentException("Pair must be UserPair", nameof(entry));
         _pair = entry;
@@ -95,8 +98,8 @@ public class DrawUserPair : DrawPairBase
     protected override float DrawRightSide(float textPosY, float originalY)
     {
         var pauseIcon = _pair.UserPair!.OwnPermissions.IsPaused() ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
-        var pauseIconSize = UiSharedService.GetIconButtonSize(pauseIcon);
-        var barButtonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars);
+        var pauseIconSize = _uiSharedService.GetIconButtonSize(pauseIcon);
+        var barButtonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars);
         var entryUID = _pair.UserData.AliasOrUID;
         var spacingX = ImGui.GetStyle().ItemSpacing.X;
         var windowEndX = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth();
@@ -112,13 +115,13 @@ public class DrawUserPair : DrawPairBase
             {
                 var infoIconPosDist = windowEndX - barButtonSize.X - spacingX - pauseIconSize.X - spacingX;
                 var icon = FontAwesomeIcon.ExclamationTriangle;
-                var iconwidth = UiSharedService.GetIconButtonSize(icon);
+                var iconwidth = _uiSharedService.GetIconButtonSize(icon);
 
                 rightSideStart = infoIconPosDist - iconwidth.X;
                 ImGui.SameLine(infoIconPosDist - iconwidth.X);
 
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
-                UiSharedService.FontText(icon.ToIconString(), UiBuilder.IconFont);
+                _uiSharedService.IconText(icon);
                 ImGui.PopStyleColor();
                 if (ImGui.IsItemHovered())
                 {
@@ -129,7 +132,7 @@ public class DrawUserPair : DrawPairBase
                     if (individualSoundsDisabled)
                     {
                         var userSoundsText = "Sound sync disabled with " + _pair.UserData.AliasOrUID;
-                        UiSharedService.FontText(FontAwesomeIcon.VolumeOff.ToIconString(), UiBuilder.IconFont);
+                        _uiSharedService.IconText(FontAwesomeIcon.VolumeOff);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(userSoundsText);
                         ImGui.NewLine();
@@ -140,7 +143,7 @@ public class DrawUserPair : DrawPairBase
                     if (individualAnimDisabled)
                     {
                         var userAnimText = "Animation sync disabled with " + _pair.UserData.AliasOrUID;
-                        UiSharedService.FontText(FontAwesomeIcon.Stop.ToIconString(), UiBuilder.IconFont);
+                        _uiSharedService.IconText(FontAwesomeIcon.Stop);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(userAnimText);
                         ImGui.NewLine();
@@ -151,7 +154,7 @@ public class DrawUserPair : DrawPairBase
                     if (individualVFXDisabled)
                     {
                         var userVFXText = "VFX sync disabled with " + _pair.UserData.AliasOrUID;
-                        UiSharedService.FontText(FontAwesomeIcon.Circle.ToIconString(), UiBuilder.IconFont);
+                        _uiSharedService.IconText(FontAwesomeIcon.Circle);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(userVFXText);
                         ImGui.NewLine();
@@ -205,7 +208,7 @@ public class DrawUserPair : DrawPairBase
     {
         if (entry.IsVisible)
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Eye, "Target player"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Eye, "Target player"))
             {
                 _mediator.Publish(new TargetPairMessage(entry));
                 ImGui.CloseCurrentPopup();
@@ -213,7 +216,7 @@ public class DrawUserPair : DrawPairBase
         }
         if (!entry.IsPaused)
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.User, "Open Profile"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.User, "Open Profile"))
             {
                 _displayHandler.OpenProfile(entry);
                 ImGui.CloseCurrentPopup();
@@ -222,7 +225,7 @@ public class DrawUserPair : DrawPairBase
         }
         if (entry.IsVisible)
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Sync, "Reload last data"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Sync, "Reload last data"))
             {
                 entry.ApplyLastReceivedData(forced: true);
                 ImGui.CloseCurrentPopup();
@@ -230,13 +233,13 @@ public class DrawUserPair : DrawPairBase
             UiSharedService.AttachToolTip("This reapplies the last received character data to this character");
         }
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.PlayCircle, "Cycle pause state"))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.PlayCircle, "Cycle pause state"))
         {
             _ = _apiController.CyclePause(entry.UserData);
             ImGui.CloseCurrentPopup();
         }
         var entryUID = entry.UserData.AliasOrUID;
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Folder, "Pair Groups"))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Folder, "Pair Groups"))
         {
             _selectGroupForPairUi.Open(entry);
         }
@@ -245,7 +248,7 @@ public class DrawUserPair : DrawPairBase
         var isDisableSounds = entry.UserPair!.OwnPermissions.IsDisableSounds();
         string disableSoundsText = isDisableSounds ? "Enable sound sync" : "Disable sound sync";
         var disableSoundsIcon = isDisableSounds ? FontAwesomeIcon.VolumeUp : FontAwesomeIcon.VolumeMute;
-        if (UiSharedService.NormalizedIconTextButton(disableSoundsIcon, disableSoundsText))
+        if (_uiSharedService.IconTextButton(disableSoundsIcon, disableSoundsText))
         {
             var permissions = entry.UserPair.OwnPermissions;
             permissions.SetDisableSounds(!isDisableSounds);
@@ -255,7 +258,7 @@ public class DrawUserPair : DrawPairBase
         var isDisableAnims = entry.UserPair!.OwnPermissions.IsDisableAnimations();
         string disableAnimsText = isDisableAnims ? "Enable animation sync" : "Disable animation sync";
         var disableAnimsIcon = isDisableAnims ? FontAwesomeIcon.Running : FontAwesomeIcon.Stop;
-        if (UiSharedService.NormalizedIconTextButton(disableAnimsIcon, disableAnimsText))
+        if (_uiSharedService.IconTextButton(disableAnimsIcon, disableAnimsText))
         {
             var permissions = entry.UserPair.OwnPermissions;
             permissions.SetDisableAnimations(!isDisableAnims);
@@ -265,14 +268,14 @@ public class DrawUserPair : DrawPairBase
         var isDisableVFX = entry.UserPair!.OwnPermissions.IsDisableVFX();
         string disableVFXText = isDisableVFX ? "Enable VFX sync" : "Disable VFX sync";
         var disableVFXIcon = isDisableVFX ? FontAwesomeIcon.Sun : FontAwesomeIcon.Circle;
-        if (UiSharedService.NormalizedIconTextButton(disableVFXIcon, disableVFXText))
+        if (_uiSharedService.IconTextButton(disableVFXIcon, disableVFXText))
         {
             var permissions = entry.UserPair.OwnPermissions;
             permissions.SetDisableVFX(!isDisableVFX);
             _ = _apiController.UserSetPairPermissions(new UserPermissionsDto(entry.UserData, permissions));
         }
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Unpair Permanently") && UiSharedService.CtrlPressed())
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Unpair Permanently") && UiSharedService.CtrlPressed())
         {
             _ = _apiController.UserRemovePair(new(entry.UserData));
         }

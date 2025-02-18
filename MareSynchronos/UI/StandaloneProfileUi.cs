@@ -1,7 +1,6 @@
 ﻿using Dalamud.Interface.Colors;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.PlayerData.Pairs;
@@ -107,8 +106,8 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             };
             if (ImGui.BeginChildFrame(1000, childFrame))
             {
-                using (_uiSharedService.GameFont.Push())
-                    ImGui.TextWrapped(mareProfile.Description);
+                using var _ = _uiSharedService.GameFont.Push();
+                ImGui.TextWrapped(mareProfile.Description);
             }
             ImGui.EndChildFrame();
 

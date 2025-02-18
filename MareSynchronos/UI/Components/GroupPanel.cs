@@ -77,7 +77,7 @@ internal sealed class GroupPanel
 
     private void DrawAddSyncshell()
     {
-        var buttonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Plus);
+        var buttonSize = _uiShared.GetIconButtonSize(FontAwesomeIcon.Plus);
         ImGui.SetNextItemWidth(UiSharedService.GetWindowContentRegionWidth() - ImGui.GetWindowContentRegionMin().X - buttonSize.X);
         ImGui.InputTextWithHint("##syncshellid", "Syncshell GID/Alias (leave empty to create)", ref _syncShellToJoin, 20);
         ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
@@ -202,7 +202,7 @@ internal sealed class GroupPanel
         }
 
         var icon = isExpanded ? FontAwesomeIcon.CaretSquareDown : FontAwesomeIcon.CaretSquareRight;
-        UiSharedService.FontText(icon.ToIconString(), UiBuilder.IconFont);
+        _uiShared.IconText(icon);
         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
             _expandedGroupState[groupDto.GID] = !_expandedGroupState[groupDto.GID];
@@ -273,7 +273,7 @@ internal sealed class GroupPanel
         }
         else
         {
-            var buttonSizes = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars).X + UiSharedService.GetIconButtonSize(FontAwesomeIcon.LockOpen).X;
+            var buttonSizes = _uiShared.GetIconButtonSize(FontAwesomeIcon.Bars).X + _uiShared.GetIconButtonSize(FontAwesomeIcon.LockOpen).X;
             ImGui.SetNextItemWidth(UiSharedService.GetWindowContentRegionWidth() - ImGui.GetCursorPosX() - buttonSizes - ImGui.GetStyle().ItemSpacing.X * 2);
             if (ImGui.InputTextWithHint("", "Comment/Notes", ref _editGroupComment, 255, ImGuiInputTextFlags.EnterReturnsTrue))
             {
@@ -302,7 +302,7 @@ internal sealed class GroupPanel
 
         if (ImGui.BeginPopupModal("Manage Banlist for " + groupDto.GID, ref _showModalBanList, UiSharedService.PopupWindowFlags))
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Retweet, "Refresh Banlist from Server"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Retweet, "Refresh Banlist from Server"))
             {
                 _bannedUsers = ApiController.GroupGetBannedUsers(groupDto).Result;
             }
@@ -331,7 +331,7 @@ internal sealed class GroupPanel
                     ImGui.TableNextColumn();
                     UiSharedService.TextWrapped(bannedUser.Reason);
                     ImGui.TableNextColumn();
-                    if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Check, "Unban#" + bannedUser.UID))
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Check, "Unban#" + bannedUser.UID))
                     {
                         _ = ApiController.GroupUnbanUser(bannedUser);
                         _bannedUsers.RemoveAll(b => string.Equals(b.UID, bannedUser.UID, StringComparison.Ordinal));
@@ -392,7 +392,7 @@ internal sealed class GroupPanel
             {
                 ImGui.SetNextItemWidth(-1);
                 ImGui.SliderInt("Amount##bulkinvites", ref _bulkInviteCount, 1, 100);
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.MailBulk, "Create invites"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.MailBulk, "Create invites"))
                 {
                     _bulkOneTimeInvites = ApiController.GroupCreateTempInvite(groupDto, _bulkInviteCount).Result;
                 }
@@ -400,7 +400,7 @@ internal sealed class GroupPanel
             else
             {
                 UiSharedService.TextWrapped("A total of " + _bulkOneTimeInvites.Count + " invites have been created.");
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Copy, "Copy invites to clipboard"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Copy, "Copy invites to clipboard"))
                 {
                     ImGui.SetClipboardText(string.Join(Environment.NewLine, _bulkOneTimeInvites));
                 }
@@ -431,7 +431,8 @@ internal sealed class GroupPanel
                     pair.GroupPair.Single(
                         g => GroupDataComparer.Instance.Equals(g.Key.Group, groupDto.Group)
                     ).Value,
-                    _uidDisplayHandler);
+                    _uidDisplayHandler,
+                    _uiShared);
 
                 if (pair.IsVisible)
                     visibleUsers.Add(drawPair);
@@ -491,19 +492,19 @@ internal sealed class GroupPanel
         var userVFXIcon = userVFXDisabled ? FontAwesomeIcon.Circle : FontAwesomeIcon.Sun;
 
         var iconSize = UiSharedService.GetIconSize(infoIcon);
-        var barbuttonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars);
+        var barbuttonSize = _uiShared.GetIconButtonSize(FontAwesomeIcon.Bars);
         var isOwner = string.Equals(groupDto.OwnerUID, ApiController.UID, StringComparison.Ordinal);
 
         var spacingX = ImGui.GetStyle().ItemSpacing.X;
         var windowEndX = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth();
         var pauseIcon = groupDto.GroupUserPermissions.IsPaused() ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
-        var pauseIconSize = UiSharedService.GetIconButtonSize(pauseIcon);
+        var pauseIconSize = _uiShared.GetIconButtonSize(pauseIcon);
 
         ImGui.SameLine(windowEndX - barbuttonSize.X - (showInfoIcon ? iconSize.X : 0) - (showInfoIcon ? spacingX : 0) - pauseIconSize.X - spacingX);
 
         if (showInfoIcon)
         {
-            UiSharedService.FontText(infoIcon.ToIconString(), UiBuilder.IconFont);
+            _uiShared.IconText(infoIcon);
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -514,7 +515,7 @@ internal sealed class GroupPanel
                     if (!invitesEnabled)
                     {
                         var lockedText = "Syncshell is closed for joining";
-                        UiSharedService.FontText(lockedIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(lockedIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(lockedText);
                     }
@@ -522,7 +523,7 @@ internal sealed class GroupPanel
                     if (soundsDisabled)
                     {
                         var soundsText = "Sound sync disabled through owner";
-                        UiSharedService.FontText(soundsIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(soundsIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(soundsText);
                     }
@@ -530,7 +531,7 @@ internal sealed class GroupPanel
                     if (animDisabled)
                     {
                         var animText = "Animation sync disabled through owner";
-                        UiSharedService.FontText(animIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(animIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(animText);
                     }
@@ -538,7 +539,7 @@ internal sealed class GroupPanel
                     if (vfxDisabled)
                     {
                         var vfxText = "VFX sync disabled through owner";
-                        UiSharedService.FontText(vfxIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(vfxIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(vfxText);
                     }
@@ -554,7 +555,7 @@ internal sealed class GroupPanel
                     if (userSoundsDisabled)
                     {
                         var userSoundsText = "Sound sync disabled through you";
-                        UiSharedService.FontText(userSoundsIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(userSoundsIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(userSoundsText);
                     }
@@ -562,7 +563,7 @@ internal sealed class GroupPanel
                     if (userAnimDisabled)
                     {
                         var userAnimText = "Animation sync disabled through you";
-                        UiSharedService.FontText(userAnimIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(userAnimIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(userAnimText);
                     }
@@ -570,7 +571,7 @@ internal sealed class GroupPanel
                     if (userVFXDisabled)
                     {
                         var userVFXText = "VFX sync disabled through you";
-                        UiSharedService.FontText(userVFXIcon.ToIconString(), UiBuilder.IconFont);
+                        _uiShared.IconText(userVFXIcon);
                         ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                         ImGui.Text(userVFXText);
                     }
@@ -598,21 +599,21 @@ internal sealed class GroupPanel
 
         if (ImGui.BeginPopup("ShellPopup"))
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ArrowCircleLeft, "Leave Syncshell") && UiSharedService.CtrlPressed())
+            if (_uiShared.IconTextButton(FontAwesomeIcon.ArrowCircleLeft, "Leave Syncshell") && UiSharedService.CtrlPressed())
             {
                 _ = ApiController.GroupLeave(groupDto);
             }
             UiSharedService.AttachToolTip("Hold CTRL and click to leave this Syncshell" + (!string.Equals(groupDto.OwnerUID, ApiController.UID, StringComparison.Ordinal) ? string.Empty : Environment.NewLine
                 + "WARNING: This action is irreversible" + Environment.NewLine + "Leaving an owned Syncshell will transfer the ownership to a random person in the Syncshell."));
 
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Copy, "Copy ID"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Copy, "Copy ID"))
             {
                 ImGui.CloseCurrentPopup();
                 ImGui.SetClipboardText(groupDto.GroupAliasOrGID);
             }
             UiSharedService.AttachToolTip("Copy Syncshell ID to Clipboard");
 
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.StickyNote, "Copy Notes"))
+            if (_uiShared.IconTextButton(FontAwesomeIcon.StickyNote, "Copy Notes"))
             {
                 ImGui.CloseCurrentPopup();
                 ImGui.SetClipboardText(UiSharedService.GetNotes(groupPairs));
@@ -620,7 +621,7 @@ internal sealed class GroupPanel
             UiSharedService.AttachToolTip("Copies all your notes for all users in this Syncshell to the clipboard." + Environment.NewLine + "They can be imported via Settings -> General -> Notes -> Import notes from clipboard");
 
             var soundsText = userSoundsDisabled ? "Enable sound sync" : "Disable sound sync";
-            if (UiSharedService.NormalizedIconTextButton(userSoundsIcon, soundsText))
+            if (_uiShared.IconTextButton(userSoundsIcon, soundsText))
             {
                 ImGui.CloseCurrentPopup();
                 var perm = groupDto.GroupUserPermissions;
@@ -633,7 +634,7 @@ internal sealed class GroupPanel
                 + Environment.NewLine + "Note: this setting does not apply to individual pairs that are also in the syncshell.");
 
             var animText = userAnimDisabled ? "Enable animations sync" : "Disable animations sync";
-            if (UiSharedService.NormalizedIconTextButton(userAnimIcon, animText))
+            if (_uiShared.IconTextButton(userAnimIcon, animText))
             {
                 ImGui.CloseCurrentPopup();
                 var perm = groupDto.GroupUserPermissions;
@@ -647,7 +648,7 @@ internal sealed class GroupPanel
                 + Environment.NewLine + "Note: this setting does not apply to individual pairs that are also in the syncshell.");
 
             var vfxText = userVFXDisabled ? "Enable VFX sync" : "Disable VFX sync";
-            if (UiSharedService.NormalizedIconTextButton(userVFXIcon, vfxText))
+            if (_uiShared.IconTextButton(userVFXIcon, vfxText))
             {
                 ImGui.CloseCurrentPopup();
                 var perm = groupDto.GroupUserPermissions;
@@ -663,7 +664,7 @@ internal sealed class GroupPanel
             if (isOwner || groupDto.GroupUserInfo.IsModerator())
             {
                 ImGui.Separator();
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Cog, "Open Admin Panel"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Cog, "Open Admin Panel"))
                 {
                     ImGui.CloseCurrentPopup();
                     _mainUi.Mediator.Publish(new OpenSyncshellAdminPanel(groupDto));

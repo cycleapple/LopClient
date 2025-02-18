@@ -79,11 +79,11 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
                 .Where(x => x.RowId != 0 && !(x.RowId >= 500 && (x.UIForeground & 0xFFFFFF00) == 0))
                 .ToDictionary(x => (int)x.RowId);
         });
-        mediator.Subscribe<TargetPairMessage>(this, async (msg) =>
+        mediator.Subscribe<TargetPairMessage>(this, (msg) =>
         {
             if (clientState.IsPvP) return;
             var ident = msg.Pair.GetPlayerNameHash();
-            await RunOnFrameworkThread(() =>
+            _ = RunOnFrameworkThread(() =>
             {
                 var addr = GetPlayerCharacterFromCachedTableByIdent(ident);
                 var pc = _clientState.LocalPlayer!;

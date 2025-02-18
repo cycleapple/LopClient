@@ -13,10 +13,11 @@ public class PopupHandler : WindowMediatorSubscriberBase
 {
     protected bool _openPopup = false;
     private readonly HashSet<IPopupHandler> _handlers;
+    private readonly UiSharedService _uiSharedService;
     private IPopupHandler? _currentHandler = null;
 
     public PopupHandler(ILogger<PopupHandler> logger, MareMediator mediator, IEnumerable<IPopupHandler> popupHandlers,
-        PerformanceCollectorService performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService, UiSharedService uiSharedService)
         : base(logger, mediator, "MarePopupHandler", performanceCollectorService)
     {
         Flags = ImGuiWindowFlags.NoBringToFrontOnFocus
@@ -48,6 +49,7 @@ public class PopupHandler : WindowMediatorSubscriberBase
             ((BanUserPopupHandler)_currentHandler).Open(msg);
             IsOpen = true;
         });
+        _uiSharedService = uiSharedService;
     }
 
     protected override void DrawInternal()
@@ -69,7 +71,7 @@ public class PopupHandler : WindowMediatorSubscriberBase
         if (_currentHandler.ShowClose)
         {
             ImGui.Separator();
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Times, "Close"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Times, "Close"))
             {
                 ImGui.CloseCurrentPopup();
             }

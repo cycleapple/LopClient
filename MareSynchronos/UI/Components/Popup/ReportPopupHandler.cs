@@ -41,7 +41,7 @@ internal class ReportPopupHandler : IPopupHandler
 
         using (ImRaii.Disabled(string.IsNullOrEmpty(_reportReason)))
         {
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ExclamationTriangle, "Send Report"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.ExclamationTriangle, "Send Report"))
             {
                 ImGui.CloseCurrentPopup();
                 var reason = _reportReason;

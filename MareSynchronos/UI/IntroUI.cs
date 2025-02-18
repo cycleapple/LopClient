@@ -108,10 +108,12 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         }
         else if (!_configService.Current.AcceptedAgreement && _readFirstPage)
         {
-            _uiShared.UidFont.Push();
-            var textSize = ImGui.CalcTextSize(Strings.ToS.LanguageLabel);
-            ImGui.TextUnformatted(Strings.ToS.AgreementLabel);
-            _uiShared.UidFont.Pop();
+            Vector2 textSize;
+            using (_uiShared.UidFont.Push())
+            {
+                textSize = ImGui.CalcTextSize(Strings.ToS.LanguageLabel);
+                ImGui.TextUnformatted(Strings.ToS.AgreementLabel);
+            }
 
             ImGui.SameLine();
             var languageSize = ImGui.CalcTextSize(Strings.ToS.LanguageLabel);
@@ -162,9 +164,9 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                      || !_configService.Current.InitialScanComplete
                      || !Directory.Exists(_configService.Current.CacheFolder)))
         {
-            _uiShared.UidFont.Push();
-            ImGui.TextUnformatted("File Storage Setup");
-            _uiShared.UidFont.Pop();
+            using (_uiShared.UidFont.Push())
+                ImGui.TextUnformatted("File Storage Setup");
+
             ImGui.Separator();
 
             if (!_uiShared.HasValidPenumbraModPath)
@@ -208,9 +210,8 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         }
         else if (!_uiShared.ApiController.ServerAlive)
         {
-            _uiShared.UidFont.Push();
-            ImGui.TextUnformatted("Service Registration");
-            _uiShared.UidFont.Pop();
+            using (_uiShared.UidFont.Push())
+                ImGui.TextUnformatted("Service Registration");
             ImGui.Separator();
             UiSharedService.TextWrapped("To be able to use Loporrit you will have to register an account.");
             UiSharedService.TextWrapped("Refer to the instructions at the location you obtained this plugin for more information or support.");
@@ -266,7 +267,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                 ImGui.BeginDisabled(_registrationInProgress || _registrationSuccess || _secretKey.Length > 0);
                 ImGui.Separator();
                 ImGui.TextUnformatted("If you do not have a secret key already click below to register a new account.");
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Plus, "Register a new Loporrit account"))
+                if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Register a new Loporrit account"))
                 {
                     _registrationInProgress = true;
                     _ = Task.Run(async () => {

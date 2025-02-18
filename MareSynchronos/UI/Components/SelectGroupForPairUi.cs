@@ -13,6 +13,7 @@ public class SelectGroupForPairUi
 {
     private readonly TagHandler _tagHandler;
     private readonly UidDisplayHandler _uidDisplayHandler;
+    private readonly UiSharedService _uiSharedService;
 
     /// <summary>
     /// The group UI is always open for a specific pair. This defines which pair the UI is open for.
@@ -30,12 +31,13 @@ public class SelectGroupForPairUi
     /// </summary>
     private string _tagNameToAdd = "";
 
-    public SelectGroupForPairUi(TagHandler tagHandler, UidDisplayHandler uidDisplayHandler)
+    public SelectGroupForPairUi(TagHandler tagHandler, UidDisplayHandler uidDisplayHandler, UiSharedService uiSharedService)
     {
         _show = false;
         _pair = null;
         _tagHandler = tagHandler;
         _uidDisplayHandler = uidDisplayHandler;
+        _uiSharedService = uiSharedService;
     }
 
     public void Draw()
@@ -60,7 +62,7 @@ public class SelectGroupForPairUi
             var childHeight = tags.Count != 0 ? tags.Count * 25 : 1;
             var childSize = new Vector2(0, childHeight > 100 ? 100 : childHeight) * ImGuiHelpers.GlobalScale;
 
-            UiSharedService.FontText($"Select the groups you want {name} to be in.", UiBuilder.DefaultFont);
+            ImGui.TextUnformatted($"Select the groups you want {name} to be in.");
             if (ImGui.BeginChild(name + "##listGroups", childSize))
             {
                 foreach (var tag in tags)
@@ -71,8 +73,8 @@ public class SelectGroupForPairUi
             }
 
             ImGui.Separator();
-            UiSharedService.FontText($"Create a new group for {name}.", UiBuilder.DefaultFont);
-            if (UiSharedService.NormalizedIconButton(FontAwesomeIcon.Plus))
+            ImGui.TextUnformatted($"Create a new group for {name}.");
+            if (_uiSharedService.IconButton(FontAwesomeIcon.Plus))
             {
                 HandleAddTag();
             }

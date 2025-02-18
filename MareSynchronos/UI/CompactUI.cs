@@ -45,7 +45,7 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly ServerConfigurationManager _serverManager;
     private readonly Stopwatch _timeout = new();
     private readonly UidDisplayHandler _uidDisplayHandler;
-    private readonly UiSharedService _uiShared;
+    private readonly UiSharedService _uiSharedService;
     private bool _buttonState;
     private string _characterOrCommentFilter = string.Empty;
     private Pair? _lastAddedUser;
@@ -63,7 +63,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         PerformanceCollectorService performanceCollectorService)
         : base(logger, mediator, "###LoporritSyncMainUI", performanceCollectorService)
     {
-        _uiShared = uiShared;
+        _uiSharedService = uiShared;
         _configService = configService;
         _apiController = apiController;
         _pairManager = pairManager;
@@ -74,9 +74,9 @@ public class CompactUi : WindowMediatorSubscriberBase
         var tagHandler = new TagHandler(_serverManager);
 
         _groupPanel = new(this, uiShared, _pairManager, _chatService, uidDisplayHandler, _configService, _serverManager);
-        _selectGroupForPairUi = new(tagHandler, uidDisplayHandler);
+        _selectGroupForPairUi = new(tagHandler, uidDisplayHandler, _uiSharedService);
         _selectPairsForGroupUi = new(tagHandler, uidDisplayHandler);
-        _pairGroupsUi = new(configService, tagHandler, uidDisplayHandler, apiController, _selectPairsForGroupUi);
+        _pairGroupsUi = new(configService, tagHandler, uidDisplayHandler, apiController, _selectPairsForGroupUi, _uiSharedService);
 
 #if DEBUG
         string dev = "Dev Build";
@@ -121,12 +121,14 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (!_apiController.IsCurrentVersion)
         {
             var ver = _apiController.CurrentClientVersion;
-            _uiShared.UidFont.Push();
             var unsupported = "UNSUPPORTED VERSION";
-            var uidTextSize = ImGui.CalcTextSize(unsupported);
-            ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X + ImGui.GetWindowContentRegionMin().X) / 2 - uidTextSize.X / 2);
+            using (_uiSharedService.UidFont.Push())
+            {
+                var uidTextSize = ImGui.CalcTextSize(unsupported);
+                ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X + ImGui.GetWindowContentRegionMin().X) / 2 - uidTextSize.X / 2);
+                ImGui.AlignTextToFramePadding();
                 ImGui.TextColored(ImGuiColors.DalamudRed, unsupported);
-            _uiShared.UidFont.Pop();
+            }
             UiSharedService.ColorTextWrapped($"Your Loporrit installation is out of date, the current version is {ver.Major}.{ver.Minor}.{ver.Build}. " +
                 $"It is highly recommended to keep Loporrit up to date. Open /xlplugins and update the plugin.", ImGuiColors.DalamudRed);
         }
@@ -209,7 +211,7 @@ public class CompactUi : WindowMediatorSubscriberBase
             {
                 UiSharedService.TextWrapped($"You have successfully added {_lastAddedUser.UserData.AliasOrUID}. Set a local note for the user in the field below:");
                 ImGui.InputTextWithHint("##noteforuser", $"Note for {_lastAddedUser.UserData.AliasOrUID}", ref _lastAddedUserComment, 100);
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Save, "Save Note"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Save, "Save Note"))
                 {
                     _serverManager.SetNoteForUid(_lastAddedUser.UserData.UID, _lastAddedUserComment);
                     _lastAddedUser = null;
@@ -244,12 +246,12 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (keys.Any())
         {
             if (_secretKeyIdx == -1) _secretKeyIdx = keys.First().Key;
-            if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Plus, "Add current character with secret key"))
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.Plus, "Add current character with secret key"))
             {
                 _serverManager.CurrentServer!.Authentications.Add(new MareConfiguration.Models.Authentication()
                 {
-                    CharacterName = _uiShared.PlayerName,
-                    WorldId = _uiShared.WorldId,
+                    CharacterName = _uiSharedService.PlayerName,
+                    WorldId = _uiSharedService.WorldId,
                     SecretKeyIdx = _secretKeyIdx
                 });
 
@@ -258,7 +260,7 @@ public class CompactUi : WindowMediatorSubscriberBase
                 _ = _apiController.CreateConnections();
             }
 
-            _uiShared.DrawCombo("Secret Key##addCharacterSecretKey", keys, (f) => f.Value.FriendlyName, (f) => _secretKeyIdx = f.Key);
+            _uiSharedService.DrawCombo("Secret Key##addCharacterSecretKey", keys, (f) => f.Value.FriendlyName, (f) => _secretKeyIdx = f.Key);
         }
         else
         {
@@ -268,7 +270,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private void DrawAddPair()
     {
-        var buttonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Plus);
+        var buttonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Plus);
         ImGui.SetNextItemWidth(UiSharedService.GetWindowContentRegionWidth() - ImGui.GetWindowContentRegionMin().X - buttonSize.X);
         ImGui.InputTextWithHint("##otheruid", "Other players UID/Alias", ref _pairToAdd, 20);
         ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
@@ -292,8 +294,8 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private void DrawFilter()
     {
-        var buttonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.ArrowUp);
-        var playButtonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Play);
+        var buttonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.ArrowUp);
+        var playButtonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Play);
 
         var users = GetFilteredUsers();
         var userCount = users.Count;
@@ -375,9 +377,9 @@ public class CompactUi : WindowMediatorSubscriberBase
             : (ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y) - TransferPartHeight - ImGui.GetCursorPosY();
         var users = GetFilteredUsers().OrderBy(u => u.GetNoteOrName());
 
-        var onlineUsers = users.Where(u => u.UserPair!.OtherPermissions.IsPaired() && (u.IsOnline || u.UserPair!.OwnPermissions.IsPaused())).Select(c => new DrawUserPair("Online" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi)).ToList();
-        var visibleUsers = users.Where(u => u.IsVisible).Select(c => new DrawUserPair("Visible" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi)).ToList();
-        var offlineUsers = users.Where(u => !u.UserPair!.OtherPermissions.IsPaired() || (!u.IsOnline && !u.UserPair!.OwnPermissions.IsPaused())).Select(c => new DrawUserPair("Offline" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi)).ToList();
+        var onlineUsers = users.Where(u => u.UserPair!.OtherPermissions.IsPaired() && (u.IsOnline || u.UserPair!.OwnPermissions.IsPaused())).Select(c => new DrawUserPair("Online" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi, _uiSharedService)).ToList();
+        var visibleUsers = users.Where(u => u.IsVisible).Select(c => new DrawUserPair("Visible" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi, _uiSharedService)).ToList();
+        var offlineUsers = users.Where(u => !u.UserPair!.OtherPermissions.IsPaired() || (!u.IsOnline && !u.UserPair!.OwnPermissions.IsPaused())).Select(c => new DrawUserPair("Offline" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi, _uiSharedService)).ToList();
 
         ImGui.BeginChild("list", new Vector2(WindowContentWidth, ySize), border: false);
 
@@ -388,7 +390,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private void DrawServerStatus()
     {
-        var buttonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Link);
+        var buttonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Link);
         var userCount = _apiController.OnlineUsers.ToString(CultureInfo.InvariantCulture);
         var userSize = ImGui.CalcTextSize(userCount);
         var textSize = ImGui.CalcTextSize("Users Online");
@@ -445,7 +447,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (_apiController.ServerState is not (ServerState.Reconnecting or ServerState.Disconnecting))
         {
             ImGui.PushStyleColor(ImGuiCol.Text, color);
-            if (ImGuiComponents.IconButton(connectedIcon))
+            if (_uiSharedService.IconButton(connectedIcon))
             {
                 _serverManager.CurrentServer.FullPause = !_serverManager.CurrentServer.FullPause;
                 _serverManager.Save();
@@ -462,9 +464,8 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         if (currentUploads.Any())
         {
-            ImGui.PushFont(UiBuilder.IconFont);
-            ImGui.TextUnformatted(FontAwesomeIcon.Upload.ToIconString());
-            ImGui.PopFont();
+            ImGui.AlignTextToFramePadding();
+            _uiSharedService.IconText(FontAwesomeIcon.Upload);
             ImGui.SameLine(35 * ImGuiHelpers.GlobalScale);
 
             var totalUploads = currentUploads.Count;
@@ -484,9 +485,8 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         if (currentDownloads.Any())
         {
-            ImGui.PushFont(UiBuilder.IconFont);
-            ImGui.TextUnformatted(FontAwesomeIcon.Download.ToIconString());
-            ImGui.PopFont();
+            ImGui.AlignTextToFramePadding();
+            _uiSharedService.IconText(FontAwesomeIcon.Download);
             ImGui.SameLine(35 * ImGuiHelpers.GlobalScale);
 
             var totalDownloads = currentDownloads.Sum(c => c.TotalFiles);
@@ -504,14 +504,14 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         var bottomButtonWidth = (WindowContentWidth - ImGui.GetStyle().ItemSpacing.X) / 2;
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Character Analysis", bottomButtonWidth))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Character Analysis", bottomButtonWidth))
         {
             Mediator.Publish(new UiToggleMessage(typeof(DataAnalysisUi)));
         }
 
         ImGui.SameLine();
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.NotesMedical, "Event Viewer", bottomButtonWidth))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.NotesMedical, "Event Viewer", bottomButtonWidth))
         {
             Mediator.Publish(new UiToggleMessage(typeof(EventViewerUI)));
         }
@@ -523,14 +523,16 @@ public class CompactUi : WindowMediatorSubscriberBase
     {
         var uidText = GetUidText();
         var buttonSizeX = 0f;
+        Vector2 uidTextSize;
 
-        _uiShared.UidFont.Push();
-        var uidTextSize = ImGui.CalcTextSize(uidText);
-        _uiShared.UidFont.Pop();
+        using (_uiSharedService.UidFont.Push())
+        {
+            uidTextSize = ImGui.CalcTextSize(uidText);
+        }
 
         var originalPos = ImGui.GetCursorPos();
         ImGui.SetWindowFontScale(1.5f);
-        var buttonSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Cog);
+        var buttonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Cog);
         buttonSizeX -= buttonSize.X - ImGui.GetStyle().ItemSpacing.X * 2;
         ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
         ImGui.SetCursorPosY(originalPos.Y + uidTextSize.Y / 2 - buttonSize.Y / 2);
@@ -545,7 +547,7 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         if (_apiController.ServerState is ServerState.Connected)
         {
-            buttonSizeX += UiSharedService.GetIconButtonSize(FontAwesomeIcon.Copy).X - ImGui.GetStyle().ItemSpacing.X * 2;
+            buttonSizeX += _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Copy).X - ImGui.GetStyle().ItemSpacing.X * 2;
             ImGui.SetCursorPosY(originalPos.Y + uidTextSize.Y / 2 - buttonSize.Y / 2);
             if (ImGuiComponents.IconButton(FontAwesomeIcon.Copy))
             {
@@ -558,9 +560,8 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         ImGui.SetCursorPosY(originalPos.Y + buttonSize.Y / 2 - uidTextSize.Y / 2 - ImGui.GetStyle().ItemSpacing.Y / 2);
         ImGui.SetCursorPosX((ImGui.GetWindowContentRegionMax().X + ImGui.GetWindowContentRegionMin().X) / 2 + buttonSizeX - uidTextSize.X / 2);
-        _uiShared.UidFont.Push();
-        ImGui.TextColored(GetUidColor(), uidText);
-        _uiShared.UidFont.Pop();
+        using (_uiSharedService.UidFont.Push())
+            ImGui.TextColored(GetUidColor(), uidText);
 
         if (_apiController.ServerState is not ServerState.Connected)
         {

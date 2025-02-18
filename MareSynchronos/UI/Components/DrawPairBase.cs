@@ -1,5 +1,4 @@
 ﻿using Dalamud.Interface;
-using Dalamud.Interface.Colors;
 using ImGuiNET;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.UI.Handlers;
@@ -11,15 +10,17 @@ public abstract class DrawPairBase
 {
     protected readonly ApiController _apiController;
     protected readonly UidDisplayHandler _displayHandler;
+    protected readonly UiSharedService _uiSharedService;
     protected Pair _pair;
     private readonly string _id;
 
-    protected DrawPairBase(string id, Pair entry, ApiController apiController, UidDisplayHandler uIDDisplayHandler)
+    protected DrawPairBase(string id, Pair entry, ApiController apiController, UidDisplayHandler uIDDisplayHandler, UiSharedService uiSharedService)
     {
         _id = id;
         _pair = entry;
         _apiController = apiController;
         _displayHandler = uIDDisplayHandler;
+        _uiSharedService = uiSharedService;
     }
 
     public string ImGuiID => _id;
@@ -28,7 +29,7 @@ public abstract class DrawPairBase
     public void DrawPairedClient()
     {
         var originalY = ImGui.GetCursorPosY();
-        var pauseIconSize = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Play);
+        var pauseIconSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Play);
         var textSize = ImGui.CalcTextSize(_pair.UserData.AliasOrUID);
 
         var startPos = ImGui.GetCursorStartPos();

@@ -17,14 +17,17 @@ public class PairGroupsUi
     private readonly SelectPairForGroupUi _selectGroupForPairUi;
     private readonly TagHandler _tagHandler;
     private readonly UidDisplayHandler _uidDisplayHandler;
+    private readonly UiSharedService _uiSharedService;
 
-    public PairGroupsUi(MareConfigService mareConfig, TagHandler tagHandler, UidDisplayHandler uidDisplayHandler, ApiController apiController, SelectPairForGroupUi selectGroupForPairUi)
+    public PairGroupsUi(MareConfigService mareConfig, TagHandler tagHandler, UidDisplayHandler uidDisplayHandler, ApiController apiController,
+        SelectPairForGroupUi selectGroupForPairUi, UiSharedService uiSharedService)
     {
         _mareConfig = mareConfig;
         _tagHandler = tagHandler;
         _uidDisplayHandler = uidDisplayHandler;
         _apiController = apiController;
         _selectGroupForPairUi = selectGroupForPairUi;
+        _uiSharedService = uiSharedService;
     }
 
     public void Draw<T>(List<T> visibleUsers, List<T> onlineUsers, List<T> offlineUsers) where T : DrawPairBase
@@ -43,8 +46,8 @@ public class PairGroupsUi
     {
         var allArePaused = availablePairsInThisTag.All(pair => pair.UserPair!.OwnPermissions.IsPaused());
         var pauseButton = allArePaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
-        var flyoutMenuX = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars).X;
-        var pauseButtonX = UiSharedService.GetIconButtonSize(pauseButton).X;
+        var flyoutMenuX = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars).X;
+        var pauseButtonX = _uiSharedService.GetIconButtonSize(pauseButton).X;
         var windowX = ImGui.GetWindowContentRegionMin().X;
         var windowWidth = UiSharedService.GetWindowContentRegionWidth();
         var spacingX = ImGui.GetStyle().ItemSpacing.X;
@@ -137,13 +140,13 @@ public class PairGroupsUi
 
     private void DrawGroupMenu(string tag)
     {
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Users, "Add people to " + tag))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Users, "Add people to " + tag))
         {
             _selectGroupForPairUi.Open(tag);
         }
         UiSharedService.AttachToolTip($"Add more users to Group {tag}");
 
-        if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Delete " + tag) && UiSharedService.CtrlPressed())
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Delete " + tag) && UiSharedService.CtrlPressed())
         {
             _tagHandler.RemoveTag(tag);
         }
@@ -165,13 +168,13 @@ public class PairGroupsUi
 
         //  FontAwesomeIcon.CaretSquareDown : FontAwesomeIcon.CaretSquareRight
         var icon = _tagHandler.IsTagOpen(tag) ? FontAwesomeIcon.CaretSquareDown : FontAwesomeIcon.CaretSquareRight;
-        UiSharedService.FontText(icon.ToIconString(), UiBuilder.IconFont);
+        _uiSharedService.IconText(icon);
         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
             ToggleTagOpen(tag);
         }
         ImGui.SameLine();
-        UiSharedService.FontText(resultFolderName, UiBuilder.DefaultFont);
+        ImGui.TextUnformatted(resultFolderName);
         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
             ToggleTagOpen(tag);

@@ -21,7 +21,10 @@ public class DrawGroupPair : DrawPairBase
     private readonly GroupPairFullInfoDto _fullInfoDto;
     private readonly GroupFullInfoDto _group;
 
-    public DrawGroupPair(string id, Pair entry, ApiController apiController, MareMediator mareMediator, GroupFullInfoDto group, GroupPairFullInfoDto fullInfoDto, UidDisplayHandler handler) : base(id, entry, apiController, handler)
+    public DrawGroupPair(string id, Pair entry, ApiController apiController,
+        MareMediator mareMediator, GroupFullInfoDto group, GroupPairFullInfoDto fullInfoDto,
+        UidDisplayHandler handler, UiSharedService uiSharedService)
+        : base(id, entry, apiController, handler, uiSharedService)
     {
         _group = group;
         _fullInfoDto = fullInfoDto;
@@ -145,8 +148,8 @@ public class DrawGroupPair : DrawPairBase
         var permIcon = (individualAnimDisabled || individualSoundsDisabled || individualVFXDisabled) ? FontAwesomeIcon.ExclamationTriangle
             : ((soundsDisabled || animDisabled || vfxDisabled) ? FontAwesomeIcon.InfoCircle : FontAwesomeIcon.None);
         var infoIconWidth = UiSharedService.GetIconSize(permIcon).X;
-        var plusButtonWidth = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Plus).X;
-        var barButtonWidth = UiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars).X;
+        var plusButtonWidth = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Plus).X;
+        var barButtonWidth = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars).X;
 
         var pos = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() + spacing
             - (showInfo ? (infoIconWidth + spacing) : 0)
@@ -158,7 +161,7 @@ public class DrawGroupPair : DrawPairBase
         {
             ImGui.SetCursorPosY(textPosY);
             ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
-            UiSharedService.FontText(permIcon.ToIconString(), UiBuilder.IconFont);
+            _uiSharedService.IconText(permIcon);
             ImGui.PopStyleColor();
             if (ImGui.IsItemHovered())
             {
@@ -169,7 +172,7 @@ public class DrawGroupPair : DrawPairBase
                 if (individualSoundsDisabled)
                 {
                     var userSoundsText = "Sound sync disabled with " + _pair.UserData.AliasOrUID;
-                    UiSharedService.FontText(FontAwesomeIcon.VolumeOff.ToIconString(), UiBuilder.IconFont);
+                    _uiSharedService.IconText(FontAwesomeIcon.VolumeOff);
                     ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                     ImGui.Text(userSoundsText);
                     ImGui.NewLine();
@@ -180,7 +183,7 @@ public class DrawGroupPair : DrawPairBase
                 if (individualAnimDisabled)
                 {
                     var userAnimText = "Animation sync disabled with " + _pair.UserData.AliasOrUID;
-                    UiSharedService.FontText(FontAwesomeIcon.Stop.ToIconString(), UiBuilder.IconFont);
+                    _uiSharedService.IconText(FontAwesomeIcon.Stop);
                     ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                     ImGui.Text(userAnimText);
                     ImGui.NewLine();
@@ -191,7 +194,7 @@ public class DrawGroupPair : DrawPairBase
                 if (individualVFXDisabled)
                 {
                     var userVFXText = "VFX sync disabled with " + _pair.UserData.AliasOrUID;
-                    UiSharedService.FontText(FontAwesomeIcon.Circle.ToIconString(), UiBuilder.IconFont);
+                    _uiSharedService.IconText(FontAwesomeIcon.Circle);
                     ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                     ImGui.Text(userVFXText);
                     ImGui.NewLine();
@@ -206,7 +209,7 @@ public class DrawGroupPair : DrawPairBase
         else if ((animDisabled || soundsDisabled))
         {
             ImGui.SetCursorPosY(textPosY);
-            UiSharedService.FontText(permIcon.ToIconString(), UiBuilder.IconFont);
+            _uiSharedService.IconText(permIcon);
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -216,7 +219,7 @@ public class DrawGroupPair : DrawPairBase
                 if (soundsDisabled)
                 {
                     var userSoundsText = "Sound sync disabled by " + _pair.UserData.AliasOrUID;
-                    UiSharedService.FontText(FontAwesomeIcon.VolumeOff.ToIconString(), UiBuilder.IconFont);
+                    _uiSharedService.IconText(FontAwesomeIcon.VolumeOff);
                     ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                     ImGui.Text(userSoundsText);
                 }
@@ -224,7 +227,7 @@ public class DrawGroupPair : DrawPairBase
                 if (animDisabled)
                 {
                     var userAnimText = "Animation sync disabled by " + _pair.UserData.AliasOrUID;
-                    UiSharedService.FontText(FontAwesomeIcon.Stop.ToIconString(), UiBuilder.IconFont);
+                    _uiSharedService.IconText(FontAwesomeIcon.Stop);
                     ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                     ImGui.Text(userAnimText);
                 }
@@ -232,7 +235,7 @@ public class DrawGroupPair : DrawPairBase
                 if (vfxDisabled)
                 {
                     var userVFXText = "VFX sync disabled by " + _pair.UserData.AliasOrUID;
-                    UiSharedService.FontText(FontAwesomeIcon.Circle.ToIconString(), UiBuilder.IconFont);
+                    _uiSharedService.IconText(FontAwesomeIcon.Circle);
                     ImGui.SameLine(40 * ImGuiHelpers.GlobalScale);
                     ImGui.Text(userVFXText);
                 }
@@ -269,7 +272,7 @@ public class DrawGroupPair : DrawPairBase
             if ((userIsModerator || userIsOwner) && !(entryIsMod || entryIsOwner))
             {
                 var pinText = entryIsPinned ? "Unpin user" : "Pin user";
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Thumbtack, pinText))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Thumbtack, pinText))
                 {
                     ImGui.CloseCurrentPopup();
                     var userInfo = _fullInfoDto.GroupPairStatusInfo ^ GroupUserInfo.IsPinned;
@@ -277,14 +280,14 @@ public class DrawGroupPair : DrawPairBase
                 }
                 UiSharedService.AttachToolTip("Pin this user to the Syncshell. Pinned users will not be deleted in case of a manually initiated Syncshell clean");
 
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Trash, "Remove user") && UiSharedService.CtrlPressed())
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Trash, "Remove user") && UiSharedService.CtrlPressed())
                 {
                     ImGui.CloseCurrentPopup();
                     _ = _apiController.GroupRemoveUser(_fullInfoDto);
                 }
 
                 UiSharedService.AttachToolTip("Hold CTRL and click to remove user " + (_pair.UserData.AliasOrUID) + " from Syncshell");
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.UserSlash, "Ban User"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserSlash, "Ban User"))
                 {
                     ImGui.CloseCurrentPopup();
                     _mediator.Publish(new OpenBanUserPopupMessage(_pair, _group));
@@ -295,7 +298,7 @@ public class DrawGroupPair : DrawPairBase
             if (userIsOwner)
             {
                 string modText = entryIsMod ? "Demod user" : "Mod user";
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.UserShield, modText) && UiSharedService.CtrlPressed())
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.UserShield, modText) && UiSharedService.CtrlPressed())
                 {
                     ImGui.CloseCurrentPopup();
                     var userInfo = _fullInfoDto.GroupPairStatusInfo ^ GroupUserInfo.IsModerator;
@@ -303,7 +306,7 @@ public class DrawGroupPair : DrawPairBase
                 }
                 UiSharedService.AttachToolTip("Hold CTRL to change the moderator status for " + (_fullInfoDto.UserAliasOrUID) + Environment.NewLine +
                     "Moderators can kick, ban/unban, pin/unpin users and clear the Syncshell.");
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Crown, "Transfer Ownership") && UiSharedService.CtrlPressed() && UiSharedService.ShiftPressed())
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Crown, "Transfer Ownership") && UiSharedService.CtrlPressed() && UiSharedService.ShiftPressed())
                 {
                     ImGui.CloseCurrentPopup();
                     _ = _apiController.GroupChangeOwnership(_fullInfoDto);
@@ -314,7 +317,7 @@ public class DrawGroupPair : DrawPairBase
             ImGui.Separator();
             if (_pair.IsVisible)
             {
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.Eye, "Target player"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.Eye, "Target player"))
                 {
                     _mediator.Publish(new TargetPairMessage(_pair));
                     ImGui.CloseCurrentPopup();
@@ -322,13 +325,13 @@ public class DrawGroupPair : DrawPairBase
             }
             if (!_pair.IsPaused)
             {
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.User, "Open Profile"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.User, "Open Profile"))
                 {
                     _displayHandler.OpenProfile(_pair);
                     ImGui.CloseCurrentPopup();
                 }
                 UiSharedService.AttachToolTip("Opens the profile for this user in a new window");
-                if (UiSharedService.NormalizedIconTextButton(FontAwesomeIcon.ExclamationTriangle, "Report Profile"))
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.ExclamationTriangle, "Report Profile"))
                 {
                     ImGui.CloseCurrentPopup();
                     _mediator.Publish(new OpenReportPopupMessage(_pair));

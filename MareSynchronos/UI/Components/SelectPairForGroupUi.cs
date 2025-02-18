@@ -1,9 +1,8 @@
-﻿using System.Numerics;
-using Dalamud.Interface;
-using Dalamud.Interface.Utility;
+﻿using Dalamud.Interface.Utility;
 using ImGuiNET;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.UI.Handlers;
+using System.Numerics;
 
 namespace MareSynchronos.UI.Components;
 
@@ -47,7 +46,8 @@ public class SelectPairForGroupUi
         ImGui.SetNextWindowSizeConstraints(minSize, maxSize);
         if (ImGui.BeginPopupModal(popupName, ref _show, ImGuiWindowFlags.Popup | ImGuiWindowFlags.Modal))
         {
-            UiSharedService.FontText($"Select users for group {_tag}", UiBuilder.DefaultFont);
+            ImGui.TextUnformatted($"Select users for group {_tag}");
+
             ImGui.InputTextWithHint("##filter", "Filter", ref _filter, 255, ImGuiInputTextFlags.None);
             foreach (var item in pairs
                 .Where(p => string.IsNullOrEmpty(_filter) || PairName(p).Contains(_filter, StringComparison.OrdinalIgnoreCase))
