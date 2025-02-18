@@ -88,7 +88,7 @@ internal sealed class GroupPanel
             || string.Equals(p.Group.GID, _syncShellToJoin, StringComparison.Ordinal));
 
         if (alreadyInGroup) ImGui.BeginDisabled();
-        if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
+        if (_uiShared.IconButton(FontAwesomeIcon.Plus))
         {
             if (!string.IsNullOrEmpty(_syncShellToJoin))
             {
@@ -170,7 +170,7 @@ internal sealed class GroupPanel
                 ImGui.AlignTextToFramePadding();
                 ImGui.TextUnformatted("Syncshell Password: " + _lastCreatedGroup.Password);
                 ImGui.SameLine();
-                if (ImGuiComponents.IconButton(FontAwesomeIcon.Copy))
+                if (_uiShared.IconButton(FontAwesomeIcon.Copy))
                 {
                     ImGui.SetClipboardText(_lastCreatedGroup.Password);
                 }
@@ -584,7 +584,7 @@ internal sealed class GroupPanel
             ImGui.SameLine();
         }
 
-        if (ImGuiComponents.IconButton(pauseIcon))
+        if (_uiShared.IconButton(pauseIcon))
         {
             var userPerm = groupDto.GroupUserPermissions ^ GroupUserPermissions.Paused;
             _ = ApiController.GroupChangeIndividualPermissionState(new GroupPairUserPermissionDto(groupDto.Group, new UserData(ApiController.UID), userPerm));
@@ -592,7 +592,7 @@ internal sealed class GroupPanel
         UiSharedService.AttachToolTip((groupDto.GroupUserPermissions.IsPaused() ? "Resume" : "Pause") + " pairing with all users in this Syncshell");
         ImGui.SameLine();
 
-        if (ImGuiComponents.IconButton(FontAwesomeIcon.Bars))
+        if (_uiShared.IconButton(FontAwesomeIcon.Bars))
         {
             ImGui.OpenPopup("ShellPopup");
         }

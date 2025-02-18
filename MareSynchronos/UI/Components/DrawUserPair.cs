@@ -172,7 +172,7 @@ public class DrawUserPair : DrawPairBase
             }
             ImGui.SameLine(windowEndX - barButtonSize.X - spacingX - pauseIconSize.X);
             ImGui.SetCursorPosY(originalY);
-            if (ImGuiComponents.IconButton(pauseIcon))
+            if (_uiSharedService.IconButton(pauseIcon))
             {
                 var perm = _pair.UserPair!.OwnPermissions;
                 perm.SetPaused(!perm.IsPaused());
@@ -191,7 +191,7 @@ public class DrawUserPair : DrawPairBase
         ImGui.SameLine(windowEndX - barButtonSize.X);
         ImGui.SetCursorPosY(originalY);
 
-        if (ImGuiComponents.IconButton(FontAwesomeIcon.Bars))
+        if (_uiSharedService.IconButton(FontAwesomeIcon.Bars))
         {
             ImGui.OpenPopup("User Flyout Menu");
         }

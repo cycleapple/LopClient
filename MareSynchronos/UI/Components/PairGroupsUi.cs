@@ -54,7 +54,7 @@ public class PairGroupsUi
 
         var buttonPauseOffset = windowX + windowWidth - flyoutMenuX - spacingX - pauseButtonX;
         ImGui.SameLine(buttonPauseOffset);
-        if (ImGuiComponents.IconButton(pauseButton))
+        if (_uiSharedService.IconButton(pauseButton))
         {
             // If all of the currently visible pairs (after applying filters to the pairs)
             // are paused we display a resume button to resume all currently visible (after filters)
@@ -81,7 +81,7 @@ public class PairGroupsUi
 
         var buttonDeleteOffset = windowX + windowWidth - flyoutMenuX;
         ImGui.SameLine(buttonDeleteOffset);
-        if (ImGuiComponents.IconButton(FontAwesomeIcon.Bars))
+        if (_uiSharedService.IconButton(FontAwesomeIcon.Bars))
         {
             ImGui.OpenPopup("Group Flyout Menu");
         }

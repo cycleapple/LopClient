@@ -275,13 +275,9 @@ public class CompactUi : WindowMediatorSubscriberBase
         ImGui.InputTextWithHint("##otheruid", "Other players UID/Alias", ref _pairToAdd, 20);
         ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
         var canAdd = !_pairManager.DirectPairs.Any(p => string.Equals(p.UserData.UID, _pairToAdd, StringComparison.Ordinal) || string.Equals(p.UserData.Alias, _pairToAdd, StringComparison.Ordinal));
-        if (!canAdd)
+        using (ImRaii.Disabled(!canAdd))
         {
-            ImGuiComponents.DisabledButton(FontAwesomeIcon.Plus);
-        }
-        else
-        {
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.Plus))
             {
                 _ = _apiController.UserAddPair(new(new(_pairToAdd)));
                 _pairToAdd = string.Empty;
@@ -334,13 +330,14 @@ public class CompactUi : WindowMediatorSubscriberBase
                 break;
         }
 
-        var button = _buttonState ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
-
-        if (!_timeout.IsRunning || _timeout.ElapsedMilliseconds > 15000)
-        {
+        if (_timeout.ElapsedMilliseconds > 5000)
             _timeout.Reset();
 
-            if (ImGuiComponents.IconButton(button) && UiSharedService.CtrlPressed())
+        var button = _buttonState ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+
+        using (ImRaii.Disabled(_timeout.IsRunning))
+        {
+            if (_uiSharedService.IconButton(button) && UiSharedService.CtrlPressed())
             {
                 foreach (var entry in users)
                 {
@@ -352,13 +349,10 @@ public class CompactUi : WindowMediatorSubscriberBase
                 _timeout.Start();
                 _buttonState = !_buttonState;
             }
-            UiSharedService.AttachToolTip($"Hold Control to {(button == FontAwesomeIcon.Play ? "resume" : "pause")} pairing with {users.Count} out of {userCount} displayed users.");
-        }
-        else
-        {
-            var availableAt = (15000 - _timeout.ElapsedMilliseconds) / 1000;
-            ImGuiComponents.DisabledButton(button);
-            UiSharedService.AttachToolTip($"Next execution is available at {availableAt} seconds");
+            if (!_timeout.IsRunning)
+                UiSharedService.AttachToolTip($"Hold Control to {(button == FontAwesomeIcon.Play ? "resume" : "pause")} pairing with {users.Count} out of {userCount} displayed users.");
+            else
+                UiSharedService.AttachToolTip($"Next execution is available at {(5000 - _timeout.ElapsedMilliseconds) / 1000} seconds");
         }
     }
 
@@ -431,7 +425,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         if (_apiController.ServerState is ServerState.Connected)
         {
             ImGui.SetCursorPosX(0 + ImGui.GetStyle().ItemSpacing.X);
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.UserCircle))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.UserCircle))
             {
                 Mediator.Publish(new UiToggleMessage(typeof(EditProfileUi)));
             }
@@ -536,7 +530,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         buttonSizeX -= buttonSize.X - ImGui.GetStyle().ItemSpacing.X * 2;
         ImGui.SameLine(ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() - buttonSize.X);
         ImGui.SetCursorPosY(originalPos.Y + uidTextSize.Y / 2 - buttonSize.Y / 2);
-        if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog))
+        if (_uiSharedService.IconButton(FontAwesomeIcon.Cog))
         {
             Mediator.Publish(new OpenSettingsUiMessage());
         }
@@ -549,7 +543,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         {
             buttonSizeX += _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Copy).X - ImGui.GetStyle().ItemSpacing.X * 2;
             ImGui.SetCursorPosY(originalPos.Y + uidTextSize.Y / 2 - buttonSize.Y / 2);
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Copy))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.Copy))
             {
                 ImGui.SetClipboardText(_apiController.DisplayName);
             }

@@ -249,7 +249,7 @@ public class DrawGroupPair : DrawPairBase
         {
             ImGui.SetCursorPosY(originalY);
 
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Plus))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.Plus))
             {
                 _ = _apiController.UserAddPair(new UserDto(new(_pair.UserData.UID)));
             }
@@ -261,7 +261,7 @@ public class DrawGroupPair : DrawPairBase
         {
             ImGui.SetCursorPosY(originalY);
 
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Bars))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.Bars))
             {
                 ImGui.OpenPopup("Popup");
             }

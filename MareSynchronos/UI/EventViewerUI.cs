@@ -113,7 +113,7 @@ internal class EventViewerUI : WindowMediatorSubscriberBase
         using (ImRaii.Disabled(_filterFreeText.IsNullOrEmpty()))
         {
             ImGui.SameLine();
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Ban))
+            if (_uiSharedService.IconButton(FontAwesomeIcon.Ban))
             {
                 _filterFreeText = string.Empty;
                 _filteredEvents = RecreateFilter();
