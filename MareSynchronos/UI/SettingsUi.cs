@@ -486,7 +486,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         if (!ApiController.ServerAlive)
         {
-            ImGui.Text("Connect to the server to configure individual syncshell settings.");
+            ImGui.TextUnformatted("Connect to the server to configure individual syncshell settings.");
             return;
         }
 

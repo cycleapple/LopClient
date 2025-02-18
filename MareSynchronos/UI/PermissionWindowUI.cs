@@ -67,7 +67,7 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
             _uiSharedService.BooleanToColoredIcon(!otherIsPaused, false);
             ImGui.SameLine();
             ImGui.AlignTextToFramePadding();
-            ImGui.Text(Pair.UserData.AliasOrUID + " has " + (!otherIsPaused ? "not " : string.Empty) + "paused you");
+            ImGui.TextUnformatted(Pair.UserData.AliasOrUID + " has " + (!otherIsPaused ? "not " : string.Empty) + "paused you");
         }
 
         ImGuiHelpers.ScaledDummy(0.5f);
@@ -85,7 +85,7 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
             _uiSharedService.BooleanToColoredIcon(!otherDisableSounds, false);
             ImGui.SameLine();
             ImGui.AlignTextToFramePadding();
-            ImGui.Text(Pair.UserData.AliasOrUID + " has " + (!otherDisableSounds ? "not " : string.Empty) + "disabled sound sync with you");
+            ImGui.TextUnformatted(Pair.UserData.AliasOrUID + " has " + (!otherDisableSounds ? "not " : string.Empty) + "disabled sound sync with you");
         }
 
         if (ImGui.Checkbox("Disable Animations", ref disableAnimations))
@@ -99,7 +99,7 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
             _uiSharedService.BooleanToColoredIcon(!otherDisableAnimations, false);
             ImGui.SameLine();
             ImGui.AlignTextToFramePadding();
-            ImGui.Text(Pair.UserData.AliasOrUID + " has " + (!otherDisableAnimations ? "not " : string.Empty) + "disabled animation sync with you");
+            ImGui.TextUnformatted(Pair.UserData.AliasOrUID + " has " + (!otherDisableAnimations ? "not " : string.Empty) + "disabled animation sync with you");
         }
 
         if (ImGui.Checkbox("Disable VFX", ref disableVfx))
@@ -113,7 +113,7 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
             _uiSharedService.BooleanToColoredIcon(!otherDisableVFX, false);
             ImGui.SameLine();
             ImGui.AlignTextToFramePadding();
-            ImGui.Text(Pair.UserData.AliasOrUID + " has " + (!otherDisableVFX ? "not " : string.Empty) + "disabled VFX sync with you");
+            ImGui.TextUnformatted(Pair.UserData.AliasOrUID + " has " + (!otherDisableVFX ? "not " : string.Empty) + "disabled VFX sync with you");
         }
 
         ImGuiHelpers.ScaledDummy(0.5f);

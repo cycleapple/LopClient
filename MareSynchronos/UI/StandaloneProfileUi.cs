@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.Colors;
+﻿using Dalamud.Interface;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using ImGuiNET;
@@ -78,6 +79,11 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
 
             using (_uiSharedService.UidFont.Push())
                 UiSharedService.ColorText(Pair.UserData.AliasOrUID, UiSharedService.AccentColor);
+
+            var reportButtonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.ExclamationTriangle, "Report Profile");
+            ImGui.SameLine(ImGui.GetWindowContentRegionMax().X - reportButtonSize);
+            if (_uiSharedService.IconTextButton(FontAwesomeIcon.ExclamationTriangle, "Report Profile"))
+                Mediator.Publish(new OpenReportPopupMessage(Pair));
 
             ImGuiHelpers.ScaledDummy(new Vector2(spacing.Y, spacing.Y));
             var textPos = ImGui.GetCursorPosY() - headerSize;
