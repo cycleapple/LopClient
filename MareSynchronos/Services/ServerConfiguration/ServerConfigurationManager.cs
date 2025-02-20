@@ -15,11 +15,16 @@ public class ServerConfigurationManager
     private readonly ILogger<ServerConfigurationManager> _logger;
     private readonly MareMediator _mareMediator;
     private readonly NotesConfigService _notesConfig;
+    private readonly ServerBlockConfigService _blockConfig;
     private readonly ServerTagConfigService _serverTagConfig;
     private readonly SyncshellConfigService _syncshellConfig;
 
+    private HashSet<string>? CachedWhitelistedUIDs = null;
+    private HashSet<string>? CachedBlacklistedUIDs = null;
+
     public ServerConfigurationManager(ILogger<ServerConfigurationManager> logger, ServerConfigService configService,
         ServerTagConfigService serverTagConfig, SyncshellConfigService syncshellConfig, NotesConfigService notesConfig,
+        ServerBlockConfigService blockConfig,
         DalamudUtilService dalamudUtil, MareMediator mareMediator)
     {
         _logger = logger;
@@ -27,6 +32,7 @@ public class ServerConfigurationManager
         _serverTagConfig = serverTagConfig;
         _syncshellConfig = syncshellConfig;
         _notesConfig = notesConfig;
+        _blockConfig = blockConfig;
         _dalamudUtil = dalamudUtil;
         _mareMediator = mareMediator;
         EnsureMainExists();
@@ -35,11 +41,16 @@ public class ServerConfigurationManager
     public string CurrentApiUrl => CurrentServer.ServerUri;
     public ServerStorage CurrentServer => _configService.Current.ServerStorage[CurrentServerIndex];
 
+    public IReadOnlyList<string> Whitelist => CurrentBlockStorage().Whitelist;
+    public IReadOnlyList<string> Blacklist => CurrentBlockStorage().Blacklist;
+
     public int CurrentServerIndex
     {
         set
         {
             _configService.Current.CurrentServer = value;
+            CachedWhitelistedUIDs = null;
+            CachedBlacklistedUIDs = null;
             _configService.Save();
         }
         get
@@ -403,6 +414,54 @@ public class ServerConfigurationManager
         _syncshellConfig.Save();
     }
 
+    internal bool IsUidWhitelisted(string uid)
+    {
+        CachedWhitelistedUIDs ??= [.. CurrentBlockStorage().Whitelist];
+        return CachedWhitelistedUIDs.Contains(uid);
+    }
+
+    internal bool IsUidBlacklisted(string uid)
+    {
+        CachedBlacklistedUIDs ??= [.. CurrentBlockStorage().Blacklist];
+        return CachedBlacklistedUIDs.Contains(uid);
+    }
+
+    internal void AddWhitelistUid(string uid)
+    {
+        if (IsUidWhitelisted(uid))
+            return;
+        if (CurrentBlockStorage().Blacklist.RemoveAll(u => u == uid) > 0)
+            CachedBlacklistedUIDs = null;
+        CurrentBlockStorage().Whitelist.Add(uid);
+        CachedWhitelistedUIDs = null;
+        _blockConfig.Save();
+    }
+
+    internal void AddBlacklistUid(string uid)
+    {
+        if (IsUidBlacklisted(uid))
+            return;
+        if (CurrentBlockStorage().Whitelist.RemoveAll(u => u == uid) > 0)
+            CachedWhitelistedUIDs = null;
+        CurrentBlockStorage().Blacklist.Add(uid);
+        CachedBlacklistedUIDs = null;
+        _blockConfig.Save();
+    }
+
+    internal void RemoveWhitelistUid(string uid)
+    {
+        if (CurrentBlockStorage().Whitelist.RemoveAll(u => u == uid) > 0)
+            CachedWhitelistedUIDs = null;
+        _blockConfig.Save();
+    }
+
+    internal void RemoveBlacklistUid(string uid)
+    {
+        if (CurrentBlockStorage().Blacklist.RemoveAll(u => u == uid) > 0)
+            CachedBlacklistedUIDs = null;
+        _blockConfig.Save();
+    }
+
     private ServerNotesStorage CurrentNotesStorage()
     {
         TryCreateCurrentNotesStorage();
@@ -419,6 +478,12 @@ public class ServerConfigurationManager
     {
         TryCreateCurrentSyncshellStorage();
         return _syncshellConfig.Current.ServerShellStorage[CurrentApiUrl];
+    }
+
+    private ServerBlockStorage CurrentBlockStorage()
+    {
+        TryCreateCurrentBlockStorage();
+        return _blockConfig.Current.ServerBlocks[CurrentApiUrl];
     }
 
     private void EnsureMainExists()
@@ -476,6 +541,14 @@ public class ServerConfigurationManager
         if (!_syncshellConfig.Current.ServerShellStorage.ContainsKey(CurrentApiUrl))
         {
             _syncshellConfig.Current.ServerShellStorage[CurrentApiUrl] = new();
+        }
+    }
+
+    private void TryCreateCurrentBlockStorage()
+    {
+        if (!_blockConfig.Current.ServerBlocks.ContainsKey(CurrentApiUrl))
+        {
+            _blockConfig.Current.ServerBlocks[CurrentApiUrl] = new();
         }
     }
 }

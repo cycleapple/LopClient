@@ -96,8 +96,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
     public void HaltScan(string source)
     {
-        if (!HaltScanLocks.ContainsKey(source)) HaltScanLocks[source] = 0;
-        HaltScanLocks[source]++;
+        HaltScanLocks.AddOrUpdate(source, 1, (k, v) => v + 1);
     }
 
     record WatcherChange(WatcherChangeTypes ChangeType, string? OldPath = null);
@@ -447,10 +446,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
     public void ResumeScan(string source)
     {
-        if (!HaltScanLocks.ContainsKey(source)) HaltScanLocks[source] = 0;
-
-        HaltScanLocks[source]--;
-        if (HaltScanLocks[source] < 0) HaltScanLocks[source] = 0;
+        HaltScanLocks.AddOrUpdate(source, 0, (k, v) => Math.Max(0, v - 1));
     }
 
     protected override void Dispose(bool disposing)

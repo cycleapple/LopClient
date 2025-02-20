@@ -54,7 +54,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     public void AddGroupPair(GroupPairFullInfoDto dto)
     {
         if (!_allClientPairs.ContainsKey(dto.User))
-            _allClientPairs[dto.User] = _pairFactory.Create();
+            _allClientPairs[dto.User] = _pairFactory.Create(dto.User);
 
         var group = _allGroups[dto.Group];
         _allClientPairs[dto.User].GroupPair[group] = dto;
@@ -65,7 +65,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
     {
         if (!_allClientPairs.ContainsKey(dto.User))
         {
-            _allClientPairs[dto.User] = _pairFactory.Create();
+            _allClientPairs[dto.User] = _pairFactory.Create(dto.User);
         }
         else
         {

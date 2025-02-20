@@ -14,17 +14,19 @@ namespace MareSynchronos.Services;
 public class GuiHookService : DisposableMediatorSubscriberBase
 {
     private readonly ILogger<GuiHookService> _logger;
+    private readonly DalamudUtilService _dalamudUtil;
     private readonly MareConfigService _configService;
     private readonly INamePlateGui _namePlateGui;
     private readonly PairManager _pairManager;
 
     private bool _isModified = false;
 
-    public GuiHookService(ILogger<GuiHookService> logger, MareMediator mediator, MareConfigService configService,
+    public GuiHookService(ILogger<GuiHookService> logger, DalamudUtilService dalamudUtil, MareMediator mediator, MareConfigService configService,
         INamePlateGui namePlateGui, PairManager pairManager)
         : base(logger, mediator)
     {
         _logger = logger;
+        _dalamudUtil = dalamudUtil;
         _configService = configService;
         _namePlateGui = namePlateGui;
         _pairManager = pairManager;
@@ -32,26 +34,32 @@ public class GuiHookService : DisposableMediatorSubscriberBase
         _namePlateGui.OnNamePlateUpdate += OnNamePlateUpdate;
         _namePlateGui.RequestRedraw();
 
-        Mediator.Subscribe<PairHandlerVisibleMessage>(this, (_) => _namePlateGui.RequestRedraw());
+        Mediator.Subscribe<PairHandlerVisibleMessage>(this, (_) => RequestRedraw());
+        Mediator.Subscribe<NameplateRedrawMessage>(this, (_) => RequestRedraw());
     }
 
-    public void RequestRedraw()
+    public void RequestRedraw(bool force = false)
     {
         if (!_configService.Current.UseNameColors)
         {
-            if (!_isModified)
+            if (!_isModified && !force)
                 return;
             _isModified = false;
         }
 
-        _namePlateGui.RequestRedraw();
+        Task.Run(async () => {
+            await _dalamudUtil.RunOnFrameworkThread(() => _namePlateGui.RequestRedraw());
+        });
     }
 
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
         _namePlateGui.OnNamePlateUpdate -= OnNamePlateUpdate;
-        _namePlateGui.RequestRedraw();
+
+        Task.Run(async () => {
+            await _dalamudUtil.RunOnFrameworkThread(() => _namePlateGui.RequestRedraw());
+        });
     }
 
     private void OnNamePlateUpdate(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
@@ -59,13 +67,17 @@ public class GuiHookService : DisposableMediatorSubscriberBase
         if (!_configService.Current.UseNameColors)
             return;
 
-        var visibleUsersIds = _pairManager.GetOnlineUserPairs().Where(u => u.IsVisible && u.PlayerCharacterId != uint.MaxValue).Select(u => (ulong)u.PlayerCharacterId).ToHashSet();
-        var colors = _configService.Current.NameColors;
+        var visibleUsers = _pairManager.GetOnlineUserPairs().Where(u => u.IsVisible && u.PlayerCharacterId != uint.MaxValue);
+        var visibleUsersIds = visibleUsers.Select(u => (ulong)u.PlayerCharacterId).ToHashSet();
+
+        var visibleUsersDict = visibleUsers.ToDictionary(u => (ulong)u.PlayerCharacterId);
 
         foreach (var handler in handlers)
         {
             if (visibleUsersIds.Contains(handler.GameObjectId))
             {
+                var pair = visibleUsersDict[handler.GameObjectId];
+                var colors = !pair.IsApplicationBlocked ? _configService.Current.NameColors : _configService.Current.BlockedNameColors;
                 handler.NameParts.TextWrap = (
                     BuildColorStartSeString(colors),
                     BuildColorEndSeString(colors)

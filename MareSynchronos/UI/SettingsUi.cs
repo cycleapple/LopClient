@@ -52,6 +52,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private readonly GuiHookService _guiHookService;
     private readonly PerformanceCollectorService _performanceCollector;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
+    private readonly PlayerPerformanceService _playerPerformanceService;
     private readonly UiSharedService _uiShared;
     private bool _deleteAccountPopupModalShown = false;
     private bool _deleteFilesPopupModalShown = false;
@@ -76,6 +78,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         UiSharedService uiShared, MareConfigService configService,
         MareCharaFileManager mareCharaFileManager, PairManager pairManager, ChatService chatService, GuiHookService guiHookService,
         ServerConfigurationManager serverConfigurationManager,
+        PlayerPerformanceConfigService playerPerformanceConfigService, PlayerPerformanceService playerPerformanceService,
         MareMediator mediator, PerformanceCollectorService performanceCollector,
         FileUploadManager fileTransferManager,
         FileTransferOrchestrator fileTransferOrchestrator,
@@ -90,6 +93,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _chatService = chatService;
         _guiHookService = guiHookService;
         _serverConfigurationManager = serverConfigurationManager;
+        _playerPerformanceConfigService = playerPerformanceConfigService;
+        _playerPerformanceService = playerPerformanceService;
         _performanceCollector = performanceCollector;
         _fileTransferManager = fileTransferManager;
         _fileTransferOrchestrator = fileTransferOrchestrator;
@@ -673,6 +678,18 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.LogEvents = logEvents;
             _configService.Save();
         }
+
+        ImGui.Separator();
+        _uiShared.BigText("Active Character Blocks");
+        foreach (var pair in _pairManager.GetOnlineUserPairs())
+        {
+            if (pair.IsApplicationBlocked)
+            {
+                ImGui.TextUnformatted(pair.PlayerName);
+                ImGui.SameLine();
+                ImGui.TextUnformatted(string.Join(", ", pair.HoldApplicationReasons));
+            }
+        }
     }
 
     private void DrawFileStorageSettings()
@@ -1055,6 +1072,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         var useNameColors = _configService.Current.UseNameColors;
         var nameColors = _configService.Current.NameColors;
+        var autoPausedNameColors = _configService.Current.BlockedNameColors;
         if (ImGui.Checkbox("Color nameplates of paired players", ref useNameColors))
         {
             _configService.Current.UseNameColors = useNameColors;
@@ -1068,6 +1086,15 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (InputDtrColors("Character Name Color", ref nameColors))
             {
                 _configService.Current.NameColors = nameColors;
+                _configService.Save();
+                _guiHookService.RequestRedraw();
+            }
+
+            ImGui.SameLine();
+
+            if (InputDtrColors("Blocked Character Color", ref autoPausedNameColors))
+            {
+                _configService.Current.BlockedNameColors = autoPausedNameColors;
                 _configService.Save();
                 _guiHookService.RequestRedraw();
             }
@@ -1203,6 +1230,215 @@ public class SettingsUi : WindowMediatorSubscriberBase
             }
             _uiShared.DrawHelpText("Enabling this will only show online notifications (type: Info) for pairs where you have set an individual note.");
         }
+    }
+
+    private bool _perfUnapplied = false;
+
+    private void DrawPerformance()
+    {
+        _uiShared.BigText("Performance Settings");
+        UiSharedService.TextWrapped("The configuration options here are to give you more informed warnings and automation when it comes to other performance-intensive synced players.");
+        ImGui.Separator();
+        bool recalculatePerformance = false;
+        string? recalculatePerformanceUID = null;
+
+        _uiShared.BigText("Individual Limits");
+        bool autoPause = _playerPerformanceConfigService.Current.AutoPausePlayersExceedingThresholds;
+        if (ImGui.Checkbox("Automatically block players exceeding thresholds", ref autoPause))
+        {
+            _playerPerformanceConfigService.Current.AutoPausePlayersExceedingThresholds = autoPause;
+            _playerPerformanceConfigService.Save();
+            recalculatePerformance = true;
+        }
+        _uiShared.DrawHelpText("When enabled, it will automatically block the modded appearance of all players that exceed the thresholds defined below." + Environment.NewLine
+            + "Will print a warning in chat when a player is blocked automatically.");
+        using (ImRaii.Disabled(!autoPause))
+        {
+            using var indent = ImRaii.PushIndent();
+            var notifyDirectPairs = _playerPerformanceConfigService.Current.NotifyAutoPauseDirectPairs;
+            var notifyGroupPairs = _playerPerformanceConfigService.Current.NotifyAutoPauseGroupPairs;
+            if (ImGui.Checkbox("Display auto-block warnings for individual pairs", ref notifyDirectPairs))
+            {
+                _playerPerformanceConfigService.Current.NotifyAutoPauseDirectPairs = notifyDirectPairs;
+                _playerPerformanceConfigService.Save();
+            }
+            if (ImGui.Checkbox("Display auto-block warnings for syncshell pairs", ref notifyGroupPairs))
+            {
+                _playerPerformanceConfigService.Current.NotifyAutoPauseGroupPairs = notifyGroupPairs;
+                _playerPerformanceConfigService.Save();
+            }
+            var vramAuto = _playerPerformanceConfigService.Current.VRAMSizeAutoPauseThresholdMiB;
+            var trisAuto = _playerPerformanceConfigService.Current.TrisAutoPauseThresholdThousands;
+            ImGui.SetNextItemWidth(100 * ImGuiHelpers.GlobalScale);
+            if (ImGui.InputInt("Auto Block VRAM threshold", ref vramAuto))
+            {
+                _playerPerformanceConfigService.Current.VRAMSizeAutoPauseThresholdMiB = vramAuto;
+                _playerPerformanceConfigService.Save();
+                _perfUnapplied = true;
+            }
+            ImGui.SameLine();
+            ImGui.Text("(MiB)");
+            _uiShared.DrawHelpText("When a loading in player and their VRAM usage exceeds this amount, automatically blocks the synced player." + UiSharedService.TooltipSeparator
+                + "Default: 550 MiB");
+            ImGui.SetNextItemWidth(100 * ImGuiHelpers.GlobalScale);
+            if (ImGui.InputInt("Auto Block Triangle threshold", ref trisAuto))
+            {
+                _playerPerformanceConfigService.Current.TrisAutoPauseThresholdThousands = trisAuto;
+                _playerPerformanceConfigService.Save();
+                _perfUnapplied = true;
+            }
+            ImGui.SameLine();
+            ImGui.Text("(thousand triangles)");
+            _uiShared.DrawHelpText("When a loading in player and their triangle count exceeds this amount, automatically blocks the synced player." + UiSharedService.TooltipSeparator
+                + "Default: 250 thousand");
+            using (ImRaii.Disabled(!_perfUnapplied))
+            {
+                if (ImGui.Button("Apply Changes Now"))
+                {
+                    recalculatePerformance = true;
+                    _perfUnapplied = false;
+                }
+            }
+        }
+
+#region Whitelist
+        ImGui.Separator();
+        _uiShared.BigText("Whitelisted UIDs");
+        bool ignoreDirectPairs = _playerPerformanceConfigService.Current.IgnoreDirectPairs;
+        if (ImGui.Checkbox("Whitelist all individual pairs", ref ignoreDirectPairs))
+        {
+            _playerPerformanceConfigService.Current.IgnoreDirectPairs = ignoreDirectPairs;
+            _playerPerformanceConfigService.Save();
+            recalculatePerformance = true;
+        }
+        _uiShared.DrawHelpText("Individual pairs will never be affected by auto blocks.");
+        ImGui.Dummy(new Vector2(5));
+        UiSharedService.TextWrapped("The entries in the list below will be not have auto block thresholds enforced.");
+        ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
+        var whitelistPos = ImGui.GetCursorPos();
+        ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
+        ImGui.InputText("##whitelistuid", ref _uidToAddForIgnore, 20);
+        using (ImRaii.Disabled(string.IsNullOrEmpty(_uidToAddForIgnore)))
+        {
+            ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add UID to whitelist"))
+            {
+                if (!_serverConfigurationManager.IsUidWhitelisted(_uidToAddForIgnore))
+                {
+                    _serverConfigurationManager.AddWhitelistUid(_uidToAddForIgnore);
+                    recalculatePerformance = true;
+                    recalculatePerformanceUID = _uidToAddForIgnore;
+                }
+                _uidToAddForIgnore = string.Empty;
+            }
+        }
+        ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
+        _uiShared.DrawHelpText("Hint: UIDs are case sensitive.\nVanity IDs are also acceptable.");
+        ImGui.Dummy(new Vector2(10));
+        var playerList = _serverConfigurationManager.Whitelist;
+        if (_selectedEntry > playerList.Count - 1)
+            _selectedEntry = -1;
+        ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
+        ImGui.SetCursorPosY(whitelistPos.Y);
+        using (var lb = ImRaii.ListBox("##whitelist"))
+        {
+            if (lb)
+            {
+                for (int i = 0; i < playerList.Count; i++)
+                {
+                    bool shouldBeSelected = _selectedEntry == i;
+                    if (ImGui.Selectable(playerList[i] + "##" + i, shouldBeSelected))
+                    {
+                        _selectedEntry = i;
+                    }
+                    string? lastSeenName = _serverConfigurationManager.GetNameForUid(playerList[i]);
+                    if (lastSeenName != null)
+                    {
+                        ImGui.SameLine();
+                        _uiShared.IconText(FontAwesomeIcon.InfoCircle);
+                        UiSharedService.AttachToolTip($"Last seen name: {lastSeenName}");
+                    }
+                }
+            }
+        }
+        using (ImRaii.Disabled(_selectedEntry == -1))
+        {
+            using var pushId = ImRaii.PushId("deleteSelectedWhitelist");
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete selected UID"))
+            {
+                _serverConfigurationManager.RemoveWhitelistUid(_serverConfigurationManager.Whitelist[_selectedEntry]);
+                _selectedEntry = -1;
+                _playerPerformanceConfigService.Save();
+                recalculatePerformance = true;
+            }
+        }
+#endregion Whitelist
+
+#region Blacklist
+        ImGui.Separator();
+        _uiShared.BigText("Blacklisted UIDs");
+        UiSharedService.TextWrapped("The entries in the list below will never have their characters displayed.");
+        ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
+        var blacklistPos = ImGui.GetCursorPos();
+        ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
+        ImGui.InputText("##uid", ref _uidToAddForIgnoreBlacklist, 20);
+        using (ImRaii.Disabled(string.IsNullOrEmpty(_uidToAddForIgnoreBlacklist)))
+        {
+            ImGui.SetCursorPosX(240 * ImGuiHelpers.GlobalScale);
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add UID to blacklist"))
+            {
+                if (!_serverConfigurationManager.IsUidBlacklisted(_uidToAddForIgnoreBlacklist))
+                {
+                    _serverConfigurationManager.AddBlacklistUid(_uidToAddForIgnoreBlacklist);
+                    recalculatePerformance = true;
+                    recalculatePerformanceUID = _uidToAddForIgnoreBlacklist;
+                }
+                _uidToAddForIgnoreBlacklist = string.Empty;
+            }
+        }
+        _uiShared.DrawHelpText("Hint: UIDs are case sensitive.\nVanity IDs are also acceptable.");
+        ImGui.Dummy(new Vector2(10));
+        var blacklist = _serverConfigurationManager.Blacklist;
+        if (_selectedEntryBlacklist > blacklist.Count - 1)
+            _selectedEntryBlacklist = -1;
+        ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
+        ImGui.SetCursorPosY(blacklistPos.Y);
+        using (var lb = ImRaii.ListBox("##blacklist"))
+        {
+            if (lb)
+            {
+                for (int i = 0; i < blacklist.Count; i++)
+                {
+                    bool shouldBeSelected = _selectedEntryBlacklist == i;
+                    if (ImGui.Selectable(blacklist[i] + "##BL" + i, shouldBeSelected))
+                    {
+                        _selectedEntryBlacklist = i;
+                    }
+                    string? lastSeenName = _serverConfigurationManager.GetNameForUid(blacklist[i]);
+                    if (lastSeenName != null)
+                    {
+                        ImGui.SameLine();
+                        _uiShared.IconText(FontAwesomeIcon.InfoCircle);
+                        UiSharedService.AttachToolTip($"Last seen name: {lastSeenName}");
+                    }
+                }
+            }
+        }
+        using (ImRaii.Disabled(_selectedEntryBlacklist == -1))
+        {
+            using var pushId = ImRaii.PushId("deleteSelectedBlacklist");
+            if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete selected UID"))
+            {
+                _serverConfigurationManager.RemoveBlacklistUid(_serverConfigurationManager.Blacklist[_selectedEntryBlacklist]);
+                _selectedEntryBlacklist = -1;
+                _playerPerformanceConfigService.Save();
+                recalculatePerformance = true;
+            }
+        }
+#endregion Blacklist
+
+        if (recalculatePerformance)
+            Mediator.Publish(new RecalculatePerformanceMessage(recalculatePerformanceUID));
     }
 
     private static bool InputDtrColors(string label, ref DtrEntry.Colors colors)
@@ -1580,6 +1816,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
     }
 
+    private string _uidToAddForIgnore = string.Empty;
+    private int _selectedEntry = -1;
+
+    private string _uidToAddForIgnoreBlacklist = string.Empty;
+    private int _selectedEntryBlacklist = -1;
+
     private void DrawSettingsContent()
     {
         if (_apiController.ServerState is ServerState.Connected)
@@ -1602,6 +1844,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (ImGui.BeginTabItem("General"))
             {
                 DrawGeneral();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Performance"))
+            {
+                DrawPerformance();
                 ImGui.EndTabItem();
             }
 

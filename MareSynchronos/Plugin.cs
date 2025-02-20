@@ -124,6 +124,8 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton((s) => new SyncshellConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new TransientConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new XivDataStorageService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton((s) => new PlayerPerformanceConfigService(pluginInterface.ConfigDirectory.FullName));
+            collection.AddSingleton((s) => new ServerBlockConfigService(pluginInterface.ConfigDirectory.FullName));
             collection.AddSingleton((s) => new ConfigurationMigrator(s.GetRequiredService<ILogger<ConfigurationMigrator>>(), s.GetRequiredService<NotesConfigService>()));
             collection.AddSingleton<HubFactory>();
 
@@ -163,7 +165,7 @@ public sealed class Plugin : IDalamudPlugin
                 s.GetRequiredService<MareMediator>(), s.GetRequiredService<ApiController>(), s.GetRequiredService<PairManager>(),
                 s.GetRequiredService<ILogger<GameChatHooks>>(), gameInteropProvider, chatGui,
                 s.GetRequiredService<MareConfigService>(), s.GetRequiredService<ServerConfigurationManager>()));
-            collection.AddScoped((s) => new GuiHookService(s.GetRequiredService<ILogger<GuiHookService>>(), s.GetRequiredService<MareMediator>(),
+            collection.AddScoped((s) => new GuiHookService(s.GetRequiredService<ILogger<GuiHookService>>(), s.GetRequiredService<DalamudUtilService>(), s.GetRequiredService<MareMediator>(),
                 s.GetRequiredService<MareConfigService>(), namePlateGui, s.GetRequiredService<PairManager>()));
 
             collection.AddHostedService(p => p.GetRequiredService<MareMediator>());
@@ -178,7 +180,16 @@ public sealed class Plugin : IDalamudPlugin
         })
         .Build();
 
-        _ = _host.StartAsync();
+        Task.Run(async () => {
+            try
+            {
+                await _host.StartAsync();
+            }
+            catch (Exception e)
+            {
+                pluginLog.Error(e, "HostBuilder startup exception");
+            }
+        });
     }
 
     public void Dispose()

@@ -12,28 +12,33 @@ using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.Utils;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace MareSynchronos.PlayerData.Pairs;
 
-public class Pair
+public class Pair : DisposableMediatorSubscriberBase
 {
     private readonly PairHandlerFactory _cachedPlayerFactory;
     private readonly SemaphoreSlim _creationSemaphore = new(1);
     private readonly ILogger<Pair> _logger;
-    private readonly MareMediator _mediator;
     private readonly MareConfigService _mareConfig;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private CancellationTokenSource _applicationCts = new();
     private OnlineUserIdentDto? _onlineUserIdentDto = null;
 
-    public Pair(ILogger<Pair> logger, PairHandlerFactory cachedPlayerFactory,
+    public Pair(ILogger<Pair> logger, UserData userData, PairHandlerFactory cachedPlayerFactory,
         MareMediator mediator, MareConfigService mareConfig, ServerConfigurationManager serverConfigurationManager)
+        : base(logger, mediator)
     {
         _logger = logger;
         _cachedPlayerFactory = cachedPlayerFactory;
-        _mediator = mediator;
         _mareConfig = mareConfig;
         _serverConfigurationManager = serverConfigurationManager;
+
+        UserData = userData;
+
+        Mediator.SubscribeKeyed<HoldPairApplicationMessage>(this, UserData.UID, (msg) => HoldApplication(msg.Source));
+        Mediator.SubscribeKeyed<UnholdPairApplicationMessage>(this, UserData.UID, (msg) => UnholdApplication(msg.Source));
     }
 
     public Dictionary<GroupFullInfoDto, GroupPairFullInfoDto> GroupPair { get; set; } = new(GroupDtoComparer.Instance);
@@ -42,6 +47,16 @@ public class Pair
 
     public bool IsPaused => UserPair != null && UserPair.OtherPermissions.IsPaired() ? UserPair.OtherPermissions.IsPaused() || UserPair.OwnPermissions.IsPaused()
             : GroupPair.All(p => p.Key.GroupUserPermissions.IsPaused() || p.Value.GroupUserPermissions.IsPaused());
+
+    // Download locks apply earlier in the process than Application locks
+    private ConcurrentDictionary<string, int> HoldDownloadLocks { get; set; } = new(StringComparer.Ordinal);
+    private ConcurrentDictionary<string, int> HoldApplicationLocks { get; set; } = new(StringComparer.Ordinal);
+
+    public bool IsDownloadBlocked => HoldDownloadLocks.Any(f => f.Value > 0);
+    public bool IsApplicationBlocked => HoldApplicationLocks.Any(f => f.Value > 0) || IsDownloadBlocked;
+
+    public IEnumerable<string> HoldDownloadReasons => HoldDownloadLocks.Keys;
+    public IEnumerable<string> HoldApplicationReasons => Enumerable.Concat(HoldDownloadLocks.Keys, HoldApplicationLocks.Keys);
 
     public bool IsVisible => CachedPlayer?.IsVisible ?? false;
     public CharacterData? LastReceivedCharacterData { get; set; }
@@ -52,7 +67,7 @@ public class Pair
     public long LastAppliedApproximateVRAMBytes { get; set; } = -1;
     public string Ident => _onlineUserIdentDto?.Ident ?? string.Empty;
 
-    public UserData UserData => UserPair?.User ?? GroupPair.First().Value.User;
+    public UserData UserData { get; init; }
 
     public UserPairDto? UserPair { get; set; }
 
@@ -65,30 +80,58 @@ public class Pair
         args.AddMenuItem(new MenuItem()
         {
             Name = "Open Profile",
-            OnClicked = (a) => _mediator.Publish(new ProfileOpenStandaloneMessage(this)),
+            OnClicked = (a) => Mediator.Publish(new ProfileOpenStandaloneMessage(this)),
             PrefixColor = 559,
             PrefixChar = 'L'
         });
-        args.AddMenuItem(new MenuItem()
+        if (!IsApplicationBlocked)
         {
-            Name = "Reapply last data",
-            OnClicked = (a) => ApplyLastReceivedData(forced: true),
-            PrefixColor = 559,
-            PrefixChar = 'L',
-        });
+            args.AddMenuItem(new MenuItem()
+            {
+                Name = "Always Block Modded Appearance",
+                OnClicked = (a) => {
+                    _serverConfigurationManager.AddBlacklistUid(UserData.UID);
+                    HoldApplication("Blacklist", maxValue: 1);
+                },
+                PrefixColor = 559,
+                PrefixChar = 'L',
+            });
+            args.AddMenuItem(new MenuItem()
+            {
+                Name = "Reapply last data",
+                OnClicked = (a) => ApplyLastReceivedData(forced: true),
+                PrefixColor = 559,
+                PrefixChar = 'L',
+            });
+        }
+        else
+        {
+            args.AddMenuItem(new MenuItem()
+            {
+                Name = "Always Allow Modded Appearance",
+                OnClicked = (a) => {
+                    _serverConfigurationManager.AddWhitelistUid(UserData.UID);
+                    UnholdApplication("Blacklist", skipApplication: true);
+                    // FIXME: Manually applying here should not be needed here if everything else was written properly
+                    ApplyLastReceivedData(forced: true);
+                },
+                PrefixColor = 559,
+                PrefixChar = 'L',
+            });
+        }
         if (UserPair != null)
         {
             args.AddMenuItem(new MenuItem()
             {
                 Name = "Change Permissions",
-                OnClicked = (a) => _mediator.Publish(new OpenPermissionWindow(this)),
+                OnClicked = (a) => Mediator.Publish(new OpenPermissionWindow(this)),
                 PrefixColor = 559,
                 PrefixChar = 'L',
             });
             args.AddMenuItem(new MenuItem()
             {
                 Name = "Cycle pause state",
-                OnClicked = (a) => _mediator.Publish(new CyclePauseMessage(UserData)),
+                OnClicked = (a) => Mediator.Publish(new CyclePauseMessage(UserData)),
                 PrefixColor = 559,
                 PrefixChar = 'L',
             });
@@ -130,6 +173,10 @@ public class Pair
     {
         if (CachedPlayer == null) return;
         if (LastReceivedCharacterData == null) return;
+        if (IsDownloadBlocked) return;
+
+        if (_serverConfigurationManager.IsUidBlacklisted(UserData.UID))
+            HoldApplication("Blacklist", maxValue: 1);
 
         CachedPlayer.ApplyCharacterData(Guid.NewGuid(), RemoveNotSyncedFiles(LastReceivedCharacterData.DeepClone())!, forced);
     }
@@ -228,6 +275,44 @@ public class Pair
     internal void SetIsUploading()
     {
         CachedPlayer?.SetUploading();
+    }
+
+    public void HoldApplication(string source, int maxValue = int.MaxValue)
+    {
+        _logger.LogDebug($"Holding {UserData.UID} for reason: {source}");
+        bool wasHeld = IsApplicationBlocked;
+        HoldApplicationLocks.AddOrUpdate(source, 1, (k, v) => Math.Min(maxValue, v + 1));
+        if (!wasHeld)
+            CachedPlayer?.UndoApplication();
+    }
+
+    public void UnholdApplication(string source, bool skipApplication = false)
+    {
+        _logger.LogDebug($"Un-holding {UserData.UID} for reason: {source}");
+        bool wasHeld = IsApplicationBlocked;
+        HoldApplicationLocks.AddOrUpdate(source, 0, (k, v) => Math.Max(0, v - 1));
+        HoldApplicationLocks.TryRemove(new(source, 0));
+        if (!skipApplication && wasHeld && !IsApplicationBlocked)
+            ApplyLastReceivedData(forced: true);
+    }
+
+    public void HoldDownloads(string source, int maxValue = int.MaxValue)
+    {
+        _logger.LogDebug($"Holding {UserData.UID} for reason: {source}");
+        bool wasHeld = IsApplicationBlocked;
+        HoldDownloadLocks.AddOrUpdate(source, 1, (k, v) => Math.Min(maxValue, v + 1));
+        if (!wasHeld)
+            CachedPlayer?.UndoApplication();
+    }
+
+    public void UnholdDownloads(string source, bool skipApplication = false)
+    {
+        _logger.LogDebug($"Un-holding {UserData.UID} for reason: {source}");
+        bool wasHeld = IsApplicationBlocked;
+        HoldDownloadLocks.AddOrUpdate(source, 0, (k, v) => Math.Max(0, v - 1));
+        HoldDownloadLocks.TryRemove(new(source, 0));
+        if (!skipApplication && wasHeld && !IsApplicationBlocked)
+            ApplyLastReceivedData(forced: true);
     }
 
     private CharacterData? RemoveNotSyncedFiles(CharacterData? data)

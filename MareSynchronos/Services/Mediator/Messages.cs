@@ -88,5 +88,11 @@ public record PenumbraDirectoryChangedMessage(string? ModDirectory) : MessageBas
 public record PenumbraRedrawCharacterMessage(ICharacter Character) : SameThreadMessage;
 public record UserChatMsgMessage(SignedChatMessage ChatMsg) : MessageBase;
 public record GroupChatMsgMessage(GroupDto GroupInfo, SignedChatMessage ChatMsg) : MessageBase;
+public record RecalculatePerformanceMessage(string? UID) : MessageBase;
+public record NameplateRedrawMessage : MessageBase;
+public record HoldPairApplicationMessage(string UID, string Source) : KeyedMessage(UID);
+public record UnholdPairApplicationMessage(string UID, string Source) : KeyedMessage(UID);
+public record HoldPairDownloadsMessage(string UID, string Source) : KeyedMessage(UID);
+public record UnholdPairDownloadsMessage(string UID, string Source) : KeyedMessage(UID);
 #pragma warning restore S2094
 #pragma warning restore MA0048 // File name must match type name

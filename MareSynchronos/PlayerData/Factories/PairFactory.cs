@@ -1,4 +1,5 @@
-﻿using MareSynchronos.API.Dto.Group;
+﻿using MareSynchronos.API.Data;
+using MareSynchronos.API.Dto.Group;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services.Mediator;
@@ -25,8 +26,8 @@ public class PairFactory
         _serverConfigurationManager = serverConfigurationManager;
     }
 
-    public Pair Create()
+    public Pair Create(UserData userData)
     {
-        return new Pair(_loggerFactory.CreateLogger<Pair>(), _cachedPlayerFactory, _mareMediator, _mareConfig, _serverConfigurationManager);
+        return new Pair(_loggerFactory.CreateLogger<Pair>(), userData, _cachedPlayerFactory, _mareMediator, _mareConfig, _serverConfigurationManager);
     }
 }

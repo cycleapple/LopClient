@@ -102,6 +102,12 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             _downloadCancellationTokenSource = _downloadCancellationTokenSource?.CancelRecreate();
             _applicationCancellationTokenSource = _applicationCancellationTokenSource?.CancelRecreate();
         });
+        Mediator.Subscribe<RecalculatePerformanceMessage>(this, (msg) =>
+        {
+            if (msg.UID != null && !msg.UID.Equals(Pair.UserData.UID, StringComparison.Ordinal)) return;
+            Logger.LogDebug("Recalculating performance for {uid}", Pair.UserData.UID);
+            pair.ApplyLastReceivedData();
+        });
 
         LastAppliedDataBytes = -1;
     }
@@ -158,6 +164,21 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         }
 
         SetUploading(isUploading: false);
+
+        if (Pair.IsDownloadBlocked)
+        {
+            var reasons = string.Join(", ", Pair.HoldDownloadReasons);
+            Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Warning,
+                $"Not applying character data: {reasons}")));
+            Logger.LogDebug("[BASE-{appBase}] Not applying due to hold: {reasons}", applicationBase, reasons);
+            var hasDiffMods = characterData.CheckUpdatedData(applicationBase, _cachedData, Logger,
+                this, forceApplyCustomization, forceApplyMods: false)
+                .Any(p => p.Value.Contains(PlayerChanges.ModManip) || p.Value.Contains(PlayerChanges.ModFiles));
+            _forceApplyMods = hasDiffMods || _forceApplyMods || (PlayerCharacter == IntPtr.Zero && _cachedData == null);
+            _cachedData = characterData;
+            Logger.LogDebug("[BASE-{appBase}] Setting data: {hash}, forceApplyMods: {force}", applicationBase, _cachedData.DataHash.Value, _forceApplyMods);
+            return;
+        }
 
         Logger.LogDebug("[BASE-{appbase}] Applying data for {player}, forceApplyCustomization: {forced}, forceApplyMods: {forceMods}", applicationBase, this, forceApplyCustomization, _forceApplyMods);
         Logger.LogDebug("[BASE-{appbase}] Hash for data is {newHash}, current cache hash is {oldHash}", applicationBase, characterData.DataHash.Value, _cachedData?.DataHash.Value ?? "NODATA");
@@ -220,6 +241,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     {
         base.Dispose(disposing);
 
+        if (!disposing) return;
+
         SetUploading(isUploading: false);
         _downloadManager.Dispose();
         var name = PlayerName;
@@ -227,17 +250,51 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         try
         {
             Guid applicationId = Guid.NewGuid();
-            _applicationCancellationTokenSource?.CancelDispose();
-            _applicationCancellationTokenSource = null;
-            _downloadCancellationTokenSource?.CancelDispose();
-            _downloadCancellationTokenSource = null;
-            _charaHandler?.Dispose();
-            _charaHandler = null;
 
             if (!string.IsNullOrEmpty(name))
             {
                 Mediator.Publish(new EventMessage(new Event(name, Pair.UserData, nameof(PairHandler), EventSeverity.Informational, "Disposing User")));
             }
+
+            if (!_lifetime.ApplicationStopping.IsCancellationRequested)
+                UndoApplicationAsync(applicationId).GetAwaiter().GetResult();
+
+            _applicationCancellationTokenSource?.Dispose();
+            _applicationCancellationTokenSource = null;
+            _downloadCancellationTokenSource?.Dispose();
+            _downloadCancellationTokenSource = null;
+            _charaHandler?.Dispose();
+            _charaHandler = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error on disposal of {name}", name);
+        }
+        finally
+        {
+            PlayerName = null;
+            _cachedData = null;
+            Logger.LogDebug("Disposing {name} complete", name);
+        }
+    }
+
+    public void UndoApplication(Guid applicationId = default)
+    {
+        _ = Task.Run(async () => {
+            await UndoApplicationAsync(applicationId).ConfigureAwait(false);
+        });
+    }
+
+    private async Task UndoApplicationAsync(Guid applicationId = default)
+    {
+        Logger.LogDebug($"Undoing application of {Pair.UserPair}");
+        var name = PlayerName;
+        try
+        {
+            if (applicationId == default)
+                applicationId = Guid.NewGuid();
+            _applicationCancellationTokenSource = _applicationCancellationTokenSource?.CancelRecreate();
+            _downloadCancellationTokenSource = _downloadCancellationTokenSource?.CancelRecreate();
 
             Logger.LogDebug("[{applicationId}] Removing Temp Collection for {name} ({user})", applicationId, name, Pair.UserPair);
             if (_penumbraCollection != Guid.Empty)
@@ -246,15 +303,13 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 _penumbraCollection = Guid.Empty;
             }
 
-            if (_lifetime.ApplicationStopping.IsCancellationRequested) return;
-
             if (_dalamudUtil is { IsZoning: false, IsInCutscene: false } && !string.IsNullOrEmpty(name))
             {
                 Logger.LogTrace("[{applicationId}] Restoring state for {name} ({OnlineUser})", applicationId, name, Pair.UserPair);
                 if (!IsVisible)
                 {
                     Logger.LogDebug("[{applicationId}] Restoring Glamourer for {name} ({user})", applicationId, name, Pair.UserPair);
-                    _ipcManager.Glamourer.RevertByNameAsync(Logger, name, applicationId).GetAwaiter().GetResult();
+                    await _ipcManager.Glamourer.RevertByNameAsync(Logger, name, applicationId);
                 }
                 else
                 {
@@ -267,7 +322,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     {
                         try
                         {
-                            RevertCustomizationDataAsync(item.Key, name, applicationId, cts.Token).GetAwaiter().GetResult();
+                            await RevertCustomizationDataAsync(item.Key, name, applicationId, cts.Token);
                         }
                         catch (InvalidOperationException ex)
                         {
@@ -282,13 +337,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Error on disposal of {name}", name);
-        }
-        finally
-        {
-            PlayerName = null;
-            _cachedData = null;
-            Logger.LogDebug("Disposing {name} complete", name);
+            Logger.LogWarning(ex, "Error on undoing application of {name}", name);
         }
     }
 
@@ -382,16 +431,20 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _downloadCancellationTokenSource = _downloadCancellationTokenSource?.CancelRecreate() ?? new CancellationTokenSource();
         var downloadToken = _downloadCancellationTokenSource.Token;
 
-        _ = DownloadAndApplyCharacterAsync(applicationBase, charaData, updatedData, updateModdedPaths, updateManip, downloadToken).ConfigureAwait(false);
+        _ = Task.Run(async () => {
+            await DownloadAndApplyCharacterAsync(applicationBase, charaData, updatedData, updateModdedPaths, updateManip, downloadToken).ConfigureAwait(false);
+        });
     }
 
     private async Task DownloadAndApplyCharacterAsync(Guid applicationBase, CharacterData charaData, Dictionary<ObjectKind, HashSet<PlayerChanges>> updatedData,
         bool updateModdedPaths, bool updateManip, CancellationToken downloadToken)
     {
+        Logger.LogTrace("[BASE-{appBase}] DownloadAndApplyCharacterAsync", applicationBase);
         Dictionary<(string GamePath, string? Hash), string> moddedPaths = [];
 
         if (updateModdedPaths)
         {
+            Logger.LogTrace("[BASE-{appBase}] DownloadAndApplyCharacterAsync > updateModdedPaths", applicationBase);
             int attempts = 0;
             List<FileReplacementData> toDownloadReplacements = TryCalculateModdedDictionary(applicationBase, charaData, out moddedPaths, downloadToken);
 
@@ -406,6 +459,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
                 if (!_playerPerformanceService.ComputeAndAutoPauseOnVRAMUsageThresholds(this, charaData, toDownloadFiles))
                 {
+                    Pair.HoldApplication("IndividualPerformanceThreshold", maxValue: 1);
                     _downloadManager.CancelDownload();
                     return;
                 }
@@ -427,11 +481,30 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     break;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(2), downloadToken).ConfigureAwait(false);
             }
 
-            if (!await _playerPerformanceService.CheckBothThresholds(this, charaData).ConfigureAwait(false))
+            bool exceedsThreshold = !await _playerPerformanceService.CheckBothThresholds(this, charaData).ConfigureAwait(false);
+
+            if (exceedsThreshold)
+                Pair.HoldApplication("IndividualPerformanceThreshold", maxValue: 1);
+            else
+                Pair.UnholdApplication("IndividualPerformanceThreshold");
+
+            if (exceedsThreshold)
+            {
+                Logger.LogTrace("[BASE-{appBase}] Not applying due to performance thresholds", applicationBase);
                 return;
+            }
+        }
+
+        if (Pair.IsApplicationBlocked)
+        {
+            var reasons = string.Join(", ", Pair.HoldApplicationReasons);
+            Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Warning,
+                $"Not applying character data: {reasons}")));
+            Logger.LogTrace("[BASE-{appBase}] Not applying due to hold: {reasons}", applicationBase, reasons);
+            return;
         }
 
         downloadToken.ThrowIfCancellationRequested();
@@ -457,10 +530,19 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private async Task ApplyCharacterDataAsync(Guid applicationBase, CharacterData charaData, Dictionary<ObjectKind, HashSet<PlayerChanges>> updatedData, bool updateModdedPaths, bool updateManip,
         Dictionary<(string GamePath, string? Hash), string> moddedPaths, CancellationToken token)
     {
+        ushort objIndex = ushort.MaxValue;
         try
         {
             _applicationId = Guid.NewGuid();
             Logger.LogDebug("[BASE-{applicationId}] Starting application task for {this}: {appId}", applicationBase, this, _applicationId);
+
+            if (_penumbraCollection == Guid.Empty)
+            {
+                if (objIndex == ushort.MaxValue)
+                    objIndex = await _dalamudUtil.RunOnFrameworkThread(() => _charaHandler!.GetGameObject()!.ObjectIndex).ConfigureAwait(false);
+                _penumbraCollection = await _ipcManager.Penumbra.CreateTemporaryCollectionAsync(Logger, Pair.UserData.UID);
+                await _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, objIndex);
+            }
 
             Logger.LogDebug("[{applicationId}] Waiting for initial draw for for {handler}", _applicationId, _charaHandler);
             await _dalamudUtil.WaitWhileCharacterIsDrawing(Logger, _charaHandler!, _applicationId, 30000, token).ConfigureAwait(false);
@@ -470,7 +552,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             if (updateModdedPaths)
             {
                 // ensure collection is set
-                var objIndex = await _dalamudUtil.RunOnFrameworkThread(() => _charaHandler!.GetGameObject()!.ObjectIndex).ConfigureAwait(false);
+                if (objIndex == ushort.MaxValue)
+                    objIndex = await _dalamudUtil.RunOnFrameworkThread(() => _charaHandler!.GetGameObject()!.ObjectIndex).ConfigureAwait(false);
                 await _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, objIndex).ConfigureAwait(false);
 
                 await _ipcManager.Penumbra.SetTemporaryModsAsync(Logger, _applicationId, _penumbraCollection,
@@ -577,10 +660,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             Logger.LogTrace("Reapplying Pet Names data for {this}", this);
             await _ipcManager.PetNames.SetPlayerData(PlayerCharacter, _cachedData.PetNamesData).ConfigureAwait(false);
         });
-
-        if (_penumbraCollection == Guid.Empty)
-            _penumbraCollection = _ipcManager.Penumbra.CreateTemporaryCollectionAsync(Logger, Pair.UserData.UID).GetAwaiter().GetResult();
-        _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, _charaHandler.GetGameObject()!.ObjectIndex).GetAwaiter().GetResult();
     }
 
     private async Task RevertCustomizationDataAsync(ObjectKind objectKind, string name, Guid applicationId, CancellationToken cancelToken)
