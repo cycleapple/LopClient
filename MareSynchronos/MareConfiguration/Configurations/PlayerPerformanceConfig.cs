@@ -7,6 +7,6 @@ public class PlayerPerformanceConfig : IMareConfiguration
     public bool NotifyAutoPauseDirectPairs { get; set; } = true;
     public bool NotifyAutoPauseGroupPairs { get; set; } = false;
     public int VRAMSizeAutoPauseThresholdMiB { get; set; } = 550;
-    public int TrisAutoPauseThresholdThousands { get; set; } = 250;
+    public int TrisAutoPauseThresholdThousands { get; set; } = 375;
     public bool IgnoreDirectPairs { get; set; } = true;
 }

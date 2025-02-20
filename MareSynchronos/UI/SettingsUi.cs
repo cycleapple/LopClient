@@ -1290,7 +1290,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             ImGui.SameLine();
             ImGui.Text("(thousand triangles)");
             _uiShared.DrawHelpText("When a loading in player and their triangle count exceeds this amount, automatically blocks the synced player." + UiSharedService.TooltipSeparator
-                + "Default: 250 thousand");
+                + "Default: 375 thousand");
             using (ImRaii.Disabled(!_perfUnapplied))
             {
                 if (ImGui.Button("Apply Changes Now"))
@@ -1367,7 +1367,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete selected UID"))
             {
                 _serverConfigurationManager.RemoveWhitelistUid(_serverConfigurationManager.Whitelist[_selectedEntry]);
-                _selectedEntry = -1;
+                if (_selectedEntry > playerList.Count - 1)
+                    --_selectedEntry;
                 _playerPerformanceConfigService.Save();
                 recalculatePerformance = true;
             }
@@ -1430,7 +1431,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
             if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete selected UID"))
             {
                 _serverConfigurationManager.RemoveBlacklistUid(_serverConfigurationManager.Blacklist[_selectedEntryBlacklist]);
-                _selectedEntryBlacklist = -1;
+                if (_selectedEntryBlacklist > blacklist.Count - 1)
+                    --_selectedEntryBlacklist;
                 _playerPerformanceConfigService.Save();
                 recalculatePerformance = true;
             }
