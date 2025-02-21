@@ -249,7 +249,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         if (!disposing) return;
 
         SetUploading(isUploading: false);
-        _downloadManager.Dispose();
         var name = PlayerName;
         Logger.LogDebug("Disposing {name} ({user})", name, Pair);
         try
@@ -319,7 +318,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 }
                 else
                 {
-                    var cts = new CancellationTokenSource();
+                    using var cts = new CancellationTokenSource();
                     cts.CancelAfter(TimeSpan.FromSeconds(60));
 
                     Logger.LogInformation("[{applicationId}] CachedData is null {isNull}, contains things: {contains}", applicationId, _cachedData == null, _cachedData?.FileReplacements.Any() ?? false);
@@ -336,8 +335,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                             break;
                         }
                     }
-
-                    cts.CancelDispose();
                 }
             }
         }
@@ -442,6 +439,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         });
     }
 
+    private Task? _pairDownloadTask;
+
     private async Task DownloadAndApplyCharacterAsync(Guid applicationBase, CharacterData charaData, Dictionary<ObjectKind, HashSet<PlayerChanges>> updatedData,
         bool updateModdedPaths, bool updateManip, CancellationToken downloadToken)
     {
@@ -456,7 +455,12 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
             while (toDownloadReplacements.Count > 0 && attempts++ <= 10 && !downloadToken.IsCancellationRequested)
             {
-                _downloadManager.CancelDownload();
+                if (_pairDownloadTask != null && !_pairDownloadTask.IsCompleted)
+                {
+                    Logger.LogDebug("[BASE-{appBase}] Finishing prior running download task for player {name}, {kind}", applicationBase, PlayerName, updatedData);
+                    await _pairDownloadTask.ConfigureAwait(false);
+                }
+
                 Logger.LogDebug("[BASE-{appBase}] Downloading missing files for player {name}, {kind}", applicationBase, PlayerName, updatedData);
 
                 Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Informational,
@@ -466,17 +470,17 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 if (!_playerPerformanceService.ComputeAndAutoPauseOnVRAMUsageThresholds(this, charaData, toDownloadFiles))
                 {
                     Pair.HoldApplication("IndividualPerformanceThreshold", maxValue: 1);
-                    _downloadManager.CancelDownload();
+                    _downloadManager.ClearDownload();
                     return;
                 }
 
-                await _downloadManager.DownloadFiles(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false);
-                _downloadManager.CancelDownload();
+                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false));
+
+                await _pairDownloadTask.ConfigureAwait(false);
 
                 if (downloadToken.IsCancellationRequested)
                 {
                     Logger.LogTrace("[BASE-{appBase}] Detected cancellation", applicationBase);
-                    _downloadManager.CancelDownload();
                     return;
                 }
 

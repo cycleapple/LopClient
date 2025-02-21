@@ -50,7 +50,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
     public bool IsDownloading => !CurrentDownloads.Any();
 
-    public void CancelDownload()
+    public void ClearDownload()
     {
         CurrentDownloads.Clear();
         _downloadStatus.Clear();
@@ -65,7 +65,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         }
         catch
         {
-            CancelDownload();
+            ClearDownload();
         }
         finally
         {
@@ -76,8 +76,8 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
     protected override void Dispose(bool disposing)
     {
-        CancelDownload();
-        foreach (var stream in _activeDownloadStreams)
+        ClearDownload();
+        foreach (var stream in _activeDownloadStreams.ToList())
         {
             try
             {
@@ -112,7 +112,11 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         bool readHash = false;
         while (true)
         {
-            var readChar = (char)ConvertReadByte(fileBlockStream.ReadByte());
+            int readByte = fileBlockStream.ReadByte();
+            if (readByte == -1)
+                throw new EndOfStreamException();
+
+            var readChar = (char)ConvertReadByte(readByte);
             if (readChar == ':')
             {
                 readHash = true;
@@ -122,6 +126,8 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             if (!readHash) hashName.Add(readChar);
             else fileLength.Add(readChar);
         }
+        if (fileLength.Count == 0)
+            fileLength.Add('0');
         return (string.Join("", hashName), long.Parse(string.Join("", fileLength)));
     }
 
@@ -162,7 +168,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
                 var bytesRead = 0;
                 var limit = _orchestrator.DownloadLimitPerSlot();
-                Logger.LogTrace("Starting Download of {id} with a speed limit of {limit}", requestId, limit);
+                Logger.LogTrace("Starting Download of {id} with a speed limit of {limit} to {tempPath}", requestId, limit, tempPath);
                 stream = new ThrottledStream(await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false), limit);
                 _activeDownloadStreams.Add(stream);
                 while ((bytesRead = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
@@ -177,9 +183,12 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                 Logger.LogDebug("{requestUrl} downloaded to {tempPath}", requestUrl, tempPath);
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Error during file download of {requestUrl}", requestUrl);
             try
             {
                 if (!tempPath.IsNullOrEmpty())
@@ -262,6 +271,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             Logger.LogDebug("GUID {requestId} for {n} files on server {uri}", requestId, fileGroup.Count(), fileGroup.First().DownloadUri);
 
             var blockFile = _fileDbManager.GetCacheFilePath(requestId.ToString("N"), "blk");
+            FileInfo fi = new(blockFile);
             try
             {
                 _downloadStatus[fileGroup.Key].DownloadStatus = DownloadStatus.WaitingForSlot;
@@ -283,26 +293,25 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             }
             catch (OperationCanceledException)
             {
-                _orchestrator.ReleaseDownloadSlot();
-                File.Delete(blockFile);
-                Logger.LogDebug("Detected cancellation, removing {id}", gameObjectHandler);
-                CancelDownload();
-                return;
+                Logger.LogDebug("{dlName}: Detected cancellation of download, partially extracting files for {id}", fi.Name, gameObjectHandler);
             }
             catch (Exception ex)
             {
                 _orchestrator.ReleaseDownloadSlot();
                 File.Delete(blockFile);
-                Logger.LogError(ex, "Error during download of {id}", requestId);
-                CancelDownload();
+                Logger.LogError(ex, "{dlName}: Error during download of {id}", fi.Name, requestId);
+                ClearDownload();
                 return;
             }
 
             FileStream? fileBlockStream = null;
             try
             {
-                _downloadStatus[fileGroup.Key].TransferredFiles = 1;
-                _downloadStatus[fileGroup.Key].DownloadStatus = DownloadStatus.Decompressing;
+                if (_downloadStatus.TryGetValue(fileGroup.Key, out var status))
+                {
+                    status.TransferredFiles = 1;
+                    status.DownloadStatus = DownloadStatus.Decompressing;
+                }
                 fileBlockStream = File.OpenRead(blockFile);
                 while (fileBlockStream.Position < fileBlockStream.Length)
                 {
@@ -310,29 +319,47 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
                     try
                     {
-                        Logger.LogDebug("Found file {file} with length {le}, decompressing download", fileHash, fileLengthBytes);
                         var fileExtension = fileReplacement.First(f => string.Equals(f.Hash, fileHash, StringComparison.OrdinalIgnoreCase)).GamePaths[0].Split(".")[^1];
+                        var filePath = _fileDbManager.GetCacheFilePath(fileHash, fileExtension);
+                        Logger.LogDebug("{dlName}: Decompressing {file}:{le} => {dest}", fi.Name, fileHash, fileLengthBytes, filePath);
 
                         using var decompressedFile = new MemoryStream(64 * 1024);
                         using var innerFileStream = new LimitedStream(fileBlockStream, fileLengthBytes);
                         innerFileStream.DisposeUnderlying = false;
                         using var decStream = LZ4Stream.Decode(innerFileStream, 0, true);
-                        await decStream.CopyToAsync(decompressedFile, token);
+                        long startPos = fileBlockStream.Position;
+                        await decStream.CopyToAsync(decompressedFile, CancellationToken.None).ConfigureAwait(false);
+                        long readBytes = fileBlockStream.Position - startPos;
 
-                        var filePath = _fileDbManager.GetCacheFilePath(fileHash, fileExtension);
-                        await _fileCompactor.WriteAllBytesAsync(filePath, decompressedFile.ToArray(), token).ConfigureAwait(false);
+                        if (readBytes != fileLengthBytes)
+                        {
+                            throw new EndOfStreamException();
+                        }
+
+                        await _fileCompactor.WriteAllBytesAsync(filePath, decompressedFile.ToArray(), CancellationToken.None).ConfigureAwait(false);
 
                         PersistFileToStorage(fileHash, filePath, fileLengthBytes);
                     }
+                    catch (EndOfStreamException)
+                    {
+                        Logger.LogWarning("{dlName}: Failure to extract file {fileHash}, stream ended prematurely", fi.Name, fileHash);
+                    }
                     catch (Exception e)
                     {
-                        Logger.LogWarning(e, "Error during decompression");
+                        Logger.LogWarning(e, "{dlName}: Error during decompression of {hash}", fi.Name, fileHash);
+
+                        foreach (var fr in fileReplacement)
+                            Logger.LogWarning(" - {h}: {x}", fr.Hash, fr.GamePaths[0]);
                     }
                 }
             }
+            catch (EndOfStreamException)
+            {
+                Logger.LogDebug("{dlName}: Failure to extract file header data, stream ended", fi.Name);
+            }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error during block file read");
+                Logger.LogError(ex, "{dlName}: Error during block file read", fi.Name);
             }
             finally
             {
@@ -345,7 +372,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
         Logger.LogDebug("Download end: {id}", gameObjectHandler);
 
-        CancelDownload();
+        ClearDownload();
     }
 
     private async Task<List<DownloadFileDto>> FilesGetSizes(List<string> hashes, CancellationToken ct)
