@@ -106,7 +106,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         {
             if (msg.UID != null && !msg.UID.Equals(Pair.UserData.UID, StringComparison.Ordinal)) return;
             Logger.LogDebug("Recalculating performance for {uid}", Pair.UserData.UID);
-            pair.ApplyLastReceivedData();
+            pair.ApplyLastReceivedData(forced: true);
         });
 
         LastAppliedDataBytes = -1;

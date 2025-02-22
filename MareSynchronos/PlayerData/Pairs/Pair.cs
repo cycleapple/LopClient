@@ -1,4 +1,5 @@
 ﻿using Dalamud.Game.Gui.ContextMenu;
+using Dalamud.Game.Text.SeStringHandling;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
 using MareSynchronos.API.Data.Enum;
@@ -77,64 +78,54 @@ public class Pair : DisposableMediatorSubscriberBase
     {
         if (CachedPlayer == null || (args.Target is not MenuTargetDefault target) || target.TargetObjectId != CachedPlayer.PlayerCharacterId || IsPaused) return;
 
-        args.AddMenuItem(new MenuItem()
-        {
-            Name = "Open Profile",
-            OnClicked = (a) => Mediator.Publish(new ProfileOpenStandaloneMessage(this)),
-            PrefixColor = 559,
-            PrefixChar = 'L'
-        });
-        if (!IsApplicationBlocked)
+        void Add(string name, Action<IMenuItemClickedArgs>? action)
         {
             args.AddMenuItem(new MenuItem()
             {
-                Name = "Always Block Modded Appearance",
-                OnClicked = (a) => {
+                Name = name,
+                OnClicked = action,
+                PrefixColor = 559,
+                PrefixChar = 'L'
+            });
+        }
+
+        bool isBlocked = IsApplicationBlocked;
+        bool isBlacklisted = _serverConfigurationManager.IsUidBlacklisted(UserData.UID);
+        bool isWhitelisted = _serverConfigurationManager.IsUidWhitelisted(UserData.UID);
+
+        Add("Open Profile", _ => Mediator.Publish(new ProfileOpenStandaloneMessage(this)));
+
+        if (!isBlocked && !isBlacklisted)
+            Add("Always Block Modded Appearance", _ => {
                     _serverConfigurationManager.AddBlacklistUid(UserData.UID);
                     HoldApplication("Blacklist", maxValue: 1);
-                },
-                PrefixColor = 559,
-                PrefixChar = 'L',
-            });
-            args.AddMenuItem(new MenuItem()
-            {
-                Name = "Reapply last data",
-                OnClicked = (a) => ApplyLastReceivedData(forced: true),
-                PrefixColor = 559,
-                PrefixChar = 'L',
-            });
-        }
-        else
-        {
-            args.AddMenuItem(new MenuItem()
-            {
-                Name = "Always Allow Modded Appearance",
-                OnClicked = (a) => {
+                    ApplyLastReceivedData(forced: true);
+                });
+        else if (isBlocked && !isWhitelisted)
+            Add("Always Allow Modded Appearance", _ => {
                     _serverConfigurationManager.AddWhitelistUid(UserData.UID);
                     UnholdApplication("Blacklist", skipApplication: true);
-                    // FIXME: Manually applying here should not be needed here if everything else was written properly
                     ApplyLastReceivedData(forced: true);
-                },
-                PrefixColor = 559,
-                PrefixChar = 'L',
+                });
+
+        if (isWhitelisted)
+            Add("Remove from Whitelist", _ => {
+                _serverConfigurationManager.RemoveWhitelistUid(UserData.UID);
+                ApplyLastReceivedData(forced: true);
             });
-        }
+        else if (isBlacklisted)
+            Add("Remove from Blacklist", _ => {
+                _serverConfigurationManager.RemoveBlacklistUid(UserData.UID);
+                UnholdApplication("Blacklist", skipApplication: true);
+                ApplyLastReceivedData(forced: true);
+            });
+
+        Add("Reapply last data", _ => ApplyLastReceivedData(forced: true));
+
         if (UserPair != null)
         {
-            args.AddMenuItem(new MenuItem()
-            {
-                Name = "Change Permissions",
-                OnClicked = (a) => Mediator.Publish(new OpenPermissionWindow(this)),
-                PrefixColor = 559,
-                PrefixChar = 'L',
-            });
-            args.AddMenuItem(new MenuItem()
-            {
-                Name = "Cycle pause state",
-                OnClicked = (a) => Mediator.Publish(new CyclePauseMessage(UserData)),
-                PrefixColor = 559,
-                PrefixChar = 'L',
-            });
+            Add("Change Permissions", _ => Mediator.Publish(new OpenPermissionWindow(this)));
+            Add("Cycle pause state", _ => Mediator.Publish(new CyclePauseMessage(UserData)));
         }
     }
 
