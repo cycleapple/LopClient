@@ -50,6 +50,7 @@ public class PopupHandler : WindowMediatorSubscriberBase
             IsOpen = true;
         });
         _uiSharedService = uiSharedService;
+        DisableWindowSounds = true;
     }
 
     protected override void DrawInternal()
