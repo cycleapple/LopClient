@@ -9,6 +9,7 @@ using MareSynchronos.API.Dto.User;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Factories;
 using MareSynchronos.PlayerData.Handlers;
+using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.Utils;
@@ -67,6 +68,7 @@ public class Pair : DisposableMediatorSubscriberBase
     public long LastAppliedDataTris { get; set; } = -1;
     public long LastAppliedApproximateVRAMBytes { get; set; } = -1;
     public string Ident => _onlineUserIdentDto?.Ident ?? string.Empty;
+    public PairAnalyzer? PairAnalyzer => CachedPlayer?.PairAnalyzer;
 
     public UserData UserData { get; init; }
 

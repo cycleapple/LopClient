@@ -322,7 +322,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                         var filePath = _fileDbManager.GetCacheFilePath(fileHash, fileExtension);
                         await _fileCompactor.WriteAllBytesAsync(filePath, decompressedFile.ToArray(), token).ConfigureAwait(false);
 
-                        PersistFileToStorage(fileHash, filePath);
+                        PersistFileToStorage(fileHash, filePath, fileLengthBytes);
                     }
                     catch (Exception e)
                     {
@@ -355,7 +355,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         return await response.Content.ReadFromJsonAsync<List<DownloadFileDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
     }
 
-    private void PersistFileToStorage(string fileHash, string filePath)
+    private void PersistFileToStorage(string fileHash, string filePath, long? compressedSize = null)
     {
         var fi = new FileInfo(filePath);
         Func<DateTime> RandomDayInThePast()
@@ -378,6 +378,8 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                 File.Delete(filePath);
                 _fileDbManager.RemoveHashedFile(entry.Hash, entry.PrefixedFilePath);
             }
+            if (entry != null)
+                entry.CompressedSize = compressedSize;
         }
         catch (Exception ex)
         {

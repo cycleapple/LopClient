@@ -79,6 +79,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<GameObjectHandlerFactory>();
             collection.AddSingleton<FileDownloadManagerFactory>();
             collection.AddSingleton<PairHandlerFactory>();
+            collection.AddSingleton<PairAnalyzerFactory>();
             collection.AddSingleton<PairFactory>();
             collection.AddSingleton<XivDataAnalyzer>();
             collection.AddSingleton<CharacterAnalyzer>();

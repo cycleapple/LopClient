@@ -43,7 +43,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private Guid _penumbraCollection = Guid.Empty;
     private bool _redrawOnNextApplication = false;
 
-    public PairHandler(ILogger<PairHandler> logger, Pair pair,
+    public PairHandler(ILogger<PairHandler> logger, Pair pair, PairAnalyzer pairAnalyzer,
         GameObjectHandlerFactory gameObjectHandlerFactory,
         IpcManager ipcManager, FileDownloadManager transferManager,
         PluginWarningNotificationService pluginWarningNotificationManager,
@@ -53,6 +53,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         ServerConfigurationManager serverConfigManager) : base(logger, mediator)
     {
         Pair = pair;
+        PairAnalyzer = pairAnalyzer;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
         _ipcManager = ipcManager;
         _downloadManager = transferManager;
@@ -129,6 +130,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
     public long LastAppliedDataBytes { get; private set; }
     public Pair Pair { get; private set; }
+    public PairAnalyzer PairAnalyzer { get; private init; }
     public nint PlayerCharacter => _charaHandler?.Address ?? nint.Zero;
     public unsafe uint PlayerCharacterId => (_charaHandler?.Address ?? nint.Zero) == nint.Zero
         ? uint.MaxValue
@@ -159,6 +161,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 .Any(p => p.Value.Contains(PlayerChanges.ModManip) || p.Value.Contains(PlayerChanges.ModFiles));
             _forceApplyMods = hasDiffMods || _forceApplyMods || (PlayerCharacter == IntPtr.Zero && _cachedData == null);
             _cachedData = characterData;
+            Mediator.Publish(new PairDataAppliedMessage(Pair.UserData.UID, characterData));
             Logger.LogDebug("[BASE-{appBase}] Setting data: {hash}, forceApplyMods: {force}", applicationBase, _cachedData.DataHash.Value, _forceApplyMods);
             return;
         }
@@ -176,6 +179,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 .Any(p => p.Value.Contains(PlayerChanges.ModManip) || p.Value.Contains(PlayerChanges.ModFiles));
             _forceApplyMods = hasDiffMods || _forceApplyMods || (PlayerCharacter == IntPtr.Zero && _cachedData == null);
             _cachedData = characterData;
+            Mediator.Publish(new PairDataAppliedMessage(Pair.UserData.UID, characterData));
             Logger.LogDebug("[BASE-{appBase}] Setting data: {hash}, forceApplyMods: {force}", applicationBase, _cachedData.DataHash.Value, _forceApplyMods);
             return;
         }
@@ -274,6 +278,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         {
             PlayerName = null;
             _cachedData = null;
+            Mediator.Publish(new PairDataAppliedMessage(Pair.UserData.UID, null));
             Logger.LogDebug("Disposing {name} complete", name);
         }
     }
@@ -581,6 +586,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             }
 
             _cachedData = charaData;
+            Mediator.Publish(new PairDataAppliedMessage(Pair.UserData.UID, charaData));
 
             Logger.LogDebug("[{applicationId}] Application finished", _applicationId);
         }
@@ -591,6 +597,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 IsVisible = false;
                 _forceApplyMods = true;
                 _cachedData = charaData;
+                Mediator.Publish(new PairDataAppliedMessage(Pair.UserData.UID, charaData));
                 Logger.LogDebug("[{applicationId}] Cancelled, player turned null during application", _applicationId);
             }
             else

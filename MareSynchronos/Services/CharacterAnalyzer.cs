@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MareSynchronos.Services;
 
-public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
+public sealed class CharacterAnalyzer : DisposableMediatorSubscriberBase
 {
     private readonly FileCacheManager _fileCacheManager;
     private readonly XivDataAnalyzer _xivDataAnalyzer;
@@ -63,7 +63,7 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
                 foreach (var file in remaining)
                 {
                     Logger.LogDebug("Computing file {file}", file.FilePaths[0]);
-                    await file.ComputeSizes(_fileCacheManager, cancelToken).ConfigureAwait(false);
+                    await file.ComputeSizes(_fileCacheManager, cancelToken, ignoreCacheEntries: true).ConfigureAwait(false);
                     CurrentFile++;
                 }
 
@@ -88,9 +88,14 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
         if (print) PrintAnalysis();
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        _analysisCts.CancelDispose();
+        base.Dispose(disposing);
+
+        if (!disposing) return;
+
+        _analysisCts?.CancelDispose();
+        _baseAnalysisCts.CancelDispose();
     }
 
     private async Task BaseAnalysis(CharacterData charaData, CancellationToken token)
@@ -191,11 +196,11 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
     internal sealed record FileDataEntry(string Hash, string FileType, List<string> GamePaths, List<string> FilePaths, long OriginalSize, long CompressedSize, long Triangles)
     {
         public bool IsComputed => OriginalSize > 0 && CompressedSize > 0;
-        public async Task ComputeSizes(FileCacheManager fileCacheManager, CancellationToken token)
+        public async Task ComputeSizes(FileCacheManager fileCacheManager, CancellationToken token, bool ignoreCacheEntries = true)
         {
             var compressedsize = await fileCacheManager.GetCompressedFileData(Hash, token).ConfigureAwait(false);
             var normalSize = new FileInfo(FilePaths[0]).Length;
-            var entries = fileCacheManager.GetAllFileCachesByHash(Hash, ignoreCacheEntries: true, validate: false);
+            var entries = fileCacheManager.GetAllFileCachesByHash(Hash, ignoreCacheEntries: ignoreCacheEntries, validate: false);
             foreach (var entry in entries)
             {
                 entry.Size = normalSize;
@@ -220,7 +225,9 @@ public sealed class CharacterAnalyzer : MediatorSubscriberBase, IDisposable
                             using var reader = new BinaryReader(stream);
                             reader.BaseStream.Position = 4;
                             var format = (TexFile.TextureFormat)reader.ReadInt32();
-                            return format.ToString();
+                            var width = reader.ReadInt16();
+                            var height = reader.ReadInt16();
+                            return $"{format} ({width}x{height})";
                         }
                         catch
                         {

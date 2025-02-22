@@ -51,4 +51,10 @@ public class UiFactory
         return new PermissionWindowUI(_loggerFactory.CreateLogger<PermissionWindowUI>(), pair,
             _mareMediator, _uiSharedService, _apiController, _performanceCollectorService);
     }
+
+    public PlayerAnalysisUI CreatePlayerAnalysisUi(Pair pair)
+    {
+        return new PlayerAnalysisUI(_loggerFactory.CreateLogger<PlayerAnalysisUI>(), pair,
+            _mareMediator, _uiSharedService, _performanceCollectorService);
+    }
 }

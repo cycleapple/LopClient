@@ -194,6 +194,11 @@ public class UidDisplayHandler
         _mediator.Publish(new ProfileOpenStandaloneMessage(entry));
     }
 
+    internal void OpenAnalysis(Pair entry)
+    {
+        _mediator.Publish(new OpenPairAnalysisWindow(entry));
+    }
+
     private bool ShowUidInsteadOfName(Pair pair)
     {
         _showUidForEntry.TryGetValue(pair.UserData.UID, out var showUidInsteadOfName);

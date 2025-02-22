@@ -78,6 +78,7 @@ public record OpenReportPopupMessage(Pair PairToReport) : MessageBase;
 public record OpenBanUserPopupMessage(Pair PairToBan, GroupFullInfoDto GroupFullInfoDto) : MessageBase;
 public record OpenSyncshellAdminPanel(GroupFullInfoDto GroupInfo) : MessageBase;
 public record OpenPermissionWindow(Pair Pair) : MessageBase;
+public record OpenPairAnalysisWindow(Pair Pair) : MessageBase;
 public record DownloadLimitChangedMessage() : SameThreadMessage;
 public record CensusUpdateMessage(byte Gender, byte RaceId, byte TribeId) : MessageBase;
 public record TargetPairMessage(Pair Pair) : MessageBase;
@@ -94,5 +95,7 @@ public record HoldPairApplicationMessage(string UID, string Source) : KeyedMessa
 public record UnholdPairApplicationMessage(string UID, string Source) : KeyedMessage(UID);
 public record HoldPairDownloadsMessage(string UID, string Source) : KeyedMessage(UID);
 public record UnholdPairDownloadsMessage(string UID, string Source) : KeyedMessage(UID);
+public record PairDataAppliedMessage(string UID, CharacterData? CharacterData) : KeyedMessage(UID);
+public record PairDataAnalyzedMessage(string UID) : KeyedMessage(UID);
 #pragma warning restore S2094
 #pragma warning restore MA0048 // File name must match type name

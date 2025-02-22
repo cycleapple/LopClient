@@ -245,6 +245,8 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
             var compressedSize = CurrentUploads.Sum(c => c.Total);
             Logger.LogDebug("Upload complete, compressed {size} to {compressed}", UiSharedService.ByteToString(totalSize), UiSharedService.ByteToString(compressedSize));
+
+            _fileDbManager.WriteOutFullCsv();
         }
 
         foreach (var file in unverifiedUploadHashes.Where(c => !CurrentUploads.Exists(u => string.Equals(u.Hash, c, StringComparison.Ordinal))))

@@ -26,6 +26,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
     private Task? _conversionTask;
     private bool _enableBc7ConversionMode = false;
     private bool _hasUpdate = false;
+    private bool _sortDirty = true;
     private bool _modalOpen = false;
     private string _selectedFileTypeTab = string.Empty;
     private string _selectedHash = string.Empty;
@@ -102,11 +103,12 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         {
             _cachedAnalysis = _characterAnalyzer.LastAnalysis.DeepClone();
             _hasUpdate = false;
+            _sortDirty = true;
         }
 
         UiSharedService.TextWrapped("This window shows you all files and their sizes that are currently in use through your character and associated entities");
 
-        if (_cachedAnalysis!.Count == 0) return;
+        if (_cachedAnalysis == null || _cachedAnalysis.Count == 0) return;
 
         bool isAnalyzing = _characterAnalyzer.IsAnalysisRunning;
         bool needAnalysis = _cachedAnalysis!.Any(c => c.Value.Any(f => !f.Value.IsComputed));
@@ -161,7 +163,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         ImGui.TextUnformatted("Total size (actual):");
         ImGui.SameLine();
         ImGui.TextUnformatted(UiSharedService.ByteToString(_cachedAnalysis!.Sum(c => c.Value.Sum(c => c.Value.OriginalSize))));
-        ImGui.TextUnformatted("Total size (compressed for up/download only):");
+        ImGui.TextUnformatted("Total size (download size):");
         ImGui.SameLine();
         using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, needAnalysis))
         {
@@ -182,7 +184,6 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         {
             using var id = ImRaii.PushId(kvp.Key.ToString());
             string tabText = kvp.Key.ToString();
-            if (kvp.Value.Any(f => !f.Value.IsComputed)) tabText += " (!)";
             using var tab = ImRaii.TabItem(tabText + "###" + kvp.Key.ToString());
             if (tab.Success)
             {
@@ -209,7 +210,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 ImGui.TextUnformatted($"{kvp.Key} size (actual):");
                 ImGui.SameLine();
                 ImGui.TextUnformatted(UiSharedService.ByteToString(kvp.Value.Sum(c => c.Value.OriginalSize)));
-                ImGui.TextUnformatted($"{kvp.Key} size (compressed for up/download only):");
+                ImGui.TextUnformatted($"{kvp.Key} size (download size):");
                 ImGui.SameLine();
                 using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, needAnalysis))
                 {
@@ -248,10 +249,6 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                     string fileGroupText = fileGroup.Key + " [" + fileGroup.Count() + "]";
                     var requiresCompute = fileGroup.Any(k => !k.IsComputed);
                     using var tabcol = ImRaii.PushColor(ImGuiCol.Tab, UiSharedService.Color(ImGuiColors.DalamudYellow), requiresCompute);
-                    if (requiresCompute)
-                    {
-                        fileGroupText += " (!)";
-                    }
                     ImRaii.IEndObject fileTab;
                     using (var textcol = ImRaii.PushColor(ImGuiCol.Text, UiSharedService.Color(new(0, 0, 0, 1)),
                         requiresCompute && !string.Equals(_selectedFileTypeTab, fileGroup.Key, StringComparison.Ordinal)))
@@ -277,7 +274,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                     ImGui.SameLine();
                     ImGui.TextUnformatted(UiSharedService.ByteToString(fileGroup.Sum(c => c.OriginalSize)));
 
-                    ImGui.TextUnformatted($"{fileGroup.Key} files size (compressed for up/download only):");
+                    ImGui.TextUnformatted($"{fileGroup.Key} files size (download size):");
                     ImGui.SameLine();
                     ImGui.TextUnformatted(UiSharedService.ByteToString(fileGroup.Sum(c => c.CompressedSize)));
 
@@ -376,10 +373,10 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
             new Vector2(0, 300));
         if (!table.Success) return;
         ImGui.TableSetupColumn("Hash");
-        ImGui.TableSetupColumn("Filepaths");
-        ImGui.TableSetupColumn("Gamepaths");
-        ImGui.TableSetupColumn("Original Size");
-        ImGui.TableSetupColumn("Compressed Size");
+        ImGui.TableSetupColumn("Filepaths", ImGuiTableColumnFlags.PreferSortDescending);
+        ImGui.TableSetupColumn("Gamepaths", ImGuiTableColumnFlags.PreferSortDescending);
+        ImGui.TableSetupColumn("File Size", ImGuiTableColumnFlags.DefaultSort | ImGuiTableColumnFlags.PreferSortDescending);
+        ImGui.TableSetupColumn("Download Size", ImGuiTableColumnFlags.PreferSortDescending);
         if (string.Equals(fileGroup.Key, "tex", StringComparison.Ordinal))
         {
             ImGui.TableSetupColumn("Format");
@@ -387,13 +384,13 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
         }
         if (string.Equals(fileGroup.Key, "mdl", StringComparison.Ordinal))
         {
-            ImGui.TableSetupColumn("Triangles");
+            ImGui.TableSetupColumn("Triangles", ImGuiTableColumnFlags.PreferSortDescending);
         }
         ImGui.TableSetupScrollFreeze(0, 1);
         ImGui.TableHeadersRow();
 
         var sortSpecs = ImGui.TableGetSortSpecs();
-        if (sortSpecs.SpecsDirty)
+        if (sortSpecs.SpecsDirty || _sortDirty)
         {
             var idx = sortSpecs.Specs.ColumnIndex;
 
@@ -427,6 +424,7 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 _cachedAnalysis![_selectedObjectTab] = _cachedAnalysis[_selectedObjectTab].OrderByDescending(k => k.Value.Format.Value, StringComparer.Ordinal).ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal);
 
             sortSpecs.SpecsDirty = false;
+            _sortDirty = false;
         }
 
         foreach (var item in fileGroup)
@@ -462,7 +460,8 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 if (_enableBc7ConversionMode)
                 {
                     ImGui.TableNextColumn();
-                    if (string.Equals(item.Format.Value, "BC7", StringComparison.Ordinal))
+                    if (item.Format.Value.StartsWith("BC") || item.Format.Value.StartsWith("DXT")
+                        || item.Format.Value.StartsWith("24864")) // BC4
                     {
                         ImGui.TextUnformatted("");
                         continue;

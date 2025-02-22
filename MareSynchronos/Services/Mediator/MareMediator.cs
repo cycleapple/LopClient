@@ -109,7 +109,7 @@ public sealed class MareMediator : IHostedService
                 throw new InvalidOperationException("Already subscribed");
             }
 
-            _logger.LogDebug("Subscriber added for message {message}: {sub}", typeof(T).Name, subscriber.GetType().Name);
+            _logger.LogTrace("Subscriber added for message {message}: {sub}", typeof(T).Name, subscriber.GetType().Name);
         }
     }
 
@@ -124,7 +124,7 @@ public sealed class MareMediator : IHostedService
                 throw new InvalidOperationException("Already subscribed");
             }
 
-            _logger.LogDebug("Subscriber added for message {message}:{key}: {sub}", typeof(T).Name, key, subscriber.GetType().Name);
+            _logger.LogTrace("Subscriber added for message {message}:{key}: {sub}", typeof(T).Name, key, subscriber.GetType().Name);
         }
     }
 

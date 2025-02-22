@@ -76,6 +76,17 @@ public sealed class UiService : DisposableMediatorSubscriberBase
             }
         });
 
+        Mediator.Subscribe<OpenPairAnalysisWindow>(this, (msg) =>
+        {
+            if (!_createdWindows.Exists(p => p is PlayerAnalysisUI ui
+                && msg.Pair == ui.Pair))
+            {
+                var window = _uiFactory.CreatePlayerAnalysisUi(msg.Pair);
+                _createdWindows.Add(window);
+                _windowSystem.AddWindow(window);
+            }
+        });
+
         Mediator.Subscribe<RemoveWindowMessage>(this, (msg) =>
         {
             _windowSystem.RemoveWindow(msg.Window);
