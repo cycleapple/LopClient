@@ -17,23 +17,31 @@ public class GuiHookService : DisposableMediatorSubscriberBase
     private readonly DalamudUtilService _dalamudUtil;
     private readonly MareConfigService _configService;
     private readonly INamePlateGui _namePlateGui;
+    private readonly IGameConfig _gameConfig;
+    private readonly IPartyList _partyList;
     private readonly PairManager _pairManager;
 
     private bool _isModified = false;
+    private bool _namePlateRoleColorsEnabled = false;
 
     public GuiHookService(ILogger<GuiHookService> logger, DalamudUtilService dalamudUtil, MareMediator mediator, MareConfigService configService,
-        INamePlateGui namePlateGui, PairManager pairManager)
+        INamePlateGui namePlateGui, IGameConfig gameConfig, IPartyList partyList, PairManager pairManager)
         : base(logger, mediator)
     {
         _logger = logger;
         _dalamudUtil = dalamudUtil;
         _configService = configService;
         _namePlateGui = namePlateGui;
+        _gameConfig = gameConfig;
+        _partyList = partyList;
         _pairManager = pairManager;
 
         _namePlateGui.OnNamePlateUpdate += OnNamePlateUpdate;
         _namePlateGui.RequestRedraw();
 
+        gameConfig.TryGet(Dalamud.Game.Config.UiConfigOption.NamePlateSetRoleColor, out bool isNameplateSetRoleColor);
+
+        Mediator.Subscribe<DelayedFrameworkUpdateMessage>(this, (_) => GameSettingsCheck());
         Mediator.Subscribe<PairHandlerVisibleMessage>(this, (_) => RequestRedraw());
         Mediator.Subscribe<NameplateRedrawMessage>(this, (_) => RequestRedraw());
     }
@@ -72,10 +80,17 @@ public class GuiHookService : DisposableMediatorSubscriberBase
 
         var visibleUsersDict = visibleUsers.ToDictionary(u => (ulong)u.PlayerCharacterId);
 
+        var partyMembers = new nint[_partyList.Count];
+
+        for (int i = 0; i < _partyList.Count; ++i)
+            partyMembers[i] = _partyList[i]?.GameObject?.Address ?? nint.MaxValue;
+
         foreach (var handler in handlers)
         {
-            if (visibleUsersIds.Contains(handler.GameObjectId))
+            if (handler != null && visibleUsersIds.Contains(handler.GameObjectId))
             {
+                if (_namePlateRoleColorsEnabled && partyMembers.Contains(handler.GameObject?.Address ?? nint.MaxValue))
+                    continue;
                 var pair = visibleUsersDict[handler.GameObjectId];
                 var colors = !pair.IsApplicationBlocked ? _configService.Current.NameColors : _configService.Current.BlockedNameColors;
                 handler.NameParts.TextWrap = (
@@ -84,6 +99,18 @@ public class GuiHookService : DisposableMediatorSubscriberBase
                 );
                 _isModified = true;
             }
+        }
+    }
+
+    private void GameSettingsCheck()
+    {
+        if (!_gameConfig.TryGet(Dalamud.Game.Config.UiConfigOption.NamePlateSetRoleColor, out bool namePlateRoleColorsEnabled))
+            return;
+
+        if (_namePlateRoleColorsEnabled != namePlateRoleColorsEnabled)
+        {
+            _namePlateRoleColorsEnabled = namePlateRoleColorsEnabled;
+            RequestRedraw(force: true);
         }
     }
 
