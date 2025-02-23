@@ -1,4 +1,6 @@
-﻿namespace MareSynchronos.MareConfiguration.Configurations;
+﻿using MareSynchronos.MareConfiguration.Models;
+
+namespace MareSynchronos.MareConfiguration.Configurations;
 
 public class PlayerPerformanceConfig : IMareConfiguration
 {
@@ -9,4 +11,5 @@ public class PlayerPerformanceConfig : IMareConfiguration
     public int VRAMSizeAutoPauseThresholdMiB { get; set; } = 550;
     public int TrisAutoPauseThresholdThousands { get; set; } = 375;
     public bool IgnoreDirectPairs { get; set; } = true;
+    public TextureShrinkMode TextureShrinkMode { get; set; } = TextureShrinkMode.Default;
 }

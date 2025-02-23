@@ -3,12 +3,14 @@ using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.Havok.Animation;
 using FFXIVClientStructs.Havok.Common.Base.Types;
 using FFXIVClientStructs.Havok.Common.Serialize.Util;
+using Lumina.Data;
 using MareSynchronos.FileCache;
 using MareSynchronos.Interop.GameModel;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Handlers;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace MareSynchronos.Services;
 
@@ -18,6 +20,7 @@ public sealed class XivDataAnalyzer
     private readonly FileCacheManager _fileCacheManager;
     private readonly XivDataStorageService _configService;
     private readonly List<string> _failedCalculatedTris = [];
+    private readonly List<string> _failedCalculatedTex = [];
 
     public XivDataAnalyzer(ILogger<XivDataAnalyzer> logger, FileCacheManager fileCacheManager,
         XivDataStorageService configService)
@@ -67,7 +70,7 @@ public sealed class XivDataAnalyzer
     {
         if (_configService.Current.BonesDictionary.TryGetValue(hash, out var bones)) return bones;
 
-        var cacheEntity = _fileCacheManager.GetFileCacheByHash(hash);
+        var cacheEntity = _fileCacheManager.GetFileCacheByHash(hash, preferSubst: true);
         if (cacheEntity == null) return null;
 
         using BinaryReader reader = new BinaryReader(File.Open(cacheEntity.ResolvedFilepath, FileMode.Open, FileAccess.Read, FileShare.Read));
@@ -158,7 +161,7 @@ public sealed class XivDataAnalyzer
         if (_failedCalculatedTris.Contains(hash, StringComparer.Ordinal))
             return 0;
 
-        var path = _fileCacheManager.GetFileCacheByHash(hash);
+        var path = _fileCacheManager.GetFileCacheByHash(hash, preferSubst: true);
         if (path == null || !path.ResolvedFilepath.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase))
             return 0;
 
@@ -209,6 +212,47 @@ public sealed class XivDataAnalyzer
             _configService.Save();
             _logger.LogWarning(e, "Could not parse file {file}", filePath);
             return 0;
+        }
+    }
+
+    public async Task<(uint Format, int MipCount, ushort Width, ushort Height)> GetTexFormatByHash(string hash)
+    {
+        if (_configService.Current.TexDictionary.TryGetValue(hash, out var cachedTex) && cachedTex.Mip0Size > 0)
+            return cachedTex;
+
+        if (_failedCalculatedTex.Contains(hash, StringComparer.Ordinal))
+            return default;
+
+        var path = _fileCacheManager.GetFileCacheByHash(hash);
+        if (path == null || !path.ResolvedFilepath.EndsWith(".tex", StringComparison.OrdinalIgnoreCase))
+            return default;
+
+        var filePath = path.ResolvedFilepath;
+
+        try
+        {
+            _logger.LogDebug("Detected Texture File {path}, reading header", filePath);
+            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            using var r = new LuminaBinaryReader(stream);
+            var texHeader = r.ReadStructure<Lumina.Data.Files.TexFile.TexHeader>();
+
+            if (texHeader.Format == 0 || texHeader.MipCount == 0 || texHeader.ArraySize != 0 || texHeader.MipCount > 13)
+            {
+                _failedCalculatedTex.Add(hash);
+                _configService.Current.TexDictionary[hash] = default;
+                _configService.Save();
+                return default;
+            }
+
+            return ((uint)texHeader.Format, texHeader.MipCount, texHeader.Width, texHeader.Height);
+        }
+        catch (Exception e)
+        {
+            _failedCalculatedTex.Add(hash);
+            _configService.Current.TriangleDictionary[hash] = 0;
+            _configService.Save();
+            _logger.LogWarning(e, "Could not parse file {file}", filePath);
+            return default;
         }
     }
 }

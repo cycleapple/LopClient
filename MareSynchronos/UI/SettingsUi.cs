@@ -1242,6 +1242,35 @@ public class SettingsUi : WindowMediatorSubscriberBase
         bool recalculatePerformance = false;
         string? recalculatePerformanceUID = null;
 
+        _uiShared.BigText("Global Configuration");
+
+        bool alwaysShrinkTextures = _playerPerformanceConfigService.Current.TextureShrinkMode == TextureShrinkMode.Always;
+        if (ImGui.Checkbox("Shrink downloaded textures", ref alwaysShrinkTextures))
+        {
+            if (alwaysShrinkTextures)
+                _playerPerformanceConfigService.Current.TextureShrinkMode = TextureShrinkMode.Always;
+            else
+                _playerPerformanceConfigService.Current.TextureShrinkMode = TextureShrinkMode.Never;
+            _playerPerformanceConfigService.Save();
+            recalculatePerformance = true;
+            _cacheMonitor.ClearSubstStorage();
+        }
+        _uiShared.DrawHelpText("Automatically shrinks texture resolution of synced players to reduce VRAM utilization." + UiSharedService.TooltipSeparator
+            + "Texture Size Limit (DXT/BC5/BC7 Compressed): 2048x2048" + Environment.NewLine
+            + "Texture Size Limit (A8R8G8B8 Uncompressed): 1024x1024" + UiSharedService.TooltipSeparator
+            + "Enable to reduce lag in large crowds." + Environment.NewLine
+            + "Disable this for higher quality during GPose.");
+
+        var totalVramBytes = _pairManager.GetOnlineUserPairs().Where(p => p.IsVisible && p.LastAppliedApproximateVRAMBytes > 0).Sum(p => p.LastAppliedApproximateVRAMBytes);
+
+        ImGui.TextUnformatted("Current VRAM utilization by all nearby players:");
+        ImGui.SameLine();
+        using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.HealerGreen, totalVramBytes < 2.0 * 1024.0 * 1024.0 * 1024.0))
+            using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudYellow, totalVramBytes >= 4.0 * 1024.0 * 1024.0 * 1024.0))
+                using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed, totalVramBytes >= 6.0 * 1024.0 * 1024.0 * 1024.0))
+                    ImGui.TextUnformatted($"{totalVramBytes / 1024.0 / 1024.0 / 1024.0:0.00} GiB");
+
+        ImGui.Separator();
         _uiShared.BigText("Individual Limits");
         bool autoPause = _playerPerformanceConfigService.Current.AutoPausePlayersExceedingThresholds;
         if (ImGui.Checkbox("Automatically block players exceeding thresholds", ref autoPause))

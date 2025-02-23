@@ -1,3 +1,4 @@
+using Lumina.Data;
 using MareSynchronos.API.Data;
 using MareSynchronos.FileCache;
 using MareSynchronos.MareConfiguration;
@@ -8,6 +9,7 @@ using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.UI;
 using MareSynchronos.WebAPI.Files.Models;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 
 namespace MareSynchronos.Services;
 
@@ -56,13 +58,8 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
 
         long triUsage = 0;
 
-        if (!charaData.FileReplacements.TryGetValue(API.Data.Enum.ObjectKind.Player, out List<FileReplacementData>? playerReplacements))
-        {
-            pair.LastAppliedDataTris = 0;
-            return true;
-        }
-
-        var moddedModelHashes = playerReplacements.Where(p => string.IsNullOrEmpty(p.FileSwapPath) && p.GamePaths.Any(g => g.EndsWith("mdl", StringComparison.OrdinalIgnoreCase)))
+        var moddedModelHashes = charaData.FileReplacements.SelectMany(k => k.Value)
+            .Where(p => string.IsNullOrEmpty(p.FileSwapPath) && p.GamePaths.Any(g => g.EndsWith("mdl", StringComparison.OrdinalIgnoreCase)))
             .Select(p => p.Hash)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -107,20 +104,15 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
         return true;
     }
 
-    public bool ComputeAndAutoPauseOnVRAMUsageThresholds(PairHandler pairHandler, CharacterData charaData, List<DownloadFileTransfer> toDownloadFiles)
+    public bool ComputeAndAutoPauseOnVRAMUsageThresholds(PairHandler pairHandler, CharacterData charaData, List<DownloadFileTransfer> toDownloadFiles, bool affect = false)
     {
         var config = _playerPerformanceConfigService.Current;
         var pair = pairHandler.Pair;
 
         long vramUsage = 0;
 
-        if (!charaData.FileReplacements.TryGetValue(API.Data.Enum.ObjectKind.Player, out List<FileReplacementData>? playerReplacements))
-        {
-            pair.LastAppliedApproximateVRAMBytes = 0;
-            return true;
-        }
-
-        var moddedTextureHashes = playerReplacements.Where(p => string.IsNullOrEmpty(p.FileSwapPath) && p.GamePaths.Any(g => g.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)))
+        var moddedTextureHashes = charaData.FileReplacements.SelectMany(k => k.Value)
+            .Where(p => string.IsNullOrEmpty(p.FileSwapPath) && p.GamePaths.Any(g => g.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)))
             .Select(p => p.Hash)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -136,7 +128,7 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
             }
             else
             {
-                var fileEntry = _fileCacheManager.GetFileCacheByHash(hash);
+                var fileEntry = _fileCacheManager.GetFileCacheByHash(hash, preferSubst: true);
                 if (fileEntry == null) continue;
 
                 if (fileEntry.Size == null)
@@ -168,6 +160,9 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
 
         if (vramUsage > vramUsageThreshold * 1024 * 1024)
         {
+            if (!affect)
+                return false;
+
             if (notify && !pair.IsApplicationBlocked)
             {
                 _mediator.Publish(new NotificationMessage($"{pair.PlayerName} ({pair.UserData.AliasOrUID}) automatically blocked",
@@ -184,5 +179,140 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
         }
 
         return true;
+    }
+
+    public async Task<bool> ShrinkTextures(PairHandler pairHandler, CharacterData charaData, CancellationToken token)
+    {
+        var config = _playerPerformanceConfigService.Current;
+        var pair = pairHandler.Pair;
+
+        if (config.TextureShrinkMode == MareConfiguration.Models.TextureShrinkMode.Never)
+            return false;
+
+        // XXX: Temporary
+        if (config.TextureShrinkMode == MareConfiguration.Models.TextureShrinkMode.Default)
+            return false;
+
+        var moddedTextureHashes = charaData.FileReplacements.SelectMany(k => k.Value)
+            .Where(p => string.IsNullOrEmpty(p.FileSwapPath) && p.GamePaths.Any(g => g.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)))
+            .Select(p => p.Hash)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        bool shrunken = false;
+
+        await Parallel.ForEachAsync(moddedTextureHashes,
+            token,
+            async (hash, token) => {
+                var fileEntry = _fileCacheManager.GetFileCacheByHash(hash, preferSubst: true);
+                if (fileEntry == null) return;
+                if (fileEntry.IsSubstEntry) return;
+
+                var texFormat = await _xivDataAnalyzer.GetTexFormatByHash(hash);
+                var filePath = fileEntry.ResolvedFilepath;
+                var tmpFilePath = _fileCacheManager.GetSubstFilePath(Guid.NewGuid().ToString(), "tmp");
+                var newFilePath = _fileCacheManager.GetSubstFilePath(hash, "tex");
+                var mipLevel = 0;
+                uint width = texFormat.Width;
+                uint height = texFormat.Height;
+                long offsetDelta = 0;
+
+                uint bitsPerPixel = texFormat.Format switch
+                {
+                    0x1130 => 8, // L8
+                    0x1131 => 8, // A8
+                    0x1440 => 16, // A4R4G4B4
+                    0x1441 => 16, // A1R5G5B5
+                    0x1450 => 32, // A8R8G8B8
+                    0x1451 => 32, // X8R8G8B8
+                    0x2150 => 32, // R32F
+                    0x2250 => 32, // G16R16F
+                    0x2260 => 64, // R32G32F
+                    0x2460 => 64, // A16B16G16R16F
+                    0x2470 => 128, // A32B32G32R32F
+                    0x3420 => 4, // DXT1
+                    0x3430 => 8, // DXT3
+                    0x3431 => 8, // DXT5
+                    0x4140 => 16, // D16
+                    0x4250 => 32, // D24S8
+                    0x6120 => 4, // BC4
+                    0x6230 => 8, // BC5
+                    0x6432 => 8, // BC7
+                    _ => 0
+                };
+
+                uint maxSize = (bitsPerPixel <= 8) ? (2048U * 2048U) : (1024U * 1024U);
+
+                while (width * height > maxSize && mipLevel < texFormat.MipCount - 1)
+                {
+                    offsetDelta += width * height * bitsPerPixel / 8;
+                    mipLevel++;
+                    width /= 2;
+                    height /= 2;
+                }
+
+                if (offsetDelta == 0)
+                    return;
+
+                _logger.LogDebug("Shrinking {hash} from from {a}x{b} to {c}x{d}",
+                    hash, texFormat.Width, texFormat.Height, width, height);
+
+                try
+                {
+                    var inFile = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                    using var reader = new BinaryReader(inFile);
+
+                    var header = reader.ReadBytes(80);
+                    reader.BaseStream.Position = 14;
+                    byte mipByte = reader.ReadByte();
+                    byte mipCount = (byte)(mipByte & 0x7F);
+
+                    var outFile = new FileStream(tmpFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                    using var writer = new BinaryWriter(outFile);
+                    writer.Write(header);
+
+                    // Update width/height
+                    writer.BaseStream.Position = 8;
+                    writer.Write((ushort)width);
+                    writer.Write((ushort)height);
+
+                    // Update the mip count
+                    writer.BaseStream.Position = 14;
+                    writer.Write((ushort)((mipByte & 0x80) | (mipCount - mipLevel)));
+
+                    // Reset all of the LoD mips
+                    writer.BaseStream.Position = 16;
+                    for (int i = 0; i < 3; ++i)
+                        writer.Write((uint)0);
+
+                    // Reset all of the mip offsets
+                    // (This data is garbage in a lot of modded textures, so its hard to fix it up correctly)
+                    writer.BaseStream.Position = 28;
+                    for (int i = 0; i < 13; ++i)
+                        writer.Write((uint)80);
+
+                    // Write the texture data shifted
+                    outFile.Position = 80;
+                    inFile.Position = 80 + offsetDelta;
+
+                    await inFile.CopyToAsync(outFile, 81920, token);
+
+                    reader.Dispose();
+                    writer.Dispose();
+
+                    File.Move(tmpFilePath, newFilePath);
+                    _fileCacheManager.CreateSubstEntry(newFilePath);
+                    shrunken = true;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Failed to shrink texture {hash}", hash);
+                    if (File.Exists(tmpFilePath))
+                        File.Delete(tmpFilePath);
+                }
+            }
+        );
+
+        return shrunken;
     }
 }

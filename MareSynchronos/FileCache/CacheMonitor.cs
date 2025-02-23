@@ -36,6 +36,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         {
             StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
             StartMareWatcher(configService.Current.CacheFolder);
+            StartSubstWatcher(_fileDbManager.SubstFolder);
             InvokeScan();
         });
         Mediator.Subscribe<HaltScanMessage>(this, (msg) => HaltScan(msg.Source));
@@ -43,6 +44,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) =>
         {
             StartMareWatcher(configService.Current.CacheFolder);
+            StartSubstWatcher(_fileDbManager.SubstFolder);
             StartPenumbraWatcher(_ipcManager.Penumbra.ModDirectory);
             InvokeScan();
         });
@@ -58,6 +60,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         if (configService.Current.HasValidSetup())
         {
             StartMareWatcher(configService.Current.CacheFolder);
+            StartSubstWatcher(_fileDbManager.SubstFolder);
             InvokeScan();
         }
 
@@ -90,6 +93,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public long FileCacheSize { get; set; }
     public long FileCacheDriveFree { get; set; }
     public ConcurrentDictionary<string, int> HaltScanLocks { get; set; } = new(StringComparer.Ordinal);
+    private int LockCount = 0;
     public bool IsScanRunning => CurrentFileProgress > 0 || TotalFiles > 0;
     public long TotalFiles { get; private set; }
     public long TotalFilesStorage { get; private set; }
@@ -97,18 +101,22 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public void HaltScan(string source)
     {
         HaltScanLocks.AddOrUpdate(source, 1, (k, v) => v + 1);
+        Interlocked.Increment(ref LockCount);
     }
 
     record WatcherChange(WatcherChangeTypes ChangeType, string? OldPath = null);
     private readonly Dictionary<string, WatcherChange> _watcherChanges = new Dictionary<string, WatcherChange>(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, WatcherChange> _mareChanges = new Dictionary<string, WatcherChange>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, WatcherChange> _substChanges = new Dictionary<string, WatcherChange>(StringComparer.OrdinalIgnoreCase);
 
     public void StopMonitoring()
     {
         Logger.LogInformation("Stopping monitoring of Penumbra and Mare storage folders");
         MareWatcher?.Dispose();
+        SubstWatcher?.Dispose();
         PenumbraWatcher?.Dispose();
         MareWatcher = null;
+        SubstWatcher = null;
         PenumbraWatcher = null;
     }
 
@@ -147,18 +155,72 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         MareWatcher.EnableRaisingEvents = true;
     }
 
+    public void StartSubstWatcher(string? substPath)
+    {
+        SubstWatcher?.Dispose();
+        if (string.IsNullOrEmpty(substPath))
+        {
+            SubstWatcher = null;
+            Logger.LogWarning("Mare file path is not set, cannot start the FSW for Mare.");
+            return;
+        }
+
+        try
+        {
+            if (!Directory.Exists(substPath))
+                Directory.CreateDirectory(substPath);
+        }
+        catch
+        {
+            Logger.LogWarning("Could not create subst directory at {path}.", substPath);
+            return;
+        }
+
+        Logger.LogDebug("Initializing Subst FSW on {path}", substPath);
+        SubstWatcher = new()
+        {
+            Path = substPath,
+            InternalBufferSize = 8388608,
+            NotifyFilter = NotifyFilters.CreationTime
+                | NotifyFilters.LastWrite
+                | NotifyFilters.FileName
+                | NotifyFilters.DirectoryName
+                | NotifyFilters.Size,
+            Filter = "*.*",
+            IncludeSubdirectories = false,
+        };
+
+        SubstWatcher.Deleted += SubstWatcher_FileChanged;
+        SubstWatcher.Created += SubstWatcher_FileChanged;
+        SubstWatcher.EnableRaisingEvents = true;
+    }
+
     private void MareWatcher_FileChanged(object sender, FileSystemEventArgs e)
     {
         Logger.LogTrace("Mare FSW: FileChanged: {change} => {path}", e.ChangeType, e.FullPath);
 
         if (!AllowedFileExtensions.Any(ext => e.FullPath.EndsWith(ext, StringComparison.OrdinalIgnoreCase))) return;
 
-        lock (_watcherChanges)
+        lock (_mareChanges)
         {
             _mareChanges[e.FullPath] = new(e.ChangeType);
         }
 
         _ = MareWatcherExecution();
+    }
+
+    private void SubstWatcher_FileChanged(object sender, FileSystemEventArgs e)
+    {
+        Logger.LogTrace("Subst FSW: FileChanged: {change} => {path}", e.ChangeType, e.FullPath);
+
+        if (!AllowedFileExtensions.Any(ext => e.FullPath.EndsWith(ext, StringComparison.OrdinalIgnoreCase))) return;
+
+        lock (_substChanges)
+        {
+            _substChanges[e.FullPath] = new(e.ChangeType);
+        }
+
+        _ = SubstWatcherExecution();
     }
 
     public void StartPenumbraWatcher(string? penumbraPath)
@@ -247,8 +309,10 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
     private CancellationTokenSource _penumbraFswCts = new();
     private CancellationTokenSource _mareFswCts = new();
+    private CancellationTokenSource _substFswCts = new();
     public FileSystemWatcher? PenumbraWatcher { get; private set; }
     public FileSystemWatcher? MareWatcher { get; private set; }
+    public FileSystemWatcher? SubstWatcher { get; private set; }
 
     private async Task MareWatcherExecution()
     {
@@ -279,6 +343,67 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         }
 
         HandleChanges(changes);
+    }
+
+    private async Task SubstWatcherExecution()
+    {
+        _substFswCts = _substFswCts.CancelRecreate();
+        var token = _substFswCts.Token;
+        var delay = TimeSpan.FromSeconds(5);
+        Dictionary<string, WatcherChange> changes;
+        lock (_substChanges)
+            changes = _substChanges.ToDictionary(t => t.Key, t => t.Value, StringComparer.Ordinal);
+        try
+        {
+            do
+            {
+                await Task.Delay(delay, token).ConfigureAwait(false);
+            } while (HaltScanLocks.Any(f => f.Value > 0));
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        lock (_substChanges)
+        {
+            foreach (var key in changes.Keys)
+            {
+                _substChanges.Remove(key);
+            }
+        }
+
+        HandleChanges(changes);
+    }
+
+    public void ClearSubstStorage()
+    {
+        var substDir = _fileDbManager.SubstFolder;
+        var allSubstFiles = Directory.GetFiles(substDir, "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(f =>
+                                {
+                                    var val = f.Split('\\')[^1];
+                                    return val.Length == 40 || (val.Split('.').FirstOrDefault()?.Length ?? 0) == 40
+                                        || val.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+                                });
+        if (SubstWatcher != null)
+            SubstWatcher.EnableRaisingEvents = false;
+
+        Dictionary<string, WatcherChange> changes = _substChanges.ToDictionary(t => t.Key, t => new WatcherChange(WatcherChangeTypes.Deleted, t.Key), StringComparer.Ordinal);
+
+        foreach (var file in allSubstFiles)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch { }
+        }
+
+        HandleChanges(changes);
+
+        if (SubstWatcher != null)
+            SubstWatcher.EnableRaisingEvents = true;
     }
 
     private void HandleChanges(Dictionary<string, WatcherChange> changes)
@@ -408,7 +533,9 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             Logger.LogWarning(ex, "Could not determine drive size for Storage Folder {folder}", _configService.Current.CacheFolder);
         }
 
-        var files = Directory.EnumerateFiles(_configService.Current.CacheFolder).Select(f => new FileInfo(f))
+        var files = Directory.EnumerateFiles(_configService.Current.CacheFolder)
+            .Concat(Directory.EnumerateFiles(_fileDbManager.SubstFolder))
+            .Select(f => new FileInfo(f))
             .OrderBy(f => f.LastAccessTime).ToList();
         FileCacheSize = files
             .Sum(f =>
@@ -429,6 +556,8 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
 
         if (FileCacheSize < maxCacheInBytes) return;
 
+        var substDir = _fileDbManager.SubstFolder;
+
         var maxCacheBuffer = maxCacheInBytes * 0.05d;
         while (FileCacheSize > maxCacheInBytes - (long)maxCacheBuffer)
         {
@@ -442,11 +571,16 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public void ResetLocks()
     {
         HaltScanLocks.Clear();
+        LockCount = 0;
     }
 
     public void ResumeScan(string source)
     {
         HaltScanLocks.AddOrUpdate(source, 0, (k, v) => Math.Max(0, v - 1));
+        int lockCount = Interlocked.Decrement(ref LockCount);
+
+        if (lockCount == 0)
+            HaltScanLocks.Clear();
     }
 
     protected override void Dispose(bool disposing)
@@ -455,8 +589,10 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         _scanCancellationTokenSource?.Cancel();
         PenumbraWatcher?.Dispose();
         MareWatcher?.Dispose();
+        SubstWatcher?.Dispose();
         _penumbraFswCts?.CancelDispose();
         _mareFswCts?.CancelDispose();
+        _substFswCts?.CancelDispose();
         _periodicCalculationTokenSource?.CancelDispose();
     }
 
@@ -466,6 +602,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         var penumbraDir = _ipcManager.Penumbra.ModDirectory;
         bool penDirExists = true;
         bool cacheDirExists = true;
+        var substDir = _fileDbManager.SubstFolder;
         if (string.IsNullOrEmpty(penumbraDir) || !Directory.Exists(penumbraDir))
         {
             penDirExists = false;
@@ -479,6 +616,16 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         if (!penDirExists || !cacheDirExists)
         {
             return;
+        }
+
+        try
+        {
+            if (!Directory.Exists(substDir))
+                Directory.CreateDirectory(substDir);
+        }
+        catch
+        {
+            Logger.LogWarning("Could not create subst directory at {path}.", substDir);
         }
 
         var previousThreadPriority = Thread.CurrentThread.Priority;
@@ -509,6 +656,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
         }
 
         var allCacheFiles = Directory.GetFiles(_configService.Current.CacheFolder, "*.*", SearchOption.TopDirectoryOnly)
+                                .Concat(Directory.GetFiles(substDir, "*.*", SearchOption.TopDirectoryOnly))
                                 .AsParallel()
                                 .Where(f =>
                                 {
@@ -654,7 +802,13 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
                     try
                     {
                         var entry = _fileDbManager.CreateFileEntry(cachePath);
-                        if (entry == null) _ = _fileDbManager.CreateCacheEntry(cachePath);
+                        if (entry == null)
+                        {
+                            if (cachePath.StartsWith(substDir, StringComparison.Ordinal))
+                                _ = _fileDbManager.CreateSubstEntry(cachePath);
+                            else
+                                _ = _fileDbManager.CreateCacheEntry(cachePath);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -678,6 +832,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             _configService.Current.InitialScanComplete = true;
             _configService.Save();
             StartMareWatcher(_configService.Current.CacheFolder);
+            StartSubstWatcher(_fileDbManager.SubstFolder);
             StartPenumbraWatcher(penumbraDir);
         }
     }

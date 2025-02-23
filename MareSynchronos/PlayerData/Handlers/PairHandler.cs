@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ObjectKind = MareSynchronos.API.Data.Enum.ObjectKind;
 
 namespace MareSynchronos.PlayerData.Handlers;
@@ -489,6 +490,17 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 await Task.Delay(TimeSpan.FromSeconds(2), downloadToken).ConfigureAwait(false);
             }
 
+            try
+            {
+                Mediator.Publish(new HaltScanMessage(nameof(PlayerPerformanceService.ShrinkTextures)));
+                if (await _playerPerformanceService.ShrinkTextures(this, charaData, downloadToken).ConfigureAwait(false))
+                    _ = TryCalculateModdedDictionary(applicationBase, charaData, out moddedPaths, downloadToken);
+            }
+            finally
+            {
+                Mediator.Publish(new ResumeScanMessage(nameof(PlayerPerformanceService.ShrinkTextures)));
+            }
+
             bool exceedsThreshold = !await _playerPerformanceService.CheckBothThresholds(this, charaData).ConfigureAwait(false);
 
             if (exceedsThreshold)
@@ -753,7 +765,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             (item) =>
             {
                 token.ThrowIfCancellationRequested();
-                var fileCache = _fileDbManager.GetFileCacheByHash(item.Hash);
+                var fileCache = _fileDbManager.GetFileCacheByHash(item.Hash, preferSubst: true);
                 if (fileCache != null)
                 {
                     if (string.IsNullOrEmpty(new FileInfo(fileCache.ResolvedFilepath).Extension))

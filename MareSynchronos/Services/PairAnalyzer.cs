@@ -131,7 +131,7 @@ public sealed class PairAnalyzer : DisposableMediatorSubscriberBase
                 var fileCacheEntries = _fileCacheManager.GetAllFileCachesByHash(fileEntry.Hash, ignoreCacheEntries: false, validate: false).ToList();
                 if (fileCacheEntries.Count == 0) continue;
 
-                var filePath = fileCacheEntries[0].ResolvedFilepath;
+                var filePath = fileCacheEntries[^1].ResolvedFilepath;
                 FileInfo fi = new(filePath);
                 string ext = "unk?";
                 try

@@ -1,4 +1,5 @@
-﻿using K4os.Compression.LZ4.Streams;
+﻿using Dalamud.Utility;
+using K4os.Compression.LZ4.Streams;
 using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.Services.Mediator;
@@ -16,6 +17,10 @@ public sealed class FileCacheManager : IHostedService
     public const string CachePrefix = "{cache}";
     public const string CsvSplit = "|";
     public const string PenumbraPrefix = "{penumbra}";
+    public const string SubstPrefix = "{subst}";
+    public const string SubstPath = "subst";
+    public string CacheFolder => _configService.Current.CacheFolder;
+    public string SubstFolder => CacheFolder.IsNullOrEmpty() ? string.Empty : CacheFolder.ToLowerInvariant().TrimEnd('\\') + "\\" + SubstPath;
     private readonly MareConfigService _configService;
     private readonly MareMediator _mareMediator;
     private readonly string _csvPath;
@@ -47,6 +52,19 @@ public sealed class FileCacheManager : IHostedService
         return CreateFileCacheEntity(fi, prefixedPath);
     }
 
+    public FileCacheEntity? CreateSubstEntry(string path)
+    {
+        FileInfo fi = new(path);
+        if (!fi.Exists) return null;
+        _logger.LogTrace("Creating substitute entry for {path}", path);
+        var fullName = fi.FullName.ToLowerInvariant();
+        if (!fullName.Contains(SubstFolder, StringComparison.Ordinal)) return null;
+        string prefixedPath = fullName.Replace(SubstFolder, SubstPrefix + "\\", StringComparison.Ordinal).Replace("\\\\", "\\", StringComparison.Ordinal);
+        var fakeHash = Path.GetFileNameWithoutExtension(fi.FullName).ToUpperInvariant();
+        var result = CreateFileCacheEntity(fi, prefixedPath, fakeHash);
+        return result;
+    }
+
     public FileCacheEntity? CreateFileEntry(string path)
     {
         FileInfo fi = new(path);
@@ -65,7 +83,7 @@ public sealed class FileCacheManager : IHostedService
         List<FileCacheEntity> output = [];
         if (_fileCaches.TryGetValue(hash, out var fileCacheEntities))
         {
-            foreach (var fileCache in fileCacheEntities.Where(c => ignoreCacheEntries ? !c.IsCacheEntry : true).ToList())
+            foreach (var fileCache in fileCacheEntities.Where(c => ignoreCacheEntries ? (!c.IsCacheEntry && !c.IsSubstEntry) : true).ToList())
             {
                 if (!validate) output.Add(fileCache);
                 else
@@ -89,6 +107,7 @@ public sealed class FileCacheManager : IHostedService
         foreach (var fileCache in cacheEntries)
         {
             if (cancellationToken.IsCancellationRequested) break;
+            if (fileCache.IsSubstEntry) continue;
 
             _logger.LogInformation("Validating {file}", fileCache.ResolvedFilepath);
 
@@ -139,6 +158,11 @@ public sealed class FileCacheManager : IHostedService
         return Path.Combine(_configService.Current.CacheFolder, hash + "." + extension);
     }
 
+    public string GetSubstFilePath(string hash, string extension)
+    {
+        return Path.Combine(SubstFolder, hash + "." + extension);
+    }
+
     public async Task<(string, byte[])> GetCompressedFileData(string fileHash, CancellationToken uploadToken)
     {
         var fileCache = GetFileCacheByHash(fileHash)!;
@@ -151,14 +175,24 @@ public sealed class FileCacheManager : IHostedService
         return (fileHash, ms.ToArray());
     }
 
-    public FileCacheEntity? GetFileCacheByHash(string hash)
+    public FileCacheEntity? GetFileCacheByHash(string hash, bool preferSubst = false)
     {
+        var caches = GetFileCachesByHash(hash);
+        if (preferSubst && caches.Subst != null)
+            return caches.Subst;
+        return caches.Penumbra ?? caches.Cache;
+    }
+
+    public (FileCacheEntity? Penumbra, FileCacheEntity? Cache, FileCacheEntity? Subst) GetFileCachesByHash(string hash)
+    {
+        (FileCacheEntity? Penumbra, FileCacheEntity? Cache, FileCacheEntity? Subst) result = (null, null, null);
         if (_fileCaches.TryGetValue(hash, out var hashes))
         {
-            var item = hashes.OrderBy(p => p.PrefixedFilePath.Contains(PenumbraPrefix) ? 0 : 1).FirstOrDefault();
-            if (item != null) return GetValidatedFileCache(item);
+            result.Penumbra = hashes.Where(p => p.PrefixedFilePath.StartsWith(PenumbraPrefix, StringComparison.Ordinal)).Select(GetValidatedFileCache).FirstOrDefault();
+            result.Cache = hashes.Where(p => p.PrefixedFilePath.StartsWith(CachePrefix, StringComparison.Ordinal)).Select(GetValidatedFileCache).FirstOrDefault();
+            result.Subst = hashes.Where(p => p.PrefixedFilePath.StartsWith(SubstPrefix, StringComparison.Ordinal)).Select(GetValidatedFileCache).FirstOrDefault();
         }
-        return null;
+        return result;
     }
 
     private FileCacheEntity? GetFileCacheByPath(string path)
@@ -187,6 +221,7 @@ public sealed class FileCacheManager : IHostedService
             var cleanedPaths = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToDictionary(p => p,
                 p => p.Replace("/", "\\", StringComparison.OrdinalIgnoreCase)
                     .Replace(_ipcManager.Penumbra.ModDirectory!, _ipcManager.Penumbra.ModDirectory!.EndsWith('\\') ? PenumbraPrefix + '\\' : PenumbraPrefix, StringComparison.OrdinalIgnoreCase)
+                    .Replace(SubstFolder, SubstPrefix, StringComparison.OrdinalIgnoreCase)
                     .Replace(_configService.Current.CacheFolder, _configService.Current.CacheFolder.EndsWith('\\') ? CachePrefix + '\\' : CachePrefix, StringComparison.OrdinalIgnoreCase)
                     .Replace("\\\\", "\\", StringComparison.Ordinal),
                 StringComparer.OrdinalIgnoreCase);
@@ -207,9 +242,11 @@ public sealed class FileCacheManager : IHostedService
                 }
                 else
                 {
-                    if (!entry.Value.Contains(CachePrefix, StringComparison.Ordinal))
+                    if (entry.Value.StartsWith(PenumbraPrefix, StringComparison.Ordinal))
                         result.Add(entry.Key, CreateFileEntry(entry.Key));
-                    else
+                    else if (entry.Value.StartsWith(SubstPrefix, StringComparison.Ordinal))
+                        result.Add(entry.Key, CreateSubstEntry(entry.Key));
+                    else if (entry.Value.StartsWith(CachePrefix, StringComparison.Ordinal))
                         result.Add(entry.Key, CreateCacheEntry(entry.Key));
                 }
             }
@@ -359,6 +396,10 @@ public sealed class FileCacheManager : IHostedService
         if (fileCache.PrefixedFilePath.StartsWith(PenumbraPrefix, StringComparison.OrdinalIgnoreCase))
         {
             fileCache.SetResolvedFilePath(fileCache.PrefixedFilePath.Replace(PenumbraPrefix, _ipcManager.Penumbra.ModDirectory, StringComparison.Ordinal));
+        }
+        else if (fileCache.PrefixedFilePath.StartsWith(SubstPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            fileCache.SetResolvedFilePath(fileCache.PrefixedFilePath.Replace(SubstPrefix, SubstFolder, StringComparison.Ordinal));
         }
         else if (fileCache.PrefixedFilePath.StartsWith(CachePrefix, StringComparison.OrdinalIgnoreCase))
         {
