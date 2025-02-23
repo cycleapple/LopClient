@@ -225,11 +225,13 @@ public class DrawUserPair : DrawPairBase
         }
         if (entry.IsVisible)
         {
+#if DEBUG
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Open Analysis"))
             {
                 _displayHandler.OpenAnalysis(_pair);
                 ImGui.CloseCurrentPopup();
             }
+#endif
             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Sync, "Reload last data"))
             {
                 entry.ApplyLastReceivedData(forced: true);

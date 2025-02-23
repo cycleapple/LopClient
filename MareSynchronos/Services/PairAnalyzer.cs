@@ -22,6 +22,7 @@ public sealed class PairAnalyzer : DisposableMediatorSubscriberBase
         : base(logger, mediator)
     {
         Pair = pair;
+#if DEBUG
         Mediator.SubscribeKeyed<PairDataAppliedMessage>(this, pair.UserData.UID, (msg) =>
         {
             _baseAnalysisCts = _baseAnalysisCts.CancelRecreate();
@@ -36,12 +37,15 @@ public sealed class PairAnalyzer : DisposableMediatorSubscriberBase
                 _lastDataHash = string.Empty;
             }
         });
+#endif
         _fileCacheManager = fileCacheManager;
         _xivDataAnalyzer = modelAnalyzer;
 
+#if DEBUG
         var lastReceivedData = pair.LastReceivedCharacterData;
         if (lastReceivedData != null)
             _ = BaseAnalysis(lastReceivedData, _baseAnalysisCts.Token);
+#endif
     }
 
     public Pair Pair { get; init; }

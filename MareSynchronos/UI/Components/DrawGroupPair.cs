@@ -335,11 +335,13 @@ public class DrawGroupPair : DrawPairBase
             }
             if (_pair.IsVisible)
             {
+#if DEBUG
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.PersonCircleQuestion, "Open Analysis"))
                 {
                     _displayHandler.OpenAnalysis(_pair);
                     ImGui.CloseCurrentPopup();
                 }
+#endif
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Sync, "Reload last data"))
                 {
                     _pair.ApplyLastReceivedData(forced: true);
