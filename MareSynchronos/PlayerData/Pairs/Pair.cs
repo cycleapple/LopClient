@@ -231,6 +231,16 @@ public class Pair : DisposableMediatorSubscriberBase
             return note;
     }
 
+    public string GetPairSortKey()
+    {
+        string? noteOrName = GetNoteOrName();
+
+        if (noteOrName != null)
+            return $"0{noteOrName}";
+        else
+            return $"9{UserData.AliasOrUID}";
+    }
+
     public string GetPlayerNameHash()
     {
         return CachedPlayer?.PlayerNameHash ?? string.Empty;
