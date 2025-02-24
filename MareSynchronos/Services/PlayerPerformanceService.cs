@@ -301,7 +301,9 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
                     writer.Dispose();
 
                     File.Move(tmpFilePath, newFilePath);
-                    _fileCacheManager.CreateSubstEntry(newFilePath);
+                    var substEntry = _fileCacheManager.CreateSubstEntry(newFilePath);
+                    if (substEntry != null)
+                        substEntry.CompressedSize = fileEntry.CompressedSize;
                     shrunken = true;
 
                     // Make sure its a cache file before trying to delete it !!
