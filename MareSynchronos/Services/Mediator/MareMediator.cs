@@ -75,12 +75,8 @@ public sealed class MareMediator : IHostedService
 
                 await Task.Delay(100, _loopCts.Token).ConfigureAwait(false);
 
-                HashSet<MessageBase> processedMessages = [];
                 while (_messageQueue.TryDequeue(out var message))
                 {
-                    if (processedMessages.Contains(message)) { continue; }
-                    processedMessages.Add(message);
-
                     ExecuteMessage(message);
                 }
             }

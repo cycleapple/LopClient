@@ -671,11 +671,11 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                 "this is due to the scanner normally ignoring those files but the game loading them in and using them on your character, so they get " +
                 "added to the local storage.");
         }
-        else if (_cacheMonitor.HaltScanLocks.Any(f => f.Value > 0))
+        else if (_cacheMonitor.HaltScanLocks.Any(f => f.Value.Value > 0))
         {
             ImGui.AlignTextToFramePadding();
 
-            ImGui.TextUnformatted("Halted (" + string.Join(", ", _cacheMonitor.HaltScanLocks.Where(f => f.Value > 0).Select(locker => locker.Key + ": " + locker.Value + " halt requests")) + ")");
+            ImGui.TextUnformatted("Halted (" + string.Join(", ", _cacheMonitor.HaltScanLocks.Where(f => f.Value.Value > 0).Select(locker => locker.Key + ": " + locker.Value.Value)) + ")");
             ImGui.SameLine();
             if (ImGui.Button("Reset halt requests##clearlocks"))
             {

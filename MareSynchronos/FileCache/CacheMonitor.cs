@@ -6,6 +6,7 @@ using MareSynchronos.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace MareSynchronos.FileCache;
 
@@ -92,16 +93,15 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public long CurrentFileProgress => _currentFileProgress;
     public long FileCacheSize { get; set; }
     public long FileCacheDriveFree { get; set; }
-    public ConcurrentDictionary<string, int> HaltScanLocks { get; set; } = new(StringComparer.Ordinal);
-    private int LockCount = 0;
+    public ConcurrentDictionary<string, StrongBox<int>> HaltScanLocks { get; set; } = new(StringComparer.Ordinal);
     public bool IsScanRunning => CurrentFileProgress > 0 || TotalFiles > 0;
     public long TotalFiles { get; private set; }
     public long TotalFilesStorage { get; private set; }
 
     public void HaltScan(string source)
     {
-        HaltScanLocks.AddOrUpdate(source, 1, (k, v) => v + 1);
-        Interlocked.Increment(ref LockCount);
+        HaltScanLocks.TryAdd(source, new(0));
+        Interlocked.Increment(ref HaltScanLocks[source].Value);
     }
 
     record WatcherChange(WatcherChangeTypes ChangeType, string? OldPath = null);
@@ -327,7 +327,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             do
             {
                 await Task.Delay(delay, token).ConfigureAwait(false);
-            } while (HaltScanLocks.Any(f => f.Value > 0));
+            } while (HaltScanLocks.Any(f => f.Value.Value > 0));
         }
         catch (TaskCanceledException)
         {
@@ -358,7 +358,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             do
             {
                 await Task.Delay(delay, token).ConfigureAwait(false);
-            } while (HaltScanLocks.Any(f => f.Value > 0));
+            } while (HaltScanLocks.Any(f => f.Value.Value > 0));
         }
         catch (TaskCanceledException)
         {
@@ -454,7 +454,7 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             do
             {
                 await Task.Delay(delay, token).ConfigureAwait(false);
-            } while (HaltScanLocks.Any(f => f.Value > 0));
+            } while (HaltScanLocks.Any(f => f.Value.Value > 0));
         }
         catch (TaskCanceledException)
         {
@@ -571,16 +571,12 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
     public void ResetLocks()
     {
         HaltScanLocks.Clear();
-        LockCount = 0;
     }
 
     public void ResumeScan(string source)
     {
-        HaltScanLocks.AddOrUpdate(source, 0, (k, v) => Math.Max(0, v - 1));
-        int lockCount = Interlocked.Decrement(ref LockCount);
-
-        if (lockCount == 0)
-            HaltScanLocks.Clear();
+        HaltScanLocks.TryAdd(source, new(0));
+        Interlocked.Decrement(ref HaltScanLocks[source].Value);
     }
 
     protected override void Dispose(bool disposing)
