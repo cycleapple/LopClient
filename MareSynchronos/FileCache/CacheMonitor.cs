@@ -406,6 +406,30 @@ public sealed class CacheMonitor : DisposableMediatorSubscriberBase
             SubstWatcher.EnableRaisingEvents = true;
     }
 
+    public void DeleteSubstOriginals()
+    {
+        var cacheDir = _configService.Current.CacheFolder;
+        var substDir = _fileDbManager.SubstFolder;
+        var allSubstFiles = Directory.GetFiles(substDir, "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(f =>
+                                {
+                                    var val = f.Split('\\')[^1];
+                                    return val.Length == 40 || (val.Split('.').FirstOrDefault()?.Length ?? 0) == 40
+                                        || val.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+                                });
+
+        foreach (var substFile in allSubstFiles)
+        {
+            var cacheFile = Path.Join(cacheDir, Path.GetFileName(substFile));
+            try
+            {
+                if (File.Exists(cacheFile))
+                    File.Delete(cacheFile);
+            }
+            catch { }
+        }
+    }
+
     private void HandleChanges(Dictionary<string, WatcherChange> changes)
     {
         lock (_fileDbManager)

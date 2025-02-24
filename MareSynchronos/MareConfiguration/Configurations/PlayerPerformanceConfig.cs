@@ -12,4 +12,5 @@ public class PlayerPerformanceConfig : IMareConfiguration
     public int TrisAutoPauseThresholdThousands { get; set; } = 375;
     public bool IgnoreDirectPairs { get; set; } = true;
     public TextureShrinkMode TextureShrinkMode { get; set; } = TextureShrinkMode.Default;
+    public bool TextureShrinkDeleteOriginal { get; set; } = false;
 }

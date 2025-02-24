@@ -303,6 +303,19 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
                     File.Move(tmpFilePath, newFilePath);
                     _fileCacheManager.CreateSubstEntry(newFilePath);
                     shrunken = true;
+
+                    // Make sure its a cache file before trying to delete it !!
+                    bool shouldDelete = fileEntry.IsCacheEntry && File.Exists(filePath);
+
+                    if (_playerPerformanceConfigService.Current.TextureShrinkDeleteOriginal && shouldDelete)
+                    {
+                        try
+                        {
+                            _logger.LogDebug("Deleting original texture: {filePath}", filePath);
+                            File.Delete(filePath);
+                        }
+                        catch { }
+                    }
                 }
                 catch (Exception e)
                 {

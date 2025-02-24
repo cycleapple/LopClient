@@ -1245,21 +1245,43 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.BigText("Global Configuration");
 
         bool alwaysShrinkTextures = _playerPerformanceConfigService.Current.TextureShrinkMode == TextureShrinkMode.Always;
-        if (ImGui.Checkbox("Shrink downloaded textures", ref alwaysShrinkTextures))
+        bool deleteOriginalTextures = _playerPerformanceConfigService.Current.TextureShrinkDeleteOriginal;
+
+        using (ImRaii.Disabled(deleteOriginalTextures))
         {
-            if (alwaysShrinkTextures)
-                _playerPerformanceConfigService.Current.TextureShrinkMode = TextureShrinkMode.Always;
-            else
-                _playerPerformanceConfigService.Current.TextureShrinkMode = TextureShrinkMode.Never;
-            _playerPerformanceConfigService.Save();
-            recalculatePerformance = true;
-            _cacheMonitor.ClearSubstStorage();
+            if (ImGui.Checkbox("Shrink downloaded textures", ref alwaysShrinkTextures))
+            {
+                if (alwaysShrinkTextures)
+                    _playerPerformanceConfigService.Current.TextureShrinkMode = TextureShrinkMode.Always;
+                else
+                    _playerPerformanceConfigService.Current.TextureShrinkMode = TextureShrinkMode.Never;
+                _playerPerformanceConfigService.Save();
+                recalculatePerformance = true;
+                _cacheMonitor.ClearSubstStorage();
+            }
         }
         _uiShared.DrawHelpText("Automatically shrinks texture resolution of synced players to reduce VRAM utilization." + UiSharedService.TooltipSeparator
             + "Texture Size Limit (DXT/BC5/BC7 Compressed): 2048x2048" + Environment.NewLine
             + "Texture Size Limit (A8R8G8B8 Uncompressed): 1024x1024" + UiSharedService.TooltipSeparator
             + "Enable to reduce lag in large crowds." + Environment.NewLine
             + "Disable this for higher quality during GPose.");
+
+        using (ImRaii.Disabled(!alwaysShrinkTextures || _cacheMonitor.FileCacheSize < 0))
+        {
+            using var indent = ImRaii.PushIndent();
+            if (ImGui.Checkbox("Delete original textures from disk", ref deleteOriginalTextures))
+            {
+                _playerPerformanceConfigService.Current.TextureShrinkDeleteOriginal = deleteOriginalTextures;
+                _playerPerformanceConfigService.Save();
+                _ = Task.Run(() =>
+                {
+                    _cacheMonitor.DeleteSubstOriginals();
+                    _cacheMonitor.RecalculateFileCacheSize(CancellationToken.None);
+                });
+            }
+            _uiShared.DrawHelpText("Deletes original, full-sized, textures from disk after downloading and shrinking." + UiSharedService.TooltipSeparator
+                + "Caution!!! This will cause a re-download of all textures when the shrink option is disabled.");
+        }
 
         var totalVramBytes = _pairManager.GetOnlineUserPairs().Where(p => p.IsVisible && p.LastAppliedApproximateVRAMBytes > 0).Sum(p => p.LastAppliedApproximateVRAMBytes);
 
