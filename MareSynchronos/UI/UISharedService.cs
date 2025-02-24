@@ -511,8 +511,22 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
                     _isOneDrive = path.Contains("onedrive", StringComparison.OrdinalIgnoreCase);
                     _isPenumbraDirectory = string.Equals(path.ToLowerInvariant(), _ipcManager.Penumbra.ModDirectory?.ToLowerInvariant(), StringComparison.Ordinal);
                     _isDirectoryWritable = IsDirectoryWritable(path);
-                    _cacheDirectoryHasOtherFilesThanCache = Directory.GetFiles(path, "*", SearchOption.AllDirectories).Any(f => Path.GetFileNameWithoutExtension(f).Length != 40)
-                        || Directory.GetDirectories(path).Any();
+                    _cacheDirectoryHasOtherFilesThanCache = false;
+                    var cacheDirFiles = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
+                    var cacheSubDirs = Directory.GetDirectories(path);
+
+                    _cacheDirectoryHasOtherFilesThanCache = cacheDirFiles.Any(f =>
+                        Path.GetFileNameWithoutExtension(f).Length != 40
+                            && !Path.GetExtension(f).Equals("tmp", StringComparison.OrdinalIgnoreCase)
+                            && !Path.GetExtension(f).Equals("blk", StringComparison.OrdinalIgnoreCase)
+                    );
+
+                    if (!_cacheDirectoryHasOtherFilesThanCache
+                        && cacheSubDirs.Select(f => Path.GetFileName(Path.TrimEndingDirectorySeparator(f))).Any(f =>
+                            !f.Equals("subst", StringComparison.OrdinalIgnoreCase)
+                    ))
+                        _cacheDirectoryHasOtherFilesThanCache = true;
+
                     _cacheDirectoryIsValidPath = PathRegex().IsMatch(path);
 
                     if (!string.IsNullOrEmpty(path)
