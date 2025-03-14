@@ -90,6 +90,26 @@ public sealed class FileCompactor
         CompactFile(filePath);
     }
 
+    public void RenameAndCompact(string filePath, string originalFilePath)
+    {
+        try
+        {
+            File.Move(originalFilePath, filePath);
+        }
+        catch (IOException)
+        {
+            // File already exists
+            return;
+        }
+
+        if (_dalamudUtilService.IsWine || !_mareConfigService.Current.UseCompactor)
+        {
+            return;
+        }
+
+        CompactFile(filePath);
+    }
+
     [DllImport("kernel32.dll")]
     private static extern int DeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out IntPtr lpBytesReturned, out IntPtr lpOverlapped);
 

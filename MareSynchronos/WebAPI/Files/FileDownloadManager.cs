@@ -305,6 +305,8 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             }
 
             FileStream? fileBlockStream = null;
+            var threadCount = Math.Clamp((int)(Environment.ProcessorCount / 2.0f), 2, 8);
+            var tasks = new List<Task>();
             try
             {
                 if (_downloadStatus.TryGetValue(fileGroup.Key, out var status))
@@ -316,42 +318,71 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                 while (fileBlockStream.Position < fileBlockStream.Length)
                 {
                     (string fileHash, long fileLengthBytes) = ReadBlockFileHeader(fileBlockStream);
+                    var chunkPosition = fileBlockStream.Position;
+                    fileBlockStream.Position += fileLengthBytes;
 
-                    try
-                    {
-                        var fileExtension = fileReplacement.First(f => string.Equals(f.Hash, fileHash, StringComparison.OrdinalIgnoreCase)).GamePaths[0].Split(".")[^1];
-                        var filePath = _fileDbManager.GetCacheFilePath(fileHash, fileExtension);
-                        Logger.LogDebug("{dlName}: Decompressing {file}:{le} => {dest}", fi.Name, fileHash, fileLengthBytes, filePath);
+                    while (tasks.Count > threadCount && tasks.Where(t => !t.IsCompleted).Count() > 4)
+                        await Task.Delay(10, CancellationToken.None);
 
-                        using var decompressedFile = new MemoryStream(64 * 1024);
-                        using var innerFileStream = new LimitedStream(fileBlockStream, fileLengthBytes);
-                        innerFileStream.DisposeUnderlying = false;
-                        using var decStream = LZ4Stream.Decode(innerFileStream, 0, true);
-                        long startPos = fileBlockStream.Position;
-                        await decStream.CopyToAsync(decompressedFile, CancellationToken.None).ConfigureAwait(false);
-                        long readBytes = fileBlockStream.Position - startPos;
+                    var fileExtension = fileReplacement.First(f => string.Equals(f.Hash, fileHash, StringComparison.OrdinalIgnoreCase)).GamePaths[0].Split(".")[^1];
+                    var tmpPath = _fileDbManager.GetCacheFilePath(Guid.NewGuid().ToString(), "tmp");
+                    var filePath = _fileDbManager.GetCacheFilePath(fileHash, fileExtension);
 
-                        if (readBytes != fileLengthBytes)
+                    Logger.LogDebug("{dlName}: Decompressing {file}:{le} => {dest}", fi.Name, fileHash, fileLengthBytes, filePath);
+
+                    tasks.Add(Task.Run(() => {
+                        try
                         {
-                            throw new EndOfStreamException();
+                            using var tmpFileStream = new FileStream(tmpPath, new FileStreamOptions()
+                            {
+                                Mode = FileMode.CreateNew,
+                                Access = FileAccess.Write,
+                                Share = FileShare.None
+                            });
+
+                            using var fileChunkStream = new FileStream(blockFile, new FileStreamOptions()
+                            {
+                                BufferSize = 80000,
+                                Mode = FileMode.Open,
+                                Access = FileAccess.Read
+                            });
+                            fileChunkStream.Position = chunkPosition;
+
+                            using var innerFileStream = new LimitedStream(fileChunkStream, fileLengthBytes);
+                            using var decoder = LZ4Frame.Decode(innerFileStream);
+                            long startPos = fileChunkStream.Position;
+                            decoder.AsStream().CopyTo(tmpFileStream);
+                            long readBytes = fileChunkStream.Position - startPos;
+
+                            if (readBytes != fileLengthBytes)
+                            {
+                                throw new EndOfStreamException();
+                            }
+
+                            tmpFileStream.Close();
+                            _fileCompactor.RenameAndCompact(filePath, tmpPath);
+                            PersistFileToStorage(fileHash, filePath, fileLengthBytes);
                         }
+                        catch (EndOfStreamException)
+                        {
+                            Logger.LogWarning("{dlName}: Failure to extract file {fileHash}, stream ended prematurely", fi.Name, fileHash);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogWarning(e, "{dlName}: Error during decompression of {hash}", fi.Name, fileHash);
 
-                        await _fileCompactor.WriteAllBytesAsync(filePath, decompressedFile.ToArray(), CancellationToken.None).ConfigureAwait(false);
-
-                        PersistFileToStorage(fileHash, filePath, fileLengthBytes);
-                    }
-                    catch (EndOfStreamException)
-                    {
-                        Logger.LogWarning("{dlName}: Failure to extract file {fileHash}, stream ended prematurely", fi.Name, fileHash);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.LogWarning(e, "{dlName}: Error during decompression of {hash}", fi.Name, fileHash);
-
-                        foreach (var fr in fileReplacement)
-                            Logger.LogWarning(" - {h}: {x}", fr.Hash, fr.GamePaths[0]);
-                    }
+                            foreach (var fr in fileReplacement)
+                                Logger.LogWarning(" - {h}: {x}", fr.Hash, fr.GamePaths[0]);
+                        }
+                        finally
+                        {
+                            if (File.Exists(tmpPath))
+                                File.Delete(tmpPath);
+                        }
+                    }));
                 }
+
+                Task.WaitAll([..tasks], CancellationToken.None);
             }
             catch (EndOfStreamException)
             {
@@ -363,6 +394,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             }
             finally
             {
+                Task.WaitAll([..tasks], CancellationToken.None);
                 _orchestrator.ReleaseDownloadSlot();
                 if (fileBlockStream != null)
                     await fileBlockStream.DisposeAsync().ConfigureAwait(false);
@@ -384,18 +416,6 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
     private void PersistFileToStorage(string fileHash, string filePath, long? compressedSize = null)
     {
-        var fi = new FileInfo(filePath);
-        Func<DateTime> RandomDayInThePast()
-        {
-            DateTime start = new(1995, 1, 1, 1, 1, 1, DateTimeKind.Local);
-            Random gen = new();
-            int range = (DateTime.Today - start).Days;
-            return () => start.AddDays(gen.Next(range));
-        }
-
-        fi.CreationTime = RandomDayInThePast().Invoke();
-        fi.LastAccessTime = DateTime.Today;
-        fi.LastWriteTime = RandomDayInThePast().Invoke();
         try
         {
             var entry = _fileDbManager.CreateCacheEntry(filePath);
@@ -404,6 +424,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                 Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entry.Hash, fileHash);
                 File.Delete(filePath);
                 _fileDbManager.RemoveHashedFile(entry.Hash, entry.PrefixedFilePath);
+                entry = null;
             }
             if (entry != null)
                 entry.CompressedSize = compressedSize;
