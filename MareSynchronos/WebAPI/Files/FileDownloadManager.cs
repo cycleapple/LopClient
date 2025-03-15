@@ -8,9 +8,11 @@ using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Utils;
 using MareSynchronos.WebAPI.Files.Models;
+using MareSynchronosStaticFilesServer.Utils;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 
 namespace MareSynchronos.WebAPI.Files;
 
@@ -333,12 +335,12 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                     tasks.Add(Task.Run(() => {
                         try
                         {
-                            using var tmpFileStream = new FileStream(tmpPath, new FileStreamOptions()
+                            using var tmpFileStream = new HashingStream(new FileStream(tmpPath, new FileStreamOptions()
                             {
                                 Mode = FileMode.CreateNew,
                                 Access = FileAccess.Write,
                                 Share = FileShare.None
-                            });
+                            }), SHA1.Create());
 
                             using var fileChunkStream = new FileStream(blockFile, new FileStreamOptions()
                             {
@@ -357,6 +359,14 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                             if (readBytes != fileLengthBytes)
                             {
                                 throw new EndOfStreamException();
+                            }
+
+                            string calculatedHash = BitConverter.ToString(tmpFileStream.Finish()).Replace("-", "", StringComparison.Ordinal);
+
+                            if (calculatedHash != fileHash)
+                            {
+                                Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", calculatedHash, fileHash);
+                                return;
                             }
 
                             tmpFileStream.Close();
@@ -418,11 +428,9 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
     {
         try
         {
-            var entry = _fileDbManager.CreateCacheEntry(filePath);
+            var entry = _fileDbManager.CreateCacheEntry(filePath, fileHash);
             if (entry != null && !string.Equals(entry.Hash, fileHash, StringComparison.OrdinalIgnoreCase))
             {
-                Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", entry.Hash, fileHash);
-                File.Delete(filePath);
                 _fileDbManager.RemoveHashedFile(entry.Hash, entry.PrefixedFilePath);
                 entry = null;
             }

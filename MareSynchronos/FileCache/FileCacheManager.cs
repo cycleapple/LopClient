@@ -41,7 +41,7 @@ public sealed class FileCacheManager : IHostedService
 
     private string CsvBakPath => _csvPath + ".bak";
 
-    public FileCacheEntity? CreateCacheEntry(string path)
+    public FileCacheEntity? CreateCacheEntry(string path, string? hash = null)
     {
         FileInfo fi = new(path);
         if (!fi.Exists) return null;
@@ -49,7 +49,10 @@ public sealed class FileCacheManager : IHostedService
         var fullName = fi.FullName.ToLowerInvariant();
         if (!fullName.Contains(_configService.Current.CacheFolder.ToLowerInvariant(), StringComparison.Ordinal)) return null;
         string prefixedPath = fullName.Replace(_configService.Current.CacheFolder.ToLowerInvariant(), CachePrefix + "\\", StringComparison.Ordinal).Replace("\\\\", "\\", StringComparison.Ordinal);
-        return CreateFileCacheEntity(fi, prefixedPath);
+        if (hash != null)
+            return CreateFileCacheEntity(fi, prefixedPath, hash);
+        else
+            return CreateFileCacheEntity(fi, prefixedPath);
     }
 
     public FileCacheEntity? CreateSubstEntry(string path)
