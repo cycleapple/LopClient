@@ -432,8 +432,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.DrawColorCombo("Chat text color", Enumerable.Concat([0], uiColors.Keys),
         i => i switch
         {
-            0 => (uiColors[ChatService.DefaultColor].UIForeground, "Plugin Default"),
-            _ => (uiColors[i].UIForeground, $"[{i}] Sample Text")
+            0 => (uiColors[ChatService.DefaultColor].Dark, "Plugin Default"),
+            _ => (uiColors[i].Dark, $"[{i}] Sample Text")
         },
         i => {
             _configService.Current.ChatColor = i;
@@ -593,8 +593,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _uiShared.DrawColorCombo($"Chat text color##{gid}", Enumerable.Concat([0], uiColors.Keys),
             i => i switch
             {
-                0 => (uiColors[globalChatColor > 0 ? globalChatColor : ChatService.DefaultColor].UIForeground, "(use global setting)"),
-                _ => (uiColors[i].UIForeground, $"[{i}] Sample Text")
+                0 => (uiColors[globalChatColor > 0 ? globalChatColor : ChatService.DefaultColor].Dark, "(use global setting)"),
+                _ => (uiColors[i].Dark, $"[{i}] Sample Text")
             },
             i => {
                 shellConfig.Color = i;

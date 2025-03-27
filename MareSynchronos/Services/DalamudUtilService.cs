@@ -76,7 +76,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         UiColors = new(() =>
         {
             return gameData.GetExcelSheet<Lumina.Excel.Sheets.UIColor>(Dalamud.Game.ClientLanguage.English)!
-                .Where(x => x.RowId != 0 && !(x.RowId >= 500 && (x.UIForeground & 0xFFFFFF00) == 0))
+                .Where(x => x.RowId != 0 && !(x.RowId >= 500 && (x.Dark & 0xFFFFFF00) == 0))
                 .ToDictionary(x => (int)x.RowId);
         });
         mediator.Subscribe<TargetPairMessage>(this, (msg) =>

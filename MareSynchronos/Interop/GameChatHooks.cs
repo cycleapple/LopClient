@@ -155,7 +155,7 @@ public unsafe sealed class GameChatHooks : IDisposable
             var pronounModule = UIModule.Instance()->GetPronounModule();
             var chatString1 = pronounModule->ProcessString(message, true);
             var chatString2 = this.ProcessStringStep2(pronounModule, chatString1, 1);
-            var chatBytes = MemoryHelper.ReadRaw((nint)chatString2->StringPtr, chatString2->Length);
+            var chatBytes = MemoryHelper.ReadRaw((nint)chatString2->StringPtr.Value, chatString2->Length);
 
             if (chatBytes.Length > 0)
                 this._chatChannelOverride.ChatMessageHandler?.Invoke(chatBytes);
