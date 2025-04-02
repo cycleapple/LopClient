@@ -65,7 +65,7 @@ public class GposeUi : WindowMediatorSubscriberBase
                 UiSharedService.TextWrapped("File Description: " + _mareCharaFileManager.LoadedCharaFile.CharaFileData.Description);
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.Check, "Apply loaded MCDF"))
                 {
-                    _applicationTask = Task.Run(async () => await _mareCharaFileManager.ApplyMareCharaFile(_dalamudUtil.GposeTargetGameObject, _expectedLength!.GetAwaiter().GetResult()).ConfigureAwait(false));
+                    _applicationTask = _dalamudUtil.RunOnFrameworkThread(async () => await _mareCharaFileManager.ApplyMareCharaFile(_dalamudUtil.GposeTargetGameObject, _expectedLength!.GetAwaiter().GetResult()).ConfigureAwait(false));
                 }
                 UiSharedService.AttachToolTip("Applies it to the currently selected GPose actor");
                 UiSharedService.ColorTextWrapped("Warning: redrawing or changing the character will revert all applied mods.", ImGuiColors.DalamudYellow);
