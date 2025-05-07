@@ -807,6 +807,10 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "[BASE-{appBase}] Something went wrong during calculation replacements", applicationBase);
