@@ -295,6 +295,11 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             }
             catch (OperationCanceledException)
             {
+                if (!fi.Exists)
+                {
+                    Logger.LogDebug("{dlName}: Detected early cancellation of download", fi.Name);
+                    return;
+                }
                 Logger.LogDebug("{dlName}: Detected cancellation of download, partially extracting files for {id}", fi.Name, gameObjectHandler);
             }
             catch (Exception ex)
