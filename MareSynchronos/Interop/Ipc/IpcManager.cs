@@ -44,15 +44,21 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
     public IpcCallerPetNames PetNames { get; }
     public IpcCallerMoodles Moodles { get; }
 
+    private int _stateCheckCounter = -1;
+
     private void PeriodicApiStateCheck()
     {
-        Penumbra.CheckAPI();
-        Penumbra.CheckModDirectory();
-        Glamourer.CheckAPI();
-        Heels.CheckAPI();
-        CustomizePlus.CheckAPI();
-        Honorific.CheckAPI();
-        PetNames.CheckAPI();
-        Moodles.CheckAPI();
+        // Stagger API checks
+        if (++_stateCheckCounter > 7)
+            _stateCheckCounter = 0;
+        int i = _stateCheckCounter;
+        if (i == 0) Penumbra.CheckAPI();
+        if (i == 1) Penumbra.CheckModDirectory();
+        if (i == 2) Glamourer.CheckAPI();
+        if (i == 3) Heels.CheckAPI();
+        if (i == 4) CustomizePlus.CheckAPI();
+        if (i == 5) Honorific.CheckAPI();
+        if (i == 6) PetNames.CheckAPI();
+        if (i == 7) Moodles.CheckAPI();
     }
 }

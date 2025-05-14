@@ -642,11 +642,11 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
         if (_charaHandler?.Address != nint.Zero && !IsVisible)
         {
-            Guid appData = Guid.NewGuid();
             IsVisible = true;
             Mediator.Publish(new PairHandlerVisibleMessage(this));
             if (_cachedData != null)
             {
+                Guid appData = Guid.NewGuid();
                 Logger.LogTrace("[BASE-{appBase}] {this} visibility changed, now: {visi}, cached data exists", appData, this, IsVisible);
 
                 _ = Task.Run(() =>

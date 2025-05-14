@@ -169,7 +169,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromMilliseconds(500), token).ConfigureAwait(false);
             await AddPlayerCacheToCreate(kind).ConfigureAwait(false);
         });
     }
@@ -183,7 +183,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(3), token).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
             await AddPlayerCacheToCreate().ConfigureAwait(false);
         }, token);
     }
@@ -197,7 +197,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(3), token).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
             await AddPlayerCacheToCreate().ConfigureAwait(false);
         }, token);
     }
@@ -211,7 +211,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(2), token).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
             await AddPlayerCacheToCreate().ConfigureAwait(false);
         }, token);
     }
