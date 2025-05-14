@@ -33,6 +33,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private readonly PlayerPerformanceService _playerPerformanceService;
     private readonly ServerConfigurationManager _serverConfigManager;
     private readonly PluginWarningNotificationService _pluginWarningNotificationManager;
+    private readonly VisibilityService _visibilityService;
     private CancellationTokenSource? _applicationCancellationTokenSource = new();
     private Guid _applicationId;
     private Task? _applicationTask;
@@ -54,7 +55,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         FileCacheManager fileDbManager, MareMediator mediator,
         PlayerPerformanceService playerPerformanceService,
         ServerConfigurationManager serverConfigManager,
-        MareConfigService configService) : base(logger, mediator)
+        MareConfigService configService, VisibilityService visibilityService) : base(logger, mediator)
     {
         Pair = pair;
         PairAnalyzer = pairAnalyzer;
@@ -68,8 +69,12 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
         _configService = configService;
+        _visibilityService = visibilityService;
 
-        Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
+        _visibilityService.StartTracking(Pair.Ident);
+
+        Mediator.SubscribeKeyed<PlayerVisibilityMessage>(this, Pair.Ident, (msg) => UpdateVisibility(msg.IsVisible));
+
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
         {
             _downloadCancellationTokenSource?.CancelDispose();
@@ -137,7 +142,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     }
 
     public long LastAppliedDataBytes { get; private set; }
-    public Pair Pair { get; private set; }
+    public Pair Pair { get; private init; }
     public PairAnalyzer PairAnalyzer { get; private init; }
     public nint PlayerCharacter => _charaHandler?.Address ?? nint.Zero;
     public unsafe uint PlayerCharacterId => (_charaHandler?.Address ?? nint.Zero) == nint.Zero
@@ -254,6 +259,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         base.Dispose(disposing);
 
         if (!disposing) return;
+
+        _visibilityService.StopTracking(Pair.Ident);
 
         SetUploading(isUploading: false);
         var name = PlayerName;
@@ -634,7 +641,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         }
     }
 
-    private void FrameworkUpdate()
+    private void UpdateVisibility(bool nowVisible)
     {
         if (string.IsNullOrEmpty(PlayerName))
         {
@@ -647,7 +654,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 $"Initializing User For Character {pc.Name}")));
         }
 
-        if (_charaHandler?.Address != nint.Zero && !IsVisible)
+        if (!IsVisible && nowVisible)
         {
             IsVisible = true;
             Mediator.Publish(new PairHandlerVisibleMessage(this));
@@ -666,10 +673,10 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 Logger.LogTrace("{this} visibility changed, now: {visi}, no cached data exists", this, IsVisible);
             }
         }
-        else if (_charaHandler?.Address == nint.Zero && IsVisible)
+        else if (IsVisible && !nowVisible)
         {
             IsVisible = false;
-            _charaHandler.Invalidate();
+            _charaHandler?.Invalidate();
             _downloadCancellationTokenSource?.CancelDispose();
             _downloadCancellationTokenSource = null;
             Logger.LogTrace("{this} visibility changed, now: {visi}", this, IsVisible);

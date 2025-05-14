@@ -19,7 +19,7 @@ namespace MareSynchronos.Services;
 
 public class DalamudUtilService : IHostedService, IMediatorSubscriber
 {
-    internal struct PlayerCharacter
+    public struct PlayerCharacter
     {
         public uint ObjectId;
         public string Name;
@@ -390,7 +390,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         return _gameGui.WorldToScreen(obj.Position, out var screenPos) ? screenPos : Vector2.Zero;
     }
 
-    internal PlayerCharacter FindPlayerByNameHash(string ident)
+    public PlayerCharacter FindPlayerByNameHash(string ident)
     {
         _playerCharas.TryGetValue(ident, out var result);
         return result;
