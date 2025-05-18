@@ -44,6 +44,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private CancellationTokenSource? _downloadCancellationTokenSource = new();
     private bool _forceApplyMods = false;
     private bool _isVisible;
+    private Guid _deferred = Guid.Empty;
     private Guid _penumbraCollection = Guid.Empty;
     private bool _redrawOnNextApplication = false;
 
@@ -165,6 +166,13 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
         if (_charaHandler == null || (PlayerCharacter == IntPtr.Zero))
         {
+            if (_deferred != Guid.Empty)
+            {
+                _isVisible = false;
+                _visibilityService.StopTracking(Pair.Ident);
+                _visibilityService.StartTracking(Pair.Ident);
+            }
+
             Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Warning,
                 "Cannot apply character data: Receiving Player is in an invalid state, deferring application")));
             Logger.LogDebug("[BASE-{appBase}] Received data but player was in invalid state, charaHandlerIsNull: {charaIsNull}, playerPointerIsNull: {ptrIsNull}",
@@ -176,8 +184,16 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             _cachedData = characterData;
             Mediator.Publish(new PairDataAppliedMessage(Pair.UserData.UID, characterData));
             Logger.LogDebug("[BASE-{appBase}] Setting data: {hash}, forceApplyMods: {force}", applicationBase, _cachedData.DataHash.Value, _forceApplyMods);
+            // Ensure that this deferred application actually occurs by forcing visibiltiy to re-proc
+            // Set _deferred as a silencing flag to avoid spamming logs once per frame with failed applications
+            _isVisible = false;
+            _deferred = applicationBase;
+            _visibilityService.StopTracking(Pair.Ident);
+            _visibilityService.StartTracking(Pair.Ident);
             return;
         }
+
+        _deferred = Guid.Empty;
 
         SetUploading(isUploading: false);
 
@@ -656,6 +672,16 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
         if (!IsVisible && nowVisible)
         {
+            // This is deferred application attempt, avoid any log output
+            if (_deferred != Guid.Empty)
+            {
+                _isVisible = true;
+                _ = Task.Run(() =>
+                {
+                    ApplyCharacterData(_deferred, _cachedData!, forceApplyCustomization: true);
+                });
+            }
+
             IsVisible = true;
             Mediator.Publish(new PairHandlerVisibleMessage(this));
             if (_cachedData != null)
