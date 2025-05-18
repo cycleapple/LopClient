@@ -30,6 +30,7 @@ public class MareConfig : IMareConfiguration
     public LogLevel LogLevel { get; set; } = LogLevel.Information;
     public bool LogPerformance { get; set; } = false;
     public bool LogEvents { get; set; } = true;
+    public bool HoldCombatApplication { get; set; } = false;
     public double MaxLocalCacheInGiB { get; set; } = 20;
     public bool OpenGposeImportOnGposeStart { get; set; } = false;
     public bool OpenPopupOnAdd { get; set; } = true;

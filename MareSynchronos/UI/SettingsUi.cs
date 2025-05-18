@@ -659,6 +659,15 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Save();
         }
 
+        bool holdCombatApplication = _configService.Current.HoldCombatApplication;
+        if (ImGui.Checkbox("Hold application during combat", ref holdCombatApplication))
+        {
+            if (!holdCombatApplication)
+                Mediator.Publish(new CombatOrPerformanceEndMessage());
+            _configService.Current.HoldCombatApplication = holdCombatApplication;
+            _configService.Save();
+        }
+
         ImGui.Separator();
         _uiShared.BigText("Debug");
 #if DEBUG

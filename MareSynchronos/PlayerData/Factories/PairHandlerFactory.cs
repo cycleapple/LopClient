@@ -1,5 +1,6 @@
 ﻿using MareSynchronos.FileCache;
 using MareSynchronos.Interop.Ipc;
+using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
@@ -12,6 +13,7 @@ namespace MareSynchronos.PlayerData.Factories;
 
 public class PairHandlerFactory
 {
+    private readonly MareConfigService _configService;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly FileCacheManager _fileCacheManager;
     private readonly FileDownloadManagerFactory _fileDownloadManagerFactory;
@@ -29,7 +31,8 @@ public class PairHandlerFactory
         FileDownloadManagerFactory fileDownloadManagerFactory, DalamudUtilService dalamudUtilService,
         PluginWarningNotificationService pluginWarningNotificationManager, IHostApplicationLifetime hostApplicationLifetime,
         FileCacheManager fileCacheManager, MareMediator mareMediator, PlayerPerformanceService playerPerformanceService,
-        ServerConfigurationManager serverConfigManager, PairAnalyzerFactory pairAnalyzerFactory)
+        ServerConfigurationManager serverConfigManager, PairAnalyzerFactory pairAnalyzerFactory,
+        MareConfigService configService)
     {
         _loggerFactory = loggerFactory;
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
@@ -43,12 +46,13 @@ public class PairHandlerFactory
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
         _pairAnalyzerFactory = pairAnalyzerFactory;
+        _configService = configService;
     }
 
     public PairHandler Create(Pair pair)
     {
         return new PairHandler(_loggerFactory.CreateLogger<PairHandler>(), pair, _pairAnalyzerFactory.Create(pair), _gameObjectHandlerFactory,
             _ipcManager, _fileDownloadManagerFactory.Create(), _pluginWarningNotificationManager, _dalamudUtilService, _hostApplicationLifetime,
-            _fileCacheManager, _mareMediator, _playerPerformanceService, _serverConfigManager);
+            _fileCacheManager, _mareMediator, _playerPerformanceService, _serverConfigManager, _configService);
     }
 }

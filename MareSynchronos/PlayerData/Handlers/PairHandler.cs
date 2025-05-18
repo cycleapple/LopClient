@@ -1,6 +1,7 @@
 ﻿using MareSynchronos.API.Data;
 using MareSynchronos.FileCache;
 using MareSynchronos.Interop.Ipc;
+using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Factories;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
@@ -22,6 +23,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 {
     private sealed record CombatData(Guid ApplicationId, CharacterData CharacterData, bool Forced);
 
+    private readonly MareConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly FileDownloadManager _downloadManager;
     private readonly FileCacheManager _fileDbManager;
@@ -51,7 +53,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         DalamudUtilService dalamudUtil, IHostApplicationLifetime lifetime,
         FileCacheManager fileDbManager, MareMediator mediator,
         PlayerPerformanceService playerPerformanceService,
-        ServerConfigurationManager serverConfigManager) : base(logger, mediator)
+        ServerConfigurationManager serverConfigManager,
+        MareConfigService configService) : base(logger, mediator)
     {
         Pair = pair;
         PairAnalyzer = pairAnalyzer;
@@ -64,6 +67,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _fileDbManager = fileDbManager;
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
+        _configService = configService;
 
         Mediator.Subscribe<FrameworkUpdateMessage>(this, (_) => FrameworkUpdate());
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
@@ -100,9 +104,12 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         });
         Mediator.Subscribe<CombatOrPerformanceStartMessage>(this, _ =>
         {
-            _dataReceivedInDowntime = null;
-            _downloadCancellationTokenSource = _downloadCancellationTokenSource?.CancelRecreate();
-            _applicationCancellationTokenSource = _applicationCancellationTokenSource?.CancelRecreate();
+            if (_configService.Current.HoldCombatApplication)
+            {
+                _dataReceivedInDowntime = null;
+                _downloadCancellationTokenSource = _downloadCancellationTokenSource?.CancelRecreate();
+                _applicationCancellationTokenSource = _applicationCancellationTokenSource?.CancelRecreate();
+            }
         });
         Mediator.Subscribe<RecalculatePerformanceMessage>(this, (msg) =>
         {
@@ -141,7 +148,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
     public void ApplyCharacterData(Guid applicationBase, CharacterData characterData, bool forceApplyCustomization = false)
     {
-        if (_dalamudUtil.IsInCombatOrPerforming)
+        if (_configService.Current.HoldCombatApplication && _dalamudUtil.IsInCombatOrPerforming)
         {
             Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Warning,
                 "Cannot apply character data: you are in combat or performing music, deferring application")));
