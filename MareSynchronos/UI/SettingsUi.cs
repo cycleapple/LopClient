@@ -497,6 +497,12 @@ public class SettingsUi : WindowMediatorSubscriberBase
             return;
         }
 
+        if (_pairManager.Groups.Count == 0)
+        {
+            ImGui.TextUnformatted("Once you join a syncshell you can configure its chat settings here.");
+            return;
+        }
+
         foreach (var group in _pairManager.Groups.OrderBy(k => k.Key.GID))
         {
             var gid = group.Key.GID;
@@ -1654,7 +1660,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
         var selectedServer = _serverConfigurationManager.GetServerByIndex(idx);
         if (selectedServer == _serverConfigurationManager.CurrentServer)
         {
-            UiSharedService.ColorTextWrapped("For any changes to be applied to the current service you need to reconnect to the service.", ImGuiColors.DalamudYellow);
+            if (_apiController.IsConnected)
+                UiSharedService.ColorTextWrapped("For any changes to be applied to the current service you need to reconnect to the service.", ImGuiColors.DalamudYellow);
         }
 
         if (ImGui.BeginTabBar("serverTabBar"))
@@ -1802,7 +1809,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     _serverConfigurationManager.Save();
                 }
 
-                if (selectedServer.ServerUri == ApiController.LoporritServiceUri)
+                if (true) // Enable registration button for all servers
                 {
                     ImGui.SameLine();
                     if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Register a new Loporrit account"))

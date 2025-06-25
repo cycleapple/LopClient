@@ -158,7 +158,7 @@ public class ServerConfigurationManager
         Save();
     }
 
-    internal void AddCurrentCharacterToServer(int serverSelectionIndex = -1)
+    internal void AddCurrentCharacterToServer(int serverSelectionIndex = -1, bool save = true)
     {
         if (serverSelectionIndex == -1) serverSelectionIndex = CurrentServerIndex;
         var server = GetServerByIndex(serverSelectionIndex);
@@ -172,7 +172,9 @@ public class ServerConfigurationManager
             WorldId = _dalamudUtil.GetHomeWorldIdAsync().GetAwaiter().GetResult(),
             SecretKeyIdx = server.SecretKeys.Last().Key,
         });
-        Save();
+
+        if (save)
+            Save();
     }
 
     internal void AddEmptyCharacterToServer(int serverSelectionIndex)

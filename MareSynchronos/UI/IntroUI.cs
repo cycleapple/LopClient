@@ -19,12 +19,13 @@ using System.Net.Http.Json;
 using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using MareSynchronos.WebAPI.SignalR.Utils;
+using Dalamud.Interface.Utility.Raii;
 
 namespace MareSynchronos.UI;
 
 public partial class IntroUi : WindowMediatorSubscriberBase
 {
-    private readonly ApiController _apiController;
     private readonly MareConfigService _configService;
     private readonly CacheMonitor _cacheMonitor;
     private readonly Dictionary<string, string> _languages = new(StringComparer.Ordinal) { { "English", "en" }, { "Deutsch", "de" }, { "Français", "fr" } };
@@ -58,7 +59,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
 
         SizeConstraints = new WindowSizeConstraints()
         {
-            MinimumSize = new Vector2(650, 400),
+            MinimumSize = new Vector2(650, 500),
             MaximumSize = new Vector2(650, 2000),
         };
 
@@ -70,6 +71,44 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             _configService.Current.UseCompactor = !dalamudUtilService.IsWine;
             IsOpen = true;
         });
+    }
+
+    private Vector4 GetConnectionColor()
+    {
+        return _uiShared.ApiController.ServerState switch
+        {
+            ServerState.Connecting => ImGuiColors.DalamudYellow,
+            ServerState.Reconnecting => ImGuiColors.DalamudRed,
+            ServerState.Connected => ImGuiColors.HealerGreen,
+            ServerState.Disconnected => ImGuiColors.DalamudYellow,
+            ServerState.Disconnecting => ImGuiColors.DalamudYellow,
+            ServerState.Unauthorized => ImGuiColors.DalamudRed,
+            ServerState.VersionMisMatch => ImGuiColors.DalamudRed,
+            ServerState.Offline => ImGuiColors.DalamudRed,
+            ServerState.RateLimited => ImGuiColors.DalamudYellow,
+            ServerState.NoSecretKey => ImGuiColors.DalamudYellow,
+            ServerState.MultiChara => ImGuiColors.DalamudYellow,
+            _ => ImGuiColors.DalamudRed
+        };
+    }
+
+    private string GetConnectionStatus()
+    {
+        return _uiShared.ApiController.ServerState switch
+        {
+            ServerState.Reconnecting => "Reconnecting",
+            ServerState.Connecting => "Connecting",
+            ServerState.Disconnected => "Disconnected",
+            ServerState.Disconnecting => "Disconnecting",
+            ServerState.Unauthorized => "Unauthorized",
+            ServerState.VersionMisMatch => "Version mismatch",
+            ServerState.Offline => "Unavailable",
+            ServerState.RateLimited => "Rate Limited",
+            ServerState.NoSecretKey => "No Secret Key",
+            ServerState.MultiChara => "Duplicate Characters",
+            ServerState.Connected => "Connected",
+            _ => string.Empty
+        };
     }
 
     protected override void DrawInternal()
@@ -208,7 +247,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                     "loading of other characters. It is recommended to keep it enabled. You can change this setting later anytime in the Loporrit settings.", ImGuiColors.DalamudYellow);
             }
         }
-        else if (!_uiShared.ApiController.ServerAlive)
+        else if (!_uiShared.ApiController.IsConnected)
         {
             using (_uiShared.UidFont.Push())
                 ImGui.TextUnformatted("Service Registration");
@@ -218,55 +257,14 @@ public partial class IntroUi : WindowMediatorSubscriberBase
 
             ImGui.Separator();
 
-            UiSharedService.TextWrapped("Once you have received a secret key you can connect to the service using the tools provided below.");
+            ImGui.BeginDisabled(_registrationInProgress || _uiShared.ApiController.ServerState == ServerState.Connecting || _uiShared.ApiController.ServerState == ServerState.Reconnecting);
+            _ = _uiShared.DrawServiceSelection(selectOnChange: true, intro: true);
 
-            ImGui.BeginDisabled(_registrationInProgress);
-            _ = _uiShared.DrawServiceSelection(selectOnChange: true);
-
-            var text = "Enter Secret Key";
-            var buttonText = "Save";
-            var buttonWidth = _secretKey.Length != 64 ? 0 : ImGuiHelpers.GetButtonSize(buttonText).X + ImGui.GetStyle().ItemSpacing.X;
-            var textSize = ImGui.CalcTextSize(text);
-            ImGui.AlignTextToFramePadding();
-            ImGui.TextUnformatted(text);
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(UiSharedService.GetWindowContentRegionWidth() - ImGui.GetWindowContentRegionMin().X - buttonWidth - textSize.X);
-            ImGui.InputText("", ref _secretKey, 64);
-            if (_secretKey.Length > 0 && _secretKey.Length != 64)
-            {
-                UiSharedService.ColorTextWrapped("Your secret key must be exactly 64 characters long.", ImGuiColors.DalamudRed);
-            }
-            else if (_secretKey.Length == 64 && !HexRegex().IsMatch(_secretKey))
-            {
-                UiSharedService.ColorTextWrapped("Your secret key can only contain ABCDEF and the numbers 0-9.", ImGuiColors.DalamudRed);
-            }
-            else if (_secretKey.Length == 64)
-            {
-                ImGui.SameLine();
-                if (ImGui.Button(buttonText))
-                {
-                    string keyName;
-                    if (_serverConfigurationManager.CurrentServer == null) _serverConfigurationManager.SelectServer(0);
-                    if (_registrationReply != null && _secretKey.Equals(_registrationReply.SecretKey, StringComparison.Ordinal))
-                        keyName = _registrationReply.UID + $" (registered {DateTime.Now:yyyy-MM-dd})";
-                    else
-                        keyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})";
-                    _serverConfigurationManager.CurrentServer!.SecretKeys.Add(_serverConfigurationManager.CurrentServer.SecretKeys.Select(k => k.Key).LastOrDefault() + 1, new SecretKey()
-                    {
-                        FriendlyName = keyName,
-                        Key = _secretKey,
-                    });
-                    _serverConfigurationManager.AddCurrentCharacterToServer();
-                    _secretKey = string.Empty;
-                    _ = Task.Run(() => _uiShared.ApiController.CreateConnections());
-                }
-            }
-
-            if (_serverConfigurationManager.CurrentApiUrl.Equals(ApiController.LoporritServiceUri, StringComparison.Ordinal))
+            if (true) // Enable registration button for all servers
             {
                 ImGui.BeginDisabled(_registrationInProgress || _registrationSuccess || _secretKey.Length > 0);
                 ImGui.Separator();
-                ImGui.TextUnformatted("If you do not have a secret key already click below to register a new account.");
+                ImGui.TextUnformatted("If you have not used Loporrit before, click below to register a new account.");
                 if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Register a new Loporrit account"))
                 {
                     _registrationInProgress = true;
@@ -322,10 +320,65 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                 }
             }
 
+            ImGui.Separator();
+
+            var text = "Enter Secret Key";
+
+            if (_registrationSuccess)
+            {
+                text = "Secret Key";
+            }
+            else
+            {
+                ImGui.TextUnformatted("If you already have a registered account, you can enter its secret key below to use it instead.");
+            }
+
+            var textSize = ImGui.CalcTextSize(text);
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(text);
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(UiSharedService.GetWindowContentRegionWidth() - ImGui.GetWindowContentRegionMin().X - textSize.X);
+            ImGui.InputText("", ref _secretKey, 64);
+            if (_secretKey.Length > 0 && _secretKey.Length != 64)
+            {
+                UiSharedService.ColorTextWrapped("Your secret key must be exactly 64 characters long.", ImGuiColors.DalamudRed);
+            }
+            else if (_secretKey.Length == 64 && !HexRegex().IsMatch(_secretKey))
+            {
+                UiSharedService.ColorTextWrapped("Your secret key can only contain ABCDEF and the numbers 0-9.", ImGuiColors.DalamudRed);
+            }
+            else if (_secretKey.Length == 64)
+            {
+                using var saveDisabled = ImRaii.Disabled(_uiShared.ApiController.ServerState == ServerState.Connecting || _uiShared.ApiController.ServerState == ServerState.Reconnecting);
+                if (ImGui.Button("Save and Connect"))
+                {
+                    string keyName;
+                    if (_serverConfigurationManager.CurrentServer == null) _serverConfigurationManager.SelectServer(0);
+                    if (_registrationReply != null && _secretKey.Equals(_registrationReply.SecretKey, StringComparison.Ordinal))
+                        keyName = _registrationReply.UID + $" (registered {DateTime.Now:yyyy-MM-dd})";
+                    else
+                        keyName = $"Secret Key added on Setup ({DateTime.Now:yyyy-MM-dd})";
+                    _serverConfigurationManager.CurrentServer!.SecretKeys.Add(_serverConfigurationManager.CurrentServer.SecretKeys.Select(k => k.Key).LastOrDefault() + 1, new SecretKey()
+                    {
+                        FriendlyName = keyName,
+                        Key = _secretKey,
+                    });
+                    _serverConfigurationManager.AddCurrentCharacterToServer(save: false);
+                    _ = Task.Run(() => _uiShared.ApiController.CreateConnections());
+                }
+            }
+
+            if (_uiShared.ApiController.ServerState != ServerState.NoSecretKey)
+            {
+                UiSharedService.ColorText(GetConnectionStatus(), GetConnectionColor());
+            }
+
             ImGui.EndDisabled(); // _registrationInProgress
         }
         else
         {
+            _secretKey = string.Empty;
+            _serverConfigurationManager.Save();
             Mediator.Publish(new SwitchToMainUiMessage());
             IsOpen = false;
         }

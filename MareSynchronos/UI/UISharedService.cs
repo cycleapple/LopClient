@@ -762,6 +762,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             ImGui.SameLine();
         }
 
+        var alignPos = ImGui.GetCursorPosX();
+
         ImGui.TextUnformatted("SimpleHeels");
         ImGui.SameLine();
         IconText(_heelsExists ? check : cross, GetBoolColor(_heelsExists));
@@ -793,6 +795,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         AttachToolTip($"PetNicknames is " + (_petNamesExists ? "available and up to date." : "unavailable or not up to date."));
         ImGui.Spacing();
 
+        ImGui.SetCursorPosX(alignPos);
         ImGui.TextUnformatted("Moodles");
         ImGui.SameLine();
         IconText(_moodlesExists ? check : cross, GetBoolColor(_moodlesExists));
@@ -809,7 +812,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         return true;
     }
 
-    public int DrawServiceSelection(bool selectOnChange = false)
+    public int DrawServiceSelection(bool selectOnChange = false, bool intro = false)
     {
         string[] comboEntries = _serverConfigurationManager.GetServerNames();
 
@@ -849,6 +852,9 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
             ImGui.EndCombo();
         }
+
+        if (intro)
+            return _serverSelectionIndex;
 
         ImGui.SameLine();
         var text = "Connect";
