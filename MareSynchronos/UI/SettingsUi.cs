@@ -38,6 +38,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly IpcManager _ipcManager;
+    private readonly IpcProvider _ipcProvider;
     private readonly CacheMonitor _cacheMonitor;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly MareConfigService _configService;
@@ -84,7 +85,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         FileTransferOrchestrator fileTransferOrchestrator,
         FileCacheManager fileCacheManager,
         FileCompactor fileCompactor, ApiController apiController,
-        IpcManager ipcManager, CacheMonitor cacheMonitor,
+        IpcManager ipcManager, IpcProvider ipcProvider, CacheMonitor cacheMonitor,
         DalamudUtilService dalamudUtilService) : base(logger, mediator, "Loporrit Settings", performanceCollector)
     {
         _configService = configService;
@@ -101,6 +102,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _fileCacheManager = fileCacheManager;
         _apiController = apiController;
         _ipcManager = ipcManager;
+        _ipcProvider = ipcProvider;
         _cacheMonitor = cacheMonitor;
         _dalamudUtilService = dalamudUtilService;
         _fileCompactor = fileCompactor;
@@ -616,10 +618,50 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
     }
 
-    private void DrawDebug()
+    private void DrawAdvanced()
     {
-        _lastTab = "Debug";
+        _lastTab = "Advanced";
 
+        _uiShared.BigText("Advanced");
+
+        bool mareApi = _configService.Current.MareAPI;
+        if (ImGui.Checkbox("Enable Mare Synchronos API", ref mareApi))
+        {
+            _configService.Current.MareAPI = mareApi;
+            _configService.Save();
+            _ipcProvider.HandleMareImpersonation();
+        }
+        _uiShared.DrawHelpText("Enables handling of the Mare Synchronos API. This currently includes:\n\n" +
+            " - MCDF loading support for other plugins\n" +
+            " - Blocking Moodles applications to paired users\n\n" +
+            "If the Mare Synchronos plugin is loaded while this option is enabled, control of its API will be relinquished.");
+
+        using (_ = ImRaii.PushIndent())
+        {
+            ImGui.SameLine(300.0f);
+            if (_ipcProvider.ImpersonationActive)
+            {
+                UiSharedService.ColorTextWrapped("Mare API active!", ImGuiColors.HealerGreen);
+            }
+            else
+            {
+                if (!mareApi)
+                    UiSharedService.ColorTextWrapped("Mare API inactive: Option is disabled", ImGuiColors.DalamudYellow);
+                else if (_ipcProvider.MarePluginEnabled)
+                    UiSharedService.ColorTextWrapped("Mare API inactive: Mare plugin is loaded", ImGuiColors.DalamudYellow);
+                else
+                    UiSharedService.ColorTextWrapped("Mare API inactive: Unknown reason", ImGuiColors.DalamudRed);
+            }
+        }
+
+        bool logEvents = _configService.Current.LogEvents;
+        if (ImGui.Checkbox("Log Event Viewer Data", ref logEvents))
+        {
+            _configService.Current.LogEvents = logEvents;
+            _configService.Save();
+        }
+
+        ImGui.Separator();
         _uiShared.BigText("Debug");
 #if DEBUG
         if (LastCreatedCharacterData != null && ImGui.TreeNode("Last created character data"))
@@ -672,22 +714,17 @@ public class SettingsUi : WindowMediatorSubscriberBase
             }
         }
 
-        bool logEvents = _configService.Current.LogEvents;
-        if (ImGui.Checkbox("Log Event Viewer Data", ref logEvents))
+        if (ImGui.TreeNode("Active Character Blocks"))
         {
-            _configService.Current.LogEvents = logEvents;
-            _configService.Save();
-        }
-
-        ImGui.Separator();
-        _uiShared.BigText("Active Character Blocks");
-        foreach (var pair in _pairManager.GetOnlineUserPairs())
-        {
-            if (pair.IsApplicationBlocked)
+            var onlinePairs = _pairManager.GetOnlineUserPairs();
+            foreach (var pair in onlinePairs)
             {
-                ImGui.TextUnformatted(pair.PlayerName);
-                ImGui.SameLine();
-                ImGui.TextUnformatted(string.Join(", ", pair.HoldApplicationReasons));
+                if (pair.IsApplicationBlocked)
+                {
+                    ImGui.TextUnformatted(pair.PlayerName);
+                    ImGui.SameLine();
+                    ImGui.TextUnformatted(string.Join(", ", pair.HoldApplicationReasons));
+                }
             }
         }
     }
@@ -1932,9 +1969,9 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Debug"))
+            if (ImGui.BeginTabItem("Advanced"))
             {
-                DrawDebug();
+                DrawAdvanced();
                 ImGui.EndTabItem();
             }
 

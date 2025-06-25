@@ -69,4 +69,6 @@ public class MareConfig : IMareConfiguration
     public int ChatLogKind { get; set; } = 1; // XivChatType.Debug
     public bool ExtraChatAPI { get; set; } = false;
     public bool ExtraChatTags { get; set; } = false;
+
+    public bool MareAPI { get; set; } = true;
 }
