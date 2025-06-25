@@ -316,7 +316,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                     if (!_registrationSuccess)
                         ImGui.TextColored(ImGuiColors.DalamudYellow, _registrationMessage);
                     else
-                        ImGui.TextUnformatted(_registrationMessage);
+                        ImGui.TextWrapped(_registrationMessage);
                 }
             }
 

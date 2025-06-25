@@ -1610,6 +1610,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.BigText("Service & Character Settings");
 
         var idx = _uiShared.DrawServiceSelection();
+        var playerName = _dalamudUtilService.GetPlayerName();
+        var playerWorldId = _dalamudUtilService.GetWorldId();
+        var worldData = _uiShared.WorldData.OrderBy(u => u.Value, StringComparer.Ordinal).ToDictionary(k => k.Key, k => k.Value);
+        string playerWorldName = worldData.GetValueOrDefault((ushort)playerWorldId, $"{playerWorldId}");
 
         ImGuiHelpers.ScaledDummy(new Vector2(10, 10));
 
@@ -1634,10 +1638,9 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         using var charaId = ImRaii.PushId("selectedChara" + i);
 
                         var worldIdx = (ushort)item.WorldId;
-                        var data = _uiShared.WorldData.OrderBy(u => u.Value, StringComparer.Ordinal).ToDictionary(k => k.Key, k => k.Value);
-                        if (!data.TryGetValue(worldIdx, out string? worldPreview))
+                        if (!worldData.TryGetValue(worldIdx, out string? worldPreview))
                         {
-                            worldPreview = data.First().Value;
+                            worldPreview = worldData.First().Value;
                         }
 
                         var secretKeyIdx = item.SecretKeyIdx;
@@ -1649,8 +1652,8 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         var friendlyName = secretKey.FriendlyName;
 
                         bool thisIsYou = false;
-                        if (string.Equals(_dalamudUtilService.GetPlayerName(), item.CharacterName, StringComparison.OrdinalIgnoreCase)
-                            && _dalamudUtilService.GetWorldId() == worldIdx)
+                        if (string.Equals(playerName, item.CharacterName, StringComparison.OrdinalIgnoreCase)
+                            && playerWorldId == worldIdx)
                         {
                             thisIsYou = true;
                         }
@@ -1663,7 +1666,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                                 _serverConfigurationManager.Save();
                             }
 
-                            _uiShared.DrawCombo("World##" + item.CharacterName + i, data, (w) => w.Value,
+                            _uiShared.DrawCombo("World##" + item.CharacterName + i, worldData, (w) => w.Value,
                                 (w) =>
                                 {
                                     if (item.WorldId != w.Key)
@@ -1671,7 +1674,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                                         item.WorldId = w.Key;
                                         _serverConfigurationManager.Save();
                                     }
-                                }, EqualityComparer<KeyValuePair<ushort, string>>.Default.Equals(data.FirstOrDefault(f => f.Key == worldIdx), default) ? data.First() : data.First(f => f.Key == worldIdx));
+                                }, EqualityComparer<KeyValuePair<ushort, string>>.Default.Equals(worldData.FirstOrDefault(f => f.Key == worldIdx), default) ? worldData.First() : worldData.First(f => f.Key == worldIdx));
 
                             _uiShared.DrawCombo("Secret Key##" + item.CharacterName + i, keys, (w) => w.Value.FriendlyName,
                                 (w) =>
@@ -1694,8 +1697,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     }
 
                     ImGui.Separator();
-                    if (!selectedServer.Authentications.Exists(c => string.Equals(c.CharacterName, _uiShared.PlayerName, StringComparison.Ordinal)
-                        && c.WorldId == _uiShared.WorldId))
+                    using (_ = ImRaii.Disabled(selectedServer.Authentications.Exists(c =>
+                            string.Equals(c.CharacterName, _uiShared.PlayerName, StringComparison.Ordinal)
+                                && c.WorldId == _uiShared.WorldId
+                    )))
                     {
                         if (_uiShared.IconTextButton(FontAwesomeIcon.User, "Add current character"))
                         {
@@ -1731,24 +1736,61 @@ public class SettingsUi : WindowMediatorSubscriberBase
                     var key = item.Value.Key;
                     var keyInUse = selectedServer.Authentications.Exists(p => p.SecretKeyIdx == item.Key);
                     if (keyInUse) ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey3);
-                    if (ImGui.InputText("Secret Key", ref key, 64))
+                    if (ImGui.InputText("Secret Key", ref key, 64, keyInUse ? ImGuiInputTextFlags.ReadOnly : default))
                     {
                         item.Value.Key = key;
                         _serverConfigurationManager.Save();
                     }
                     if (keyInUse) ImGui.PopStyleColor();
-                    if (!keyInUse)
+
+                    bool thisIsYou = selectedServer.Authentications.Any(a =>
+                        a.SecretKeyIdx == item.Key
+                            && string.Equals(a.CharacterName, _uiShared.PlayerName, StringComparison.OrdinalIgnoreCase)
+                            && a.WorldId == playerWorldId
+                    );
+
+                    bool disableAssignment = thisIsYou || item.Value.Key.IsNullOrEmpty();
+
+                    using (_ = ImRaii.Disabled(disableAssignment))
                     {
-                        if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Secret Key") && UiSharedService.CtrlPressed())
+                        if (_uiShared.IconTextButton(FontAwesomeIcon.User, "Assign current character"))
                         {
-                            selectedServer.SecretKeys.Remove(item.Key);
-                            _serverConfigurationManager.Save();
+                            var currentAssignment = selectedServer.Authentications.Find(a =>
+                                string.Equals(a.CharacterName, _uiShared.PlayerName, StringComparison.OrdinalIgnoreCase)
+                                    && a.WorldId == playerWorldId
+                            );
+
+                            if (currentAssignment == null)
+                            {
+                                selectedServer.Authentications.Add(new Authentication()
+                                {
+                                    CharacterName = playerName,
+                                    WorldId = playerWorldId,
+                                    SecretKeyIdx = item.Key
+                                });
+                            }
+                            else
+                            {
+                                currentAssignment.SecretKeyIdx = item.Key;
+                            }
                         }
-                        UiSharedService.AttachToolTip("Hold CTRL to delete this secret key entry");
+                        if (!disableAssignment)
+                            UiSharedService.AttachToolTip($"Use this secret key for {playerName} @ {playerWorldName}");
                     }
-                    else
+
+                    ImGui.SameLine();
+                    using var disableDelete = ImRaii.Disabled(keyInUse);
+                    if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Secret Key") && UiSharedService.CtrlPressed())
                     {
-                        UiSharedService.ColorTextWrapped("This key is in use and cannot be edited or deleted", ImGuiColors.DalamudYellow);
+                        selectedServer.SecretKeys.Remove(item.Key);
+                        _serverConfigurationManager.Save();
+                    }
+                    if (!keyInUse)
+                        UiSharedService.AttachToolTip("Hold CTRL to delete this secret key entry");
+
+                    if (keyInUse)
+                    {
+                        UiSharedService.ColorTextWrapped("This key is currently assigned to a character and cannot be edited or deleted.", ImGuiColors.DalamudYellow);
                     }
 
                     if (item.Key != selectedServer.SecretKeys.Keys.LastOrDefault())
@@ -1822,7 +1864,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         if (!_registrationSuccess)
                             ImGui.TextColored(ImGuiColors.DalamudYellow, _registrationMessage);
                         else
-                            ImGui.TextUnformatted(_registrationMessage);
+                            ImGui.TextWrapped(_registrationMessage);
                     }
                 }
 
