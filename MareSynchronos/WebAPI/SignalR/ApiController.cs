@@ -129,7 +129,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
             return;
         }
 
-        if (secretKey.IsNullOrEmpty())
+        if (secretKey == null)
         {
             Logger.LogWarning("No secret key set for current character");
             _connectionDto = null;
