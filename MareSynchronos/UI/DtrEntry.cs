@@ -33,7 +33,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
 
     private readonly ApiController _apiController;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly ConfigurationServiceBase<MareConfig> _configService;
+    private readonly MareConfigService _configService;
     private readonly IDtrBar _dtrBar;
     private readonly Lazy<IDtrBarEntry> _entry;
     private readonly ILogger<DtrEntry> _logger;
@@ -44,7 +44,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
     private string? _tooltip;
     private Colors _colors;
 
-    public DtrEntry(ILogger<DtrEntry> logger, IDtrBar dtrBar, ConfigurationServiceBase<MareConfig> configService, MareMediator mareMediator, PairManager pairManager, ApiController apiController)
+    public DtrEntry(ILogger<DtrEntry> logger, IDtrBar dtrBar, MareConfigService configService, MareMediator mareMediator, PairManager pairManager, ApiController apiController)
     {
         _logger = logger;
         _dtrBar = dtrBar;
