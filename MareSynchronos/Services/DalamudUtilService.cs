@@ -606,10 +606,10 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
                 _classJobId = localPlayer.ClassJob.RowId;
             }
 
+            Mediator.Publish(new PriorityFrameworkUpdateMessage());
+
             if (!IsInCombatOrPerforming)
                 Mediator.Publish(new FrameworkUpdateMessage());
-
-            Mediator.Publish(new PriorityFrameworkUpdateMessage());
 
             if (isNormalFrameworkUpdate)
                 return;

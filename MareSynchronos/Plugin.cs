@@ -112,6 +112,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<TagHandler>();
             collection.AddSingleton<UidDisplayHandler>();
             collection.AddSingleton<IpcProvider>();
+            collection.AddSingleton<PluginWatcherService>();
             collection.AddSingleton<PlayerPerformanceService>();
             collection.AddSingleton<EventAggregator>();
             collection.AddSingleton<DalamudUtilService>();
