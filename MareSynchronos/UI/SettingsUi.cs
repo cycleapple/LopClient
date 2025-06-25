@@ -183,7 +183,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.BigText("Transfer Settings");
 
         int maxParallelDownloads = _configService.Current.ParallelDownloads;
-        bool useAlternativeUpload = _configService.Current.UseAlternativeFileUpload;
         int downloadSpeedLimit = _configService.Current.DownloadSpeedLimitInBytes;
 
         ImGui.AlignTextToFramePadding();
@@ -221,13 +220,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.ParallelDownloads = maxParallelDownloads;
             _configService.Save();
         }
-
-        if (ImGui.Checkbox("Use Alternative Upload Method", ref useAlternativeUpload))
-        {
-            _configService.Current.UseAlternativeFileUpload = useAlternativeUpload;
-            _configService.Save();
-        }
-        _uiShared.DrawHelpText("This will attempt to upload files in one go instead of a stream. Typically not necessary to enable. Use if you have upload issues.");
 
         ImGui.Separator();
         _uiShared.BigText("Transfer UI");
@@ -1575,49 +1567,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
         {
             _uiShared.BigText("Service Actions");
             ImGuiHelpers.ScaledDummy(new Vector2(5, 5));
-            if (ImGui.Button("Delete all my files"))
-            {
-                _deleteFilesPopupModalShown = true;
-                ImGui.OpenPopup("Delete all your files?");
-            }
-
-            _uiShared.DrawHelpText("Completely deletes all your uploaded files on the service.");
-
-            if (ImGui.BeginPopupModal("Delete all your files?", ref _deleteFilesPopupModalShown, UiSharedService.PopupWindowFlags))
-            {
-                UiSharedService.TextWrapped(
-                    "All your own uploaded files on the service will be deleted.\nThis operation cannot be undone.");
-                ImGui.TextUnformatted("Are you sure you want to continue?");
-                ImGui.Separator();
-                ImGui.Spacing();
-
-                var buttonSize = (ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X -
-                                 ImGui.GetStyle().ItemSpacing.X) / 2;
-
-                if (ImGui.Button("Delete everything", new Vector2(buttonSize, 0)))
-                {
-                    _ = Task.Run(_fileTransferManager.DeleteAllFiles);
-                    _deleteFilesPopupModalShown = false;
-                }
-
-                ImGui.SameLine();
-
-                if (ImGui.Button("Cancel##cancelDelete", new Vector2(buttonSize, 0)))
-                {
-                    _deleteFilesPopupModalShown = false;
-                }
-
-                UiSharedService.SetScaledWindowSize(325);
-                ImGui.EndPopup();
-            }
-            ImGui.SameLine();
             if (ImGui.Button("Delete account"))
             {
                 _deleteAccountPopupModalShown = true;
                 ImGui.OpenPopup("Delete your account?");
             }
 
-            _uiShared.DrawHelpText("Completely deletes your account and all uploaded files to the service.");
+            _uiShared.DrawHelpText("Completely deletes your currently connected account.");
 
             if (ImGui.BeginPopupModal("Delete your account?", ref _deleteAccountPopupModalShown, UiSharedService.PopupWindowFlags))
             {
