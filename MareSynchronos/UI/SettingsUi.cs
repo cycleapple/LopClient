@@ -1626,22 +1626,43 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         if (ImGui.BeginTabBar("serverTabBar"))
         {
-            if (ImGui.BeginTabItem("Character Management"))
+            if (ImGui.BeginTabItem("Character Assignments"))
             {
-                if (selectedServer.SecretKeys.Any())
+                if (selectedServer.SecretKeys.Count > 0)
                 {
-                    UiSharedService.ColorTextWrapped("Characters listed here will automatically connect to the selected service with the settings as provided below." +
-                        " Make sure to enter the character names correctly or use the 'Add current character' button at the bottom.", ImGuiColors.DalamudYellow);
+                    float windowPadding = ImGui.GetStyle().WindowPadding.X;
+                    float itemSpacing = ImGui.GetStyle().ItemSpacing.X;
+                    float longestName = 0.0f;
+                    if (selectedServer.Authentications.Count > 0)
+                        longestName = selectedServer.Authentications.Max(p => ImGui.CalcTextSize($"{p.CharacterName} @ Pandaemonium  ").X);
+                    float iconWidth;
+
+                    using (_ = _uiShared.IconFont.Push())
+                        iconWidth = ImGui.CalcTextSize(FontAwesomeIcon.Trash.ToIconString()).X;
+
+                    UiSharedService.ColorTextWrapped("Characters listed here will connect with the specified secret key.", ImGuiColors.DalamudYellow);
                     int i = 0;
                     foreach (var item in selectedServer.Authentications.ToList())
                     {
                         using var charaId = ImRaii.PushId("selectedChara" + i);
 
-                        var worldIdx = (ushort)item.WorldId;
-                        if (!worldData.TryGetValue(worldIdx, out string? worldPreview))
-                        {
+                        bool thisIsYou = string.Equals(playerName, item.CharacterName, StringComparison.OrdinalIgnoreCase)
+                            && playerWorldId == item.WorldId;
+
+                        if (!worldData.TryGetValue((ushort)item.WorldId, out string? worldPreview))
                             worldPreview = worldData.First().Value;
-                        }
+
+                        _uiShared.IconText(thisIsYou ? FontAwesomeIcon.Star : FontAwesomeIcon.None);
+
+                        if (thisIsYou)
+                            UiSharedService.AttachToolTip("Current character");
+
+                        ImGui.SameLine(windowPadding + iconWidth + itemSpacing);
+                        float beforeName = ImGui.GetCursorPosX();
+                        ImGui.TextUnformatted($"{item.CharacterName} @ {worldPreview}");
+                        float afterName = ImGui.GetCursorPosX();
+
+                        ImGui.SameLine(afterName + (afterName - beforeName) + longestName + itemSpacing);
 
                         var secretKeyIdx = item.SecretKeyIdx;
                         var keys = selectedServer.SecretKeys;
@@ -1651,47 +1672,32 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         }
                         var friendlyName = secretKey.FriendlyName;
 
-                        bool thisIsYou = false;
-                        if (string.Equals(playerName, item.CharacterName, StringComparison.OrdinalIgnoreCase)
-                            && playerWorldId == worldIdx)
+                        ImGui.SetNextItemWidth(afterName - iconWidth - itemSpacing * 2 - windowPadding);
+
+                        string selectedKeyName = string.Empty;
+                        if (selectedServer.SecretKeys.TryGetValue(item.SecretKeyIdx, out var selectedKey))
+                            selectedKeyName = selectedKey.FriendlyName;
+
+                        // _uiShared.DrawCombo() remembers the selected option -- we don't want that, because the value can change
+                        if (ImGui.BeginCombo($"##{item.CharacterName}{i}", selectedKeyName))
                         {
-                            thisIsYou = true;
-                        }
-                        if (ImGui.TreeNode($"chara", (thisIsYou ? "[CURRENT] " : "") + $"Character: {item.CharacterName}, World: {worldPreview}, Secret Key: {friendlyName}"))
-                        {
-                            var charaName = item.CharacterName;
-                            if (ImGui.InputText("Character Name", ref charaName, 64))
+                            foreach (var key in selectedServer.SecretKeys)
                             {
-                                item.CharacterName = charaName;
-                                _serverConfigurationManager.Save();
+                                if (ImGui.Selectable($"{key.Value.FriendlyName}##{i}", key.Key == item.SecretKeyIdx)
+                                    && key.Key != item.SecretKeyIdx)
+                                {
+                                    item.SecretKeyIdx = key.Key;
+                                    _serverConfigurationManager.Save();
+                                }
                             }
-
-                            _uiShared.DrawCombo("World##" + item.CharacterName + i, worldData, (w) => w.Value,
-                                (w) =>
-                                {
-                                    if (item.WorldId != w.Key)
-                                    {
-                                        item.WorldId = w.Key;
-                                        _serverConfigurationManager.Save();
-                                    }
-                                }, EqualityComparer<KeyValuePair<ushort, string>>.Default.Equals(worldData.FirstOrDefault(f => f.Key == worldIdx), default) ? worldData.First() : worldData.First(f => f.Key == worldIdx));
-
-                            _uiShared.DrawCombo("Secret Key##" + item.CharacterName + i, keys, (w) => w.Value.FriendlyName,
-                                (w) =>
-                                {
-                                    if (w.Key != item.SecretKeyIdx)
-                                    {
-                                        item.SecretKeyIdx = w.Key;
-                                        _serverConfigurationManager.Save();
-                                    }
-                                }, EqualityComparer<KeyValuePair<int, SecretKey>>.Default.Equals(keys.FirstOrDefault(f => f.Key == item.SecretKeyIdx), default) ? keys.First() : keys.First(f => f.Key == item.SecretKeyIdx));
-
-                            if (_uiShared.IconTextButton(FontAwesomeIcon.Trash, "Delete Character") && UiSharedService.CtrlPressed())
-                                _serverConfigurationManager.RemoveCharacterFromServer(idx, item);
-                            UiSharedService.AttachToolTip("Hold CTRL to delete this entry.");
-
-                            ImGui.TreePop();
+                            ImGui.EndCombo();
                         }
+
+                        ImGui.SameLine();
+
+                        if (_uiShared.IconButton(FontAwesomeIcon.Trash))
+                            _serverConfigurationManager.RemoveCharacterFromServer(idx, item);
+                        UiSharedService.AttachToolTip("Delete character assignment");
 
                         i++;
                     }
@@ -1707,11 +1713,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
                             _serverConfigurationManager.AddCurrentCharacterToServer(idx);
                         }
                         ImGui.SameLine();
-                    }
-
-                    if (_uiShared.IconTextButton(FontAwesomeIcon.Plus, "Add new character"))
-                    {
-                        _serverConfigurationManager.AddEmptyCharacterToServer(idx);
                     }
                 }
                 else
