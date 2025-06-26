@@ -1620,7 +1620,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         var idx = _uiShared.DrawServiceSelection();
         var playerName = _dalamudUtilService.GetPlayerName();
-        var playerWorldId = _dalamudUtilService.GetWorldId();
+        var playerWorldId = _dalamudUtilService.GetHomeWorldId();
         var worldData = _uiShared.WorldData.OrderBy(u => u.Value, StringComparer.Ordinal).ToDictionary(k => k.Key, k => k.Value);
         string playerWorldName = worldData.GetValueOrDefault((ushort)playerWorldId, $"{playerWorldId}");
 
