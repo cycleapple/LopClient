@@ -39,7 +39,6 @@ public class PluginWatcherService : MediatorSubscriberBase
 {
     private readonly ConcurrentDictionary<UserData, OptionalPluginWarning> _cachedOptionalPluginWarnings = new(UserDataComparer.Instance);
     private readonly IDalamudPluginInterface _pluginInterface;
-    private readonly MareConfigService _mareConfigService;
 
     private CapturedPluginState[] _prevInstalledPluginState = [];
 
@@ -62,10 +61,8 @@ public class PluginWatcherService : MediatorSubscriberBase
         }
     }
 
-    public PluginWatcherService(ILogger<PluginWatcherService> logger, MareConfigService mareConfigService,
-        IDalamudPluginInterface pluginInterface, MareMediator mediator) : base(logger, mediator)
+    public PluginWatcherService(ILogger<PluginWatcherService> logger, IDalamudPluginInterface pluginInterface, MareMediator mediator) : base(logger, mediator)
     {
-        _mareConfigService = mareConfigService;
         _pluginInterface = pluginInterface;
 
         Mediator.Subscribe<PriorityFrameworkUpdateMessage>(this, (_) => {
@@ -84,7 +81,7 @@ public class PluginWatcherService : MediatorSubscriberBase
     {
         if (!ExposedPluginsEqual(_pluginInterface.InstalledPlugins, _prevInstalledPluginState))
         {
-            var state = _pluginInterface.InstalledPlugins.Select(x => new CapturedPluginState(x.InternalName, x.Version ?? VersionZero, x.IsLoaded)).ToArray();
+            var state = _pluginInterface.InstalledPlugins.Select(x => new CapturedPluginState(x.InternalName, x.Version, x.IsLoaded)).ToArray();
 
             // The same plugin can be installed multiple times -- InternalName is not unique
 
