@@ -58,9 +58,8 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
         });
 
         _marePluginEnabled = pi.InstalledPlugins.Any(p => p.InternalName == "MareSynchronos" && p.IsLoaded);
-        Mediator.Subscribe<PluginChangeMessage>(this, p => {
-            if (p.InternalName == "MareSynchronos")
-                _marePluginEnabled = p.IsLoaded;
+        Mediator.SubscribeKeyed<PluginChangeMessage>(this, "MareSynchronos", p => {
+            _marePluginEnabled = p.IsLoaded;
             HandleMareImpersonation();
         });
     }

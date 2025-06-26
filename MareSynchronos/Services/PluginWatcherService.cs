@@ -1,13 +1,13 @@
 using Dalamud.Plugin;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
-using MareSynchronos.MareConfiguration;
+using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services.Mediator;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using CapturedPluginState = (string InternalName, System.Version Version, bool IsLoaded);
 
-namespace MareSynchronos.PlayerData.Pairs;
+namespace MareSynchronos.Services;
 
 /* Parts of this code from ECommons DalamudReflector
 
@@ -42,22 +42,20 @@ public class PluginWatcherService : MediatorSubscriberBase
 
     private CapturedPluginState[] _prevInstalledPluginState = [];
 
-    private readonly static System.Version VersionZero = new(0, 0, 0, 0);
-
-    private bool ExposedPluginsEqual(IEnumerable<IExposedPlugin> plugins, IEnumerable<CapturedPluginState> other)
+    private static bool ExposedPluginsEqual(IEnumerable<IExposedPlugin> plugins, IEnumerable<CapturedPluginState> other)
     {
-        if(plugins.Count() != other.Count()) return false;
+        if (plugins.Count() != other.Count()) return false;
         var enumeratorOriginal = plugins.GetEnumerator();
         var enumeratorOther = other.GetEnumerator();
-        while(true)
+        while (true)
         {
             var move1 = enumeratorOriginal.MoveNext();
             var move2 = enumeratorOther.MoveNext();
-            if(move1 != move2) return false;
-            if(move1 == false) return true;
-            if(enumeratorOriginal.Current.IsLoaded != enumeratorOther.Current.IsLoaded) return false;
-            if(enumeratorOriginal.Current.Version != enumeratorOther.Current.Version) return false;
-            if(enumeratorOriginal.Current.InternalName != enumeratorOther.Current.InternalName) return false;
+            if (move1 != move2) return false;
+            if (move1 == false) return true;
+            if (enumeratorOriginal.Current.IsLoaded != enumeratorOther.Current.IsLoaded) return false;
+            if (enumeratorOriginal.Current.Version != enumeratorOther.Current.Version) return false;
+            if (enumeratorOriginal.Current.InternalName != enumeratorOther.Current.InternalName) return false;
         }
     }
 
@@ -65,7 +63,8 @@ public class PluginWatcherService : MediatorSubscriberBase
     {
         _pluginInterface = pluginInterface;
 
-        Mediator.Subscribe<PriorityFrameworkUpdateMessage>(this, (_) => {
+        Mediator.Subscribe<PriorityFrameworkUpdateMessage>(this, (_) =>
+        {
             try
             {
                 Update();

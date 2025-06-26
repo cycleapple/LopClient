@@ -100,6 +100,6 @@ public record PairDataAnalyzedMessage(string UID) : KeyedMessage(UID);
 public record GameObjectHandlerCreatedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : MessageBase;
 public record GameObjectHandlerDestroyedMessage(GameObjectHandler GameObjectHandler, bool OwnedObject) : MessageBase;
 
-public record PluginChangeMessage(string InternalName, Version Version, bool IsLoaded) : MessageBase;
+public record PluginChangeMessage(string InternalName, Version Version, bool IsLoaded) : KeyedMessage(InternalName);
 #pragma warning restore S2094
 #pragma warning restore MA0048 // File name must match type name

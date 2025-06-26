@@ -53,6 +53,9 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private readonly ResolvePlayerPathsAsync _penumbraResolvePaths;
     private readonly GetGameObjectResourcePaths _penumbraResourcePaths;
 
+    private bool _pluginLoaded;
+    private Version _pluginVersion;
+
     public IpcCallerPenumbra(ILogger<IpcCallerPenumbra> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
         MareMediator mareMediator, RedrawManager redrawManager) : base(logger, mareMediator)
     {
@@ -92,6 +95,18 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         });
 
         Mediator.Subscribe<DalamudLoginMessage>(this, (msg) => _shownPenumbraUnavailable = false);
+
+        var plugin = _pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Penumbra", StringComparison.Ordinal));
+
+        _pluginLoaded = plugin?.IsLoaded ?? false;
+        _pluginVersion = plugin?.Version ?? new(0, 0, 0, 0);
+
+        Mediator.SubscribeKeyed<PluginChangeMessage>(this, "Penumbra", (msg) =>
+        {
+             _pluginLoaded = msg.IsLoaded;
+             _pluginVersion = msg.Version;
+             CheckAPI();
+        });
     }
 
     public bool APIAvailable { get; private set; } = false;
@@ -101,10 +116,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         bool penumbraAvailable = false;
         try
         {
-            var penumbraVersion = (_pi.InstalledPlugins
-                .FirstOrDefault(p => string.Equals(p.InternalName, "Penumbra", StringComparison.OrdinalIgnoreCase))
-                ?.Version ?? new Version(0, 0, 0, 0));
-            penumbraAvailable = penumbraVersion >= new Version(1, 0, 1, 0);
+            penumbraAvailable = _pluginLoaded && _pluginVersion >= new Version(1, 0, 1, 0);
             try
             {
                 penumbraAvailable &= _penumbraEnabled.Invoke();

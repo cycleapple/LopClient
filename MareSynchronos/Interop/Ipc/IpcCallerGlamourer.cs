@@ -27,6 +27,9 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
     private readonly UnlockStateName _glamourerUnlockByName;
     private readonly EventSubscriber<nint>? _glamourerStateChanged;
 
+    private bool _pluginLoaded;
+    private Version _pluginVersion;
+
     private bool _shownGlamourerUnavailable = false;
     private readonly uint LockCode = 0x626E7579;
 
@@ -52,6 +55,18 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         _glamourerStateChanged.Enable();
 
         Mediator.Subscribe<DalamudLoginMessage>(this, s => _shownGlamourerUnavailable = false);
+
+        var plugin = _pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Glamourer", StringComparison.Ordinal));
+
+        _pluginLoaded = plugin?.IsLoaded ?? false;
+        _pluginVersion = plugin?.Version ?? new(0, 0, 0, 0);
+
+        Mediator.SubscribeKeyed<PluginChangeMessage>(this, "Glamourer", (msg) =>
+        {
+             _pluginLoaded = msg.IsLoaded;
+             _pluginVersion = msg.Version;
+             CheckAPI();
+        });
     }
 
     protected override void Dispose(bool disposing)
@@ -69,9 +84,7 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         bool apiAvailable = false;
         try
         {
-            bool versionValid = (_pi.InstalledPlugins
-                .FirstOrDefault(p => string.Equals(p.InternalName, "Glamourer", StringComparison.OrdinalIgnoreCase))
-                ?.Version ?? new Version(0, 0, 0, 0)) >= new Version(1, 0, 6, 1);
+            bool versionValid = _pluginLoaded && _pluginVersion >= new Version(1, 0, 6, 1);
             try
             {
                 var version = _glamourerApiVersions.Invoke();
