@@ -297,6 +297,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
             {
                 if (!fi.Exists)
                 {
+                    _orchestrator.ReleaseDownloadSlot();
                     Logger.LogDebug("{dlName}: Detected early cancellation of download", fi.Name);
                     return;
                 }
