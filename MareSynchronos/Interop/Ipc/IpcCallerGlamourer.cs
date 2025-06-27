@@ -49,12 +49,6 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         _dalamudUtil = dalamudUtil;
         _mareMediator = mareMediator;
         _redrawManager = redrawManager;
-        CheckAPI();
-
-        _glamourerStateChanged = StateChanged.Subscriber(pi, GlamourerChanged);
-        _glamourerStateChanged.Enable();
-
-        Mediator.Subscribe<DalamudLoginMessage>(this, s => _shownGlamourerUnavailable = false);
 
         var plugin = _pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Glamourer", StringComparison.Ordinal));
 
@@ -67,6 +61,13 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
              _pluginVersion = msg.Version;
              CheckAPI();
         });
+
+        CheckAPI();
+
+        _glamourerStateChanged = StateChanged.Subscriber(pi, GlamourerChanged);
+        _glamourerStateChanged.Enable();
+
+        Mediator.Subscribe<DalamudLoginMessage>(this, s => _shownGlamourerUnavailable = false);
     }
 
     protected override void Dispose(bool disposing)
