@@ -4,10 +4,12 @@ using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.Utils;
+using MareSynchronos.API.Dto;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Reflection;
 
 namespace MareSynchronos.WebAPI.SignalR;
@@ -19,6 +21,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
     private readonly ILogger<TokenProvider> _logger;
     private readonly ServerConfigurationManager _serverManager;
     private readonly ConcurrentDictionary<JwtIdentifier, string> _tokenCache = new();
+    private readonly ConcurrentDictionary<string, string?> _wellKnownCache = new();
 
     public TokenProvider(ILogger<TokenProvider> logger, ServerConfigurationManager serverManager, DalamudUtilService dalamudUtil, MareMediator mareMediator)
     {
@@ -32,11 +35,13 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
         {
             _lastJwtIdentifier = null;
             _tokenCache.Clear();
+            _wellKnownCache.Clear();
         });
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) =>
         {
             _lastJwtIdentifier = null;
             _tokenCache.Clear();
+            _wellKnownCache.Clear();
         });
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
     }
@@ -54,14 +59,13 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
     public async Task<string> GetNewToken(JwtIdentifier identifier, CancellationToken token)
     {
         Uri tokenUri;
-        string response = string.Empty;
         HttpResponseMessage result;
 
         try
         {
             _logger.LogDebug("GetNewToken: Requesting");
 
-            tokenUri = MareAuth.AuthFullPath(new Uri(_serverManager.CurrentApiUrl
+            tokenUri = MareAuth.AuthV2FullPath(new Uri(_serverManager.CurrentApiUrl
                 .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                 .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
             var secretKey = _serverManager.GetSecretKey(out _)!;
@@ -72,13 +76,16 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                         new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
             }), token).ConfigureAwait(false);
 
-            response = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var response = await result.Content.ReadFromJsonAsync<AuthReplyDto>().ConfigureAwait(false) ?? new();
             result.EnsureSuccessStatusCode();
-            _tokenCache[identifier] = response;
+            _tokenCache[identifier] = response.Token;
+            _wellKnownCache[_serverManager.CurrentApiUrl] = response.WellKnown;
+            return response.Token;
         }
         catch (HttpRequestException ex)
         {
             _tokenCache.TryRemove(identifier, out _);
+            _wellKnownCache.TryRemove(_serverManager.CurrentApiUrl, out _);
 
             _logger.LogError(ex, "GetNewToken: Failure to get token");
 
@@ -86,13 +93,10 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             {
                 Mediator.Publish(new NotificationMessage("Error refreshing token", "Your authentication token could not be renewed. Try reconnecting manually.", NotificationType.Error));
                 Mediator.Publish(new DisconnectedMessage());
-                throw new MareAuthFailureException(response);
             }
 
             throw;
         }
-
-        return response;
     }
 
     private async Task<JwtIdentifier?> GetIdentifier()
@@ -152,5 +156,14 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
 
         _logger.LogTrace("GetOrUpdate: Getting new token");
         return await GetNewToken(jwtIdentifier, ct).ConfigureAwait(false);
+    }
+
+    public string? GetStapledWellKnown(string apiUrl)
+    {
+        _wellKnownCache.TryGetValue(apiUrl, out var wellKnown);
+        // Treat an empty string as null -- it won't decode as JSON anyway
+        if (string.IsNullOrEmpty(wellKnown))
+            return null;
+        return wellKnown;
     }
 }

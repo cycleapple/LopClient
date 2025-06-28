@@ -63,29 +63,11 @@ public class HubFactory : MediatorSubscriberBase
         return BuildHubConnection(_cachedConfig, ct);
     }
 
-    public async Task<HubConnectionConfig> ResolveHubConfig()
+    private async Task<HubConnectionConfig> ResolveHubConfig()
     {
-        var uri = new Uri(_serverConfigurationManager.CurrentApiUrl);
+        var stapledWellKnown = _tokenProvider.GetStapledWellKnown(_serverConfigurationManager.CurrentApiUrl);
 
-        var httpScheme = uri.Scheme.ToLowerInvariant() switch
-        {
-            "ws" => "http",
-            "wss" => "https",
-            _ => uri.Scheme
-        };
-
-        var wellKnownUrl = $"{httpScheme}://{uri.Host}/.well-known/loporrit/client";
-
-        using var httpClient = new HttpClient(
-            new HttpClientHandler
-            {
-                AllowAutoRedirect = true,
-                MaxAutomaticRedirections = 5
-            }
-        );
-
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+        var apiUrl = new Uri(_serverConfigurationManager.CurrentApiUrl);
 
         HubConnectionConfig defaultConfig;
 
@@ -93,38 +75,72 @@ public class HubFactory : MediatorSubscriberBase
         {
             defaultConfig = _cachedConfig;
         }
-        else if (_serverConfigurationManager.CurrentApiUrl == ApiController.LoporritServiceUri)
-        {
-            defaultConfig = new HubConnectionConfig
-            {
-                HubUrl = ApiController.LoporritServiceHubUri,
-                SkipNegotiation = true,
-                Transports = ["websockets"]
-            };
-        }
         else
         {
             defaultConfig = new HubConnectionConfig
             {
-                HubUrl = uri.AbsoluteUri.TrimEnd('/') + IMareHub.Path,
+                HubUrl = _serverConfigurationManager.CurrentApiUrl.TrimEnd('/') + IMareHub.Path,
                 Transports = []
             };
         }
 
+        if (_serverConfigurationManager.CurrentApiUrl == ApiController.LoporritServiceUri)
+            defaultConfig.HubUrl = ApiController.LoporritServiceHubUri;
+
+        string jsonResponse;
+
+        if (stapledWellKnown != null)
+        {
+            jsonResponse = stapledWellKnown;
+            Logger.LogTrace("Using stapled hub config for {url}", _serverConfigurationManager.CurrentApiUrl);
+        }
+        else
+        {
+            try
+            {
+                var httpScheme = apiUrl.Scheme.ToLowerInvariant() switch
+                {
+                    "ws" => "http",
+                    "wss" => "https",
+                    _ => apiUrl.Scheme
+                };
+
+                var wellKnownUrl = $"{httpScheme}://{apiUrl.Host}/.well-known/loporrit/client";
+                Logger.LogTrace("Fetching hub config for {uri} via {wk}", _serverConfigurationManager.CurrentApiUrl, wellKnownUrl);
+
+                using var httpClient = new HttpClient(
+                    new HttpClientHandler
+                    {
+                        AllowAutoRedirect = true,
+                        MaxAutomaticRedirections = 5
+                    }
+                );
+
+                var ver = Assembly.GetExecutingAssembly().GetName().Version;
+                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+
+                // Make a GET request to the loporrit endpoint
+                var response = await httpClient.GetAsync(wellKnownUrl).ConfigureAwait(false);
+
+                if (!response.IsSuccessStatusCode)
+                    return defaultConfig;
+
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+
+                if (contentType == null || contentType != "application/json")
+                    return defaultConfig;
+
+                jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex)
+            {
+                Logger.LogWarning(ex, "HTTP request failed for .well-known");
+                return defaultConfig;
+            }
+        }
+
         try
         {
-            // Make a GET request to the loporrit endpoint
-            var response = await httpClient.GetAsync(wellKnownUrl).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-                return defaultConfig;
-
-            var contentType = response.Content.Headers.ContentType?.MediaType;
-
-            if (contentType == null || contentType != "application/json")
-                return defaultConfig;
-
-            var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var config = JsonSerializer.Deserialize<HubConnectionConfig>(
                 jsonResponse,
                 new JsonSerializerOptions
@@ -137,16 +153,11 @@ public class HubFactory : MediatorSubscriberBase
                 return defaultConfig;
 
             if (string.IsNullOrEmpty(config.HubUrl))
-                config.HubUrl ??= defaultConfig.HubUrl;
+                config.HubUrl = defaultConfig.HubUrl;
 
             config.Transports ??= [];
 
             return config;
-        }
-        catch (HttpRequestException ex)
-        {
-            Logger.LogWarning(ex, "HTTP request failed for .well-known");
-            return defaultConfig;
         }
         catch (JsonException ex)
         {
