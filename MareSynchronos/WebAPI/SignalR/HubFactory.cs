@@ -93,6 +93,15 @@ public class HubFactory : MediatorSubscriberBase
         {
             defaultConfig = _cachedConfig;
         }
+        else if (_serverConfigurationManager.CurrentApiUrl == ApiController.LoporritServiceUri)
+        {
+            defaultConfig = new HubConnectionConfig
+            {
+                HubUrl = ApiController.LoporritServiceHubUri,
+                SkipNegotiation = true,
+                Transports = ["websockets"]
+            };
+        }
         else
         {
             defaultConfig = new HubConnectionConfig
