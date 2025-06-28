@@ -505,9 +505,9 @@ public class CompactUi : WindowMediatorSubscriberBase
 
         ImGui.SameLine();
 
-        if (_uiSharedService.IconTextButton(FontAwesomeIcon.NotesMedical, "Event Viewer", bottomButtonWidth))
+        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Running, "Character Data Hub", bottomButtonWidth))
         {
-            Mediator.Publish(new UiToggleMessage(typeof(EventViewerUI)));
+            Mediator.Publish(new UiToggleMessage(typeof(CharaDataHubUi)));
         }
 
         ImGui.SameLine();

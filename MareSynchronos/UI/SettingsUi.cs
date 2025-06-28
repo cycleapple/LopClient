@@ -648,10 +648,16 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
 
         bool logEvents = _configService.Current.LogEvents;
-        if (ImGui.Checkbox("Log Event Viewer Data", ref logEvents))
+        if (ImGui.Checkbox("Log Event Viewer data to disk", ref logEvents))
         {
             _configService.Current.LogEvents = logEvents;
             _configService.Save();
+        }
+
+        ImGui.SameLine(300.0f);
+        if (_uiShared.IconTextButton(FontAwesomeIcon.NotesMedical, "Open Event Viewer"))
+        {
+            Mediator.Publish(new UiToggleMessage(typeof(EventViewerUI)));
         }
 
         bool holdCombatApplication = _configService.Current.HoldCombatApplication;
@@ -747,8 +753,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
             Mediator.Publish(new UiToggleMessage(typeof(CharaDataHubUi)));
         }
 
-        UiSharedService.TextWrapped("Note: this entry will be removed in the near future. Please use the Main UI to open the Character Data Hub.");
-        ImGuiHelpers.ScaledDummy(5);
         ImGui.Separator();
 
         _uiShared.BigText("Storage");
