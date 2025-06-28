@@ -76,6 +76,24 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                         new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
             }), token).ConfigureAwait(false);
 
+            if (!result.IsSuccessStatusCode)
+            {
+                tokenUri = MareAuth.AuthFullPath(new Uri(_serverManager.CurrentApiUrl
+                    .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
+                    .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
+                result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent(new[]
+                {
+                            new KeyValuePair<string, string>("auth", auth),
+                            new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
+                }), token).ConfigureAwait(false);
+
+                var textResponse = await result.Content.ReadAsStringAsync().ConfigureAwait(false) ?? string.Empty;
+                result.EnsureSuccessStatusCode();
+                _tokenCache[identifier] = textResponse;
+                _wellKnownCache[_serverManager.CurrentApiUrl] = null;
+                return textResponse;
+            }
+
             var response = await result.Content.ReadFromJsonAsync<AuthReplyDto>().ConfigureAwait(false) ?? new();
             result.EnsureSuccessStatusCode();
             _tokenCache[identifier] = response.Token;
