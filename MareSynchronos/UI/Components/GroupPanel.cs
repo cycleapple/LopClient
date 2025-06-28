@@ -31,6 +31,7 @@ internal sealed class GroupPanel
     private readonly ChatService _chatService;
     private readonly MareConfigService _mareConfig;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly CharaDataManager _charaDataManager;
     private readonly Dictionary<string, bool> _showGidForEntry = new(StringComparer.Ordinal);
     private readonly UidDisplayHandler _uidDisplayHandler;
     private readonly UiSharedService _uiShared;
@@ -56,7 +57,8 @@ internal sealed class GroupPanel
     private string _syncShellToJoin = string.Empty;
 
     public GroupPanel(CompactUi mainUi, UiSharedService uiShared, PairManager pairManager, ChatService chatServivce,
-        UidDisplayHandler uidDisplayHandler, MareConfigService mareConfig, ServerConfigurationManager serverConfigurationManager)
+        UidDisplayHandler uidDisplayHandler, MareConfigService mareConfig, ServerConfigurationManager serverConfigurationManager,
+        CharaDataManager charaDataManager)
     {
         _mainUi = mainUi;
         _uiShared = uiShared;
@@ -65,6 +67,7 @@ internal sealed class GroupPanel
         _uidDisplayHandler = uidDisplayHandler;
         _mareConfig = mareConfig;
         _serverConfigurationManager = serverConfigurationManager;
+        _charaDataManager = charaDataManager;
     }
 
     private ApiController ApiController => _uiShared.ApiController;
@@ -435,7 +438,8 @@ internal sealed class GroupPanel
                         g => GroupDataComparer.Instance.Equals(g.Key.Group, groupDto.Group)
                     ).Value,
                     _uidDisplayHandler,
-                    _uiShared);
+                    _uiShared,
+                    _charaDataManager);
 
                 if (pair.IsVisible)
                     visibleUsers.Add(drawPair);

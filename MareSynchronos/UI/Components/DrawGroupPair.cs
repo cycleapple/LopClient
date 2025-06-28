@@ -12,6 +12,7 @@ using MareSynchronos.API.Data.Enum;
 using MareSynchronos.Services.Mediator;
 using Dalamud.Interface.Utility;
 using MareSynchronos.UI.Components.Popup;
+using MareSynchronos.Services;
 
 namespace MareSynchronos.UI.Components;
 
@@ -20,15 +21,17 @@ public class DrawGroupPair : DrawPairBase
     protected readonly MareMediator _mediator;
     private readonly GroupPairFullInfoDto _fullInfoDto;
     private readonly GroupFullInfoDto _group;
+    private readonly CharaDataManager _charaDataManager;
 
     public DrawGroupPair(string id, Pair entry, ApiController apiController,
         MareMediator mareMediator, GroupFullInfoDto group, GroupPairFullInfoDto fullInfoDto,
-        UidDisplayHandler handler, UiSharedService uiSharedService)
+        UidDisplayHandler handler, UiSharedService uiSharedService, CharaDataManager charaDataManager)
         : base(id, entry, apiController, handler, uiSharedService)
     {
         _group = group;
         _fullInfoDto = fullInfoDto;
         _mediator = mareMediator;
+        _charaDataManager = charaDataManager;
     }
 
     protected override void DrawLeftSide(float textPosY, float originalY)
@@ -140,6 +143,7 @@ public class DrawGroupPair : DrawPairBase
         var individualAnimDisabled = (_pair.UserPair?.OwnPermissions.IsDisableAnimations() ?? false) || (_pair.UserPair?.OtherPermissions.IsDisableAnimations() ?? false);
         var individualVFXDisabled = (_pair.UserPair?.OwnPermissions.IsDisableVFX() ?? false) || (_pair.UserPair?.OtherPermissions.IsDisableVFX() ?? false);
 
+        bool showShared = _charaDataManager.SharedWithYouData.TryGetValue(_pair.UserData, out var sharedData);
         bool showInfo = (individualAnimDisabled || individualSoundsDisabled || animDisabled || soundsDisabled);
         bool showPlus = _pair.UserPair == null;
         bool showBars = (userIsOwner || (userIsModerator && !entryIsMod && !entryIsOwner)) || !_pair.IsPaused;
@@ -147,16 +151,33 @@ public class DrawGroupPair : DrawPairBase
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var permIcon = (individualAnimDisabled || individualSoundsDisabled || individualVFXDisabled) ? FontAwesomeIcon.ExclamationTriangle
             : ((soundsDisabled || animDisabled || vfxDisabled) ? FontAwesomeIcon.InfoCircle : FontAwesomeIcon.None);
+        var runningIconWidth = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Running).X;
         var infoIconWidth = UiSharedService.GetIconSize(permIcon).X;
         var plusButtonWidth = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Plus).X;
         var barButtonWidth = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Bars).X;
 
         var pos = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth() + spacing
+            - (showShared ? (runningIconWidth + spacing) : 0)
             - (showInfo ? (infoIconWidth + spacing) : 0)
             - (showPlus ? (plusButtonWidth + spacing) : 0)
             - (showBars ? (barButtonWidth + spacing) : 0);
 
         ImGui.SameLine(pos);
+
+        if (showShared)
+        {
+            _uiSharedService.IconText(FontAwesomeIcon.Running);
+
+            UiSharedService.AttachToolTip($"This user has shared {sharedData!.Count} Character Data Sets with you." + UiSharedService.TooltipSeparator
+                + "Click to open the Character Data Hub and show the entries.");
+
+            if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+            {
+                _mediator.Publish(new OpenCharaDataHubWithFilterMessage(_pair.UserData));
+            }
+            ImGui.SameLine();
+        }
+
         if (individualAnimDisabled || individualSoundsDisabled)
         {
             ImGui.SetCursorPosY(textPosY);

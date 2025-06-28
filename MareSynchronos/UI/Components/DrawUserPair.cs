@@ -11,6 +11,7 @@ using MareSynchronos.API.Dto.User;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.UI.Handlers;
 using Dalamud.Interface.Utility;
+using MareSynchronos.Services;
 
 namespace MareSynchronos.UI.Components;
 
@@ -18,16 +19,18 @@ public class DrawUserPair : DrawPairBase
 {
     protected readonly MareMediator _mediator;
     private readonly SelectGroupForPairUi _selectGroupForPairUi;
+    private readonly CharaDataManager _charaDataManager;
 
     public DrawUserPair(string id, Pair entry, UidDisplayHandler displayHandler, ApiController apiController,
         MareMediator mareMediator, SelectGroupForPairUi selectGroupForPairUi,
-        UiSharedService uiSharedService)
+        UiSharedService uiSharedService, CharaDataManager charaDataManager)
         : base(id, entry, apiController, displayHandler, uiSharedService)
     {
         if (_pair.UserPair == null) throw new ArgumentException("Pair must be UserPair", nameof(entry));
         _pair = entry;
         _selectGroupForPairUi = selectGroupForPairUi;
         _mediator = mareMediator;
+        _charaDataManager = charaDataManager;
     }
 
     public bool IsOnline => _pair.IsOnline;
@@ -103,22 +106,51 @@ public class DrawUserPair : DrawPairBase
         var entryUID = _pair.UserData.AliasOrUID;
         var spacingX = ImGui.GetStyle().ItemSpacing.X;
         var windowEndX = ImGui.GetWindowContentRegionMin().X + UiSharedService.GetWindowContentRegionWidth();
-        var rightSideStart = 0f;
+        var rightSidePos = windowEndX - barButtonSize.X;
 
+        // Flyout Menu
+        ImGui.SameLine(rightSidePos);
+        ImGui.SetCursorPosY(originalY);
+
+        if (_uiSharedService.IconButton(FontAwesomeIcon.Bars))
+        {
+            ImGui.OpenPopup("User Flyout Menu");
+        }
+        if (ImGui.BeginPopup("User Flyout Menu"))
+        {
+            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}")) DrawPairedClientMenu(_pair);
+            ImGui.EndPopup();
+        }
+
+        // Pause (mutual pairs only)
         if (_pair.UserPair!.OwnPermissions.IsPaired() && _pair.UserPair!.OtherPermissions.IsPaired())
         {
+            rightSidePos -= pauseIconSize.X + spacingX;
+            ImGui.SameLine(rightSidePos);
+            ImGui.SetCursorPosY(originalY);
+            if (_uiSharedService.IconButton(pauseIcon))
+            {
+                var perm = _pair.UserPair!.OwnPermissions;
+                perm.SetPaused(!perm.IsPaused());
+                _ = _apiController.UserSetPairPermissions(new(_pair.UserData, perm));
+            }
+            UiSharedService.AttachToolTip(!_pair.UserPair!.OwnPermissions.IsPaused()
+                ? "Pause pairing with " + entryUID
+                : "Resume pairing with " + entryUID);
+
+
             var individualSoundsDisabled = (_pair.UserPair?.OwnPermissions.IsDisableSounds() ?? false) || (_pair.UserPair?.OtherPermissions.IsDisableSounds() ?? false);
             var individualAnimDisabled = (_pair.UserPair?.OwnPermissions.IsDisableAnimations() ?? false) || (_pair.UserPair?.OtherPermissions.IsDisableAnimations() ?? false);
             var individualVFXDisabled = (_pair.UserPair?.OwnPermissions.IsDisableVFX() ?? false) || (_pair.UserPair?.OtherPermissions.IsDisableVFX() ?? false);
 
-            if (individualAnimDisabled || individualSoundsDisabled || individualVFXDisabled)
+            // Icon for individually applied permissions
+            if (individualSoundsDisabled || individualAnimDisabled || individualVFXDisabled)
             {
-                var infoIconPosDist = windowEndX - barButtonSize.X - spacingX - pauseIconSize.X - spacingX;
                 var icon = FontAwesomeIcon.ExclamationTriangle;
                 var iconwidth = _uiSharedService.GetIconButtonSize(icon);
 
-                rightSideStart = infoIconPosDist - iconwidth.X;
-                ImGui.SameLine(infoIconPosDist - iconwidth.X);
+                rightSidePos -= iconwidth.X + spacingX / 2f;
+                ImGui.SameLine(rightSidePos);
 
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
                 _uiSharedService.IconText(icon);
@@ -165,43 +197,27 @@ public class DrawUserPair : DrawPairBase
                     ImGui.EndTooltip();
                 }
             }
+        }
 
-            if (rightSideStart == 0f)
+        // Icon for shared character data
+        if (_charaDataManager.SharedWithYouData.TryGetValue(_pair.UserData, out var sharedData))
+        {
+            var icon = FontAwesomeIcon.Running;
+            var iconwidth = _uiSharedService.GetIconButtonSize(icon);
+            rightSidePos -= iconwidth.X + spacingX / 2f;
+            ImGui.SameLine(rightSidePos);
+            _uiSharedService.IconText(icon);
+
+            UiSharedService.AttachToolTip($"This user has shared {sharedData.Count} Character Data Sets with you." + UiSharedService.TooltipSeparator
+                + "Click to open the Character Data Hub and show the entries.");
+
+            if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
             {
-                rightSideStart = windowEndX - barButtonSize.X - spacingX * 2 - pauseIconSize.X;
+                _mediator.Publish(new OpenCharaDataHubWithFilterMessage(_pair.UserData));
             }
-            ImGui.SameLine(windowEndX - barButtonSize.X - spacingX - pauseIconSize.X);
-            ImGui.SetCursorPosY(originalY);
-            if (_uiSharedService.IconButton(pauseIcon))
-            {
-                var perm = _pair.UserPair!.OwnPermissions;
-                perm.SetPaused(!perm.IsPaused());
-                _ = _apiController.UserSetPairPermissions(new(_pair.UserData, perm));
-            }
-            UiSharedService.AttachToolTip(!_pair.UserPair!.OwnPermissions.IsPaused()
-                ? "Pause pairing with " + entryUID
-                : "Resume pairing with " + entryUID);
         }
 
-        // Flyout Menu
-        if (rightSideStart == 0f)
-        {
-            rightSideStart = windowEndX - barButtonSize.X;
-        }
-        ImGui.SameLine(windowEndX - barButtonSize.X);
-        ImGui.SetCursorPosY(originalY);
-
-        if (_uiSharedService.IconButton(FontAwesomeIcon.Bars))
-        {
-            ImGui.OpenPopup("User Flyout Menu");
-        }
-        if (ImGui.BeginPopup("User Flyout Menu"))
-        {
-            using (ImRaii.PushId($"buttons-{_pair.UserData.UID}")) DrawPairedClientMenu(_pair);
-            ImGui.EndPopup();
-        }
-
-        return rightSideStart;
+        return rightSidePos - spacingX;
     }
 
     private void DrawPairedClientMenu(Pair entry)
