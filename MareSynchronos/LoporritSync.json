@@ -8,7 +8,7 @@
   "Tags": [
     "customization"
   ],
-  "IconUrl": "https://raw.githubusercontent.com/loporrit/MareClient/main/MareSynchronos/images/logo.png",
+  "IconUrl": "https://raw.githubusercontent.com/loporrit/MareClient/way4/MareSynchronos/images/icon.png",
   "RepoUrl": "https://github.com/loporrit/MareClient/",
   "CanUnloadAsync": true
 }
