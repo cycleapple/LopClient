@@ -177,7 +177,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
 
                 if (token.IsCancellationRequested) break;
 
-                _mareHub = _hubFactory.GetOrCreate(token);
+                _mareHub = await _hubFactory.GetOrCreate(token);
                 InitializeApiHooks();
 
                 await _mareHub.StartAsync(token).ConfigureAwait(false);

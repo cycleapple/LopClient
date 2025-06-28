@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Text.Json;
 
 namespace MareSynchronos.WebAPI.SignalR;
 
@@ -17,6 +20,8 @@ public class HubFactory : MediatorSubscriberBase
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly TokenProvider _tokenProvider;
     private HubConnection? _instance;
+    private string _cachedConfigFor = string.Empty;
+    private HubConnectionConfig? _cachedConfig;
     private bool _isDisposed = false;
 
     public HubFactory(ILogger<HubFactory> logger, MareMediator mediator,
@@ -48,23 +53,110 @@ public class HubFactory : MediatorSubscriberBase
         Logger.LogDebug("Current HubConnection disposed");
     }
 
-    public HubConnection GetOrCreate(CancellationToken ct)
+    public async Task<HubConnection> GetOrCreate(CancellationToken ct)
     {
         if (!_isDisposed && _instance != null) return _instance;
 
-        return BuildHubConnection(ct);
+        _cachedConfig = await ResolveHubConfig();
+        _cachedConfigFor = _serverConfigurationManager.CurrentApiUrl;
+
+        return BuildHubConnection(_cachedConfig, ct);
     }
 
-    private HubConnection BuildHubConnection(CancellationToken ct)
+    public async Task<HubConnectionConfig> ResolveHubConfig()
+    {
+        var uri = new Uri(_serverConfigurationManager.CurrentApiUrl);
+
+        var httpScheme = uri.Scheme.ToLowerInvariant() switch
+        {
+            "ws" => "http",
+            "wss" => "https",
+            _ => uri.Scheme
+        };
+
+        var wellKnownUrl = $"{httpScheme}://{uri.Host}/.well-known/loporrit/client";
+
+        using var httpClient = new HttpClient(
+            new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 5
+            }
+        );
+
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
+
+        HubConnectionConfig defaultConfig;
+
+        if (_cachedConfig != null && _serverConfigurationManager.CurrentApiUrl == _cachedConfigFor)
+        {
+            defaultConfig = _cachedConfig;
+        }
+        else
+        {
+            defaultConfig = new HubConnectionConfig
+            {
+                HubUrl = uri.AbsoluteUri.TrimEnd('/') + IMareHub.Path,
+                Transports = []
+            };
+        }
+
+        try
+        {
+            // Make a GET request to the loporrit endpoint
+            var response = await httpClient.GetAsync(wellKnownUrl).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+                return defaultConfig;
+
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+
+            if (contentType == null || contentType != "application/json")
+                return defaultConfig;
+
+            var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var config = JsonSerializer.Deserialize<HubConnectionConfig>(
+                jsonResponse,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    AllowTrailingCommas = true
+                });
+
+            if (config == null)
+                return defaultConfig;
+
+            if (string.IsNullOrEmpty(config.HubUrl))
+                config.HubUrl ??= defaultConfig.HubUrl;
+
+            config.Transports ??= [];
+
+            return config;
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "HTTP request failed for .well-known");
+            return defaultConfig;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogWarning(ex, "Invalid JSON in .well-known response");
+            return defaultConfig;
+        }
+    }
+
+    private HubConnection BuildHubConnection(HubConnectionConfig hubConfig, CancellationToken ct)
     {
         Logger.LogDebug("Building new HubConnection");
 
         _instance = new HubConnectionBuilder()
-            .WithUrl(_serverConfigurationManager.CurrentApiUrl + IMareHub.Path, options =>
+            .WithUrl(hubConfig.HubUrl, options =>
             {
+                var transports =  hubConfig.TransportType;
                 options.AccessTokenProvider = () => _tokenProvider.GetOrUpdateToken(ct);
-                options.SkipNegotiation = true;
-                options.Transports = HttpTransportType.WebSockets;
+                options.SkipNegotiation = hubConfig.SkipNegotiation && (transports == HttpTransportType.WebSockets);
+                options.Transports = transports;
             })
             .AddMessagePackProtocol(opt =>
             {
