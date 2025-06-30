@@ -63,7 +63,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
 
     public Pair? GetPairByUID(string uid)
     {
-        var existingPair = _allClientPairs.FirstOrDefault(f => f.Key.UID == uid);
+        var existingPair = _allClientPairs.FirstOrDefault(f => uid.Equals(f.Key.UID, StringComparison.Ordinal));
         if (!Equals(existingPair, default(KeyValuePair<UserData, Pair>)))
         {
             return existingPair.Value;

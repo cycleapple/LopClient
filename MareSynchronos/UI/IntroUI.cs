@@ -374,6 +374,8 @@ This service is provided as-is.
         }
     }
 
+#pragma warning disable MA0009
     [GeneratedRegex("^([A-F0-9]{2})+")]
     private static partial Regex HexRegex();
+#pragma warning restore MA0009
 }

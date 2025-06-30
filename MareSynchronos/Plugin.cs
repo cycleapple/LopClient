@@ -34,9 +34,9 @@ public sealed class Plugin : IDalamudPlugin
 {
     private readonly IHost _host;
 
-#pragma warning disable CA2211, CS8618
+#pragma warning disable CA2211, CS8618, MA0069, S1104, S2223
     public static Plugin Self;
-#pragma warning restore CA2211, CS8618
+#pragma warning restore CA2211, CS8618, MA0069, S1104, S2223
     public Action<IFramework>? RealOnFrameworkUpdate { get; set; }
 
     // Proxy function in the LoporritSync namespace to avoid confusion in /xlstats
@@ -203,16 +203,16 @@ public sealed class Plugin : IDalamudPlugin
         })
         .Build();
 
-        Task.Run(async () => {
+        _ = Task.Run(async () => {
             try
             {
-                await _host.StartAsync();
+                await _host.StartAsync().ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 pluginLog.Error(e, "HostBuilder startup exception");
             }
-        });
+        }).ConfigureAwait(false);
     }
 
     public void Dispose()

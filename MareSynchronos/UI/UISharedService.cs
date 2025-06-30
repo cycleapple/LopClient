@@ -35,7 +35,8 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public static readonly ImGuiWindowFlags PopupWindowFlags = ImGuiWindowFlags.NoResize |
                                                ImGuiWindowFlags.NoScrollbar |
                                            ImGuiWindowFlags.NoScrollWithMouse;
-    public static Vector4 AccentColor = ImGuiColors.DalamudYellow;
+
+    public static Vector4 AccentColor { get; set; } = ImGuiColors.DalamudYellow;
 
     public readonly FileDialogManager FileDialogManager;
 

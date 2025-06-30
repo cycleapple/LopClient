@@ -39,8 +39,6 @@ public class GuiHookService : DisposableMediatorSubscriberBase
         _namePlateGui.OnNamePlateUpdate += OnNamePlateUpdate;
         _namePlateGui.RequestRedraw();
 
-        gameConfig.TryGet(Dalamud.Game.Config.UiConfigOption.NamePlateSetRoleColor, out bool isNameplateSetRoleColor);
-
         Mediator.Subscribe<DelayedFrameworkUpdateMessage>(this, (_) => GameSettingsCheck());
         Mediator.Subscribe<PairHandlerVisibleMessage>(this, (_) => RequestRedraw());
         Mediator.Subscribe<NameplateRedrawMessage>(this, (_) => RequestRedraw());
@@ -55,8 +53,8 @@ public class GuiHookService : DisposableMediatorSubscriberBase
             _isModified = false;
         }
 
-        Task.Run(async () => {
-            await _dalamudUtil.RunOnFrameworkThread(() => _namePlateGui.RequestRedraw());
+        _ = Task.Run(async () => {
+            await _dalamudUtil.RunOnFrameworkThread(() => _namePlateGui.RequestRedraw()).ConfigureAwait(false);
         });
     }
 
@@ -65,8 +63,8 @@ public class GuiHookService : DisposableMediatorSubscriberBase
         base.Dispose(disposing);
         _namePlateGui.OnNamePlateUpdate -= OnNamePlateUpdate;
 
-        Task.Run(async () => {
-            await _dalamudUtil.RunOnFrameworkThread(() => _namePlateGui.RequestRedraw());
+        _ = Task.Run(async () => {
+            await _dalamudUtil.RunOnFrameworkThread(() => _namePlateGui.RequestRedraw()).ConfigureAwait(false);
         });
     }
 

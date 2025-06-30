@@ -13,7 +13,6 @@ namespace MareSynchronos.Interop.Ipc;
 public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcCaller
 {
     private readonly ILogger<IpcCallerGlamourer> _logger;
-    private readonly IDalamudPluginInterface _pi;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly MareMediator _mareMediator;
     private readonly RedrawManager _redrawManager;
@@ -45,12 +44,11 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         _glamourerUnlockByName = new UnlockStateName(pi);
 
         _logger = logger;
-        _pi = pi;
         _dalamudUtil = dalamudUtil;
         _mareMediator = mareMediator;
         _redrawManager = redrawManager;
 
-        var plugin = _pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Glamourer", StringComparison.Ordinal));
+        var plugin = pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Glamourer", StringComparison.Ordinal));
 
         _pluginLoaded = plugin?.IsLoaded ?? false;
         _pluginVersion = plugin?.Version ?? new(0, 0, 0, 0);

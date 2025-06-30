@@ -184,7 +184,6 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
     public async Task<bool> ShrinkTextures(PairHandler pairHandler, CharacterData charaData, CancellationToken token)
     {
         var config = _playerPerformanceConfigService.Current;
-        var pair = pairHandler.Pair;
 
         if (config.TextureShrinkMode == MareConfiguration.Models.TextureShrinkMode.Never)
             return false;
@@ -208,7 +207,7 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
                 if (fileEntry == null) return;
                 if (fileEntry.IsSubstEntry) return;
 
-                var texFormat = await Task.Run(() => _xivDataAnalyzer.GetTexFormatByHash(hash));
+                var texFormat = _xivDataAnalyzer.GetTexFormatByHash(hash);
                 var filePath = fileEntry.ResolvedFilepath;
                 var tmpFilePath = _fileCacheManager.GetSubstFilePath(Guid.NewGuid().ToString(), "tmp");
                 var newFilePath = _fileCacheManager.GetSubstFilePath(hash, "tex");
@@ -295,7 +294,7 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
                     outFile.Position = 80;
                     inFile.Position = 80 + offsetDelta;
 
-                    await inFile.CopyToAsync(outFile, 81920, token);
+                    await inFile.CopyToAsync(outFile, 81920, token).ConfigureAwait(false);
 
                     reader.Dispose();
                     writer.Dispose();
@@ -326,7 +325,7 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
                         File.Delete(tmpFilePath);
                 }
             }
-        );
+        ).ConfigureAwait(false);
 
         return shrunken;
     }

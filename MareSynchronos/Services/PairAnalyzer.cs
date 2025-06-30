@@ -153,7 +153,7 @@ public sealed class PairAnalyzer : DisposableMediatorSubscriberBase
                 {
                     data[fileEntry.Hash] = new CharacterAnalyzer.FileDataEntry(fileEntry.Hash, ext,
                         [.. fileEntry.GamePaths],
-                        fileCacheEntries.Select(c => c.ResolvedFilepath).Distinct().ToList(),
+                        fileCacheEntries.Select(c => c.ResolvedFilepath).Distinct(StringComparer.Ordinal).ToList(),
                         entry.Size > 0 ? entry.Size.Value : 0,
                         entry.CompressedSize > 0 ? entry.CompressedSize.Value : 0,
                         tris);

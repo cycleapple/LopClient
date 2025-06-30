@@ -334,7 +334,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             Logger.LogDebug("[{applicationId}] Removing Temp Collection for {name} ({user})", applicationId, name, Pair.UserPair);
             if (_penumbraCollection != Guid.Empty)
             {
-                _ipcManager.Penumbra.RemoveTemporaryCollectionAsync(Logger, applicationId, _penumbraCollection).GetAwaiter().GetResult();
+                await _ipcManager.Penumbra.RemoveTemporaryCollectionAsync(Logger, applicationId, _penumbraCollection).ConfigureAwait(false);
                 _penumbraCollection = Guid.Empty;
             }
 
@@ -344,7 +344,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 if (!IsVisible)
                 {
                     Logger.LogDebug("[{applicationId}] Restoring Glamourer for {name} ({user})", applicationId, name, Pair.UserPair);
-                    await _ipcManager.Glamourer.RevertByNameAsync(Logger, name, applicationId);
+                    await _ipcManager.Glamourer.RevertByNameAsync(Logger, name, applicationId).ConfigureAwait(false);
                 }
                 else
                 {
@@ -357,7 +357,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     {
                         try
                         {
-                            await RevertCustomizationDataAsync(item.Key, name, applicationId, cts.Token);
+                            await RevertCustomizationDataAsync(item.Key, name, applicationId, cts.Token).ConfigureAwait(false);
                         }
                         catch (InvalidOperationException ex)
                         {
@@ -508,7 +508,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     return;
                 }
 
-                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false));
+                _pairDownloadTask = Task.Run(async () => await _downloadManager.DownloadFiles(_charaHandler!, toDownloadReplacements, downloadToken).ConfigureAwait(false), downloadToken);
 
                 await _pairDownloadTask.ConfigureAwait(false);
 
@@ -595,8 +595,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             {
                 if (objIndex == ushort.MaxValue)
                     objIndex = await _dalamudUtil.RunOnFrameworkThread(() => _charaHandler!.GetGameObject()!.ObjectIndex).ConfigureAwait(false);
-                _penumbraCollection = await _ipcManager.Penumbra.CreateTemporaryCollectionAsync(Logger, Pair.UserData.UID);
-                await _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, objIndex);
+                _penumbraCollection = await _ipcManager.Penumbra.CreateTemporaryCollectionAsync(Logger, Pair.UserData.UID).ConfigureAwait(false);
+                await _ipcManager.Penumbra.AssignTemporaryCollectionAsync(Logger, _penumbraCollection, objIndex).ConfigureAwait(false);
             }
 
             Logger.LogDebug("[{applicationId}] Waiting for initial draw for for {handler}", _applicationId, _charaHandler);
@@ -714,18 +714,18 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         PlayerName = name;
         _charaHandler = _gameObjectHandlerFactory.Create(ObjectKind.Player, () => _dalamudUtil.GetPlayerCharacterFromCachedTableByIdent(Pair.Ident), isWatched: false).GetAwaiter().GetResult();
 
-        Mediator.Subscribe<HonorificReadyMessage>(this, async (_) =>
+        Mediator.Subscribe<HonorificReadyMessage>(this, msg =>
         {
             if (string.IsNullOrEmpty(_cachedData?.HonorificData)) return;
             Logger.LogTrace("Reapplying Honorific data for {this}", this);
-            await _ipcManager.Honorific.SetTitleAsync(PlayerCharacter, _cachedData.HonorificData).ConfigureAwait(false);
+            _ = Task.Run(async () => await _ipcManager.Honorific.SetTitleAsync(PlayerCharacter, _cachedData.HonorificData).ConfigureAwait(false), CancellationToken.None);
         });
 
-        Mediator.Subscribe<PetNamesReadyMessage>(this, async (_) =>
+        Mediator.Subscribe<PetNamesReadyMessage>(this, msg =>
         {
             if (string.IsNullOrEmpty(_cachedData?.PetNamesData)) return;
             Logger.LogTrace("Reapplying Pet Names data for {this}", this);
-            await _ipcManager.PetNames.SetPlayerData(PlayerCharacter, _cachedData.PetNamesData).ConfigureAwait(false);
+            _ = Task.Run(async () => await _ipcManager.PetNames.SetPlayerData(PlayerCharacter, _cachedData.PetNamesData).ConfigureAwait(false), CancellationToken.None);
         });
     }
 

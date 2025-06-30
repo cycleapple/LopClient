@@ -42,6 +42,7 @@ public class PluginWatcherService : MediatorSubscriberBase
 
     private CapturedPluginState[] _prevInstalledPluginState = [];
 
+#pragma warning disable
     private static bool ExposedPluginsEqual(IEnumerable<IExposedPlugin> plugins, IEnumerable<CapturedPluginState> other)
     {
         if (plugins.Count() != other.Count()) return false;
@@ -58,6 +59,7 @@ public class PluginWatcherService : MediatorSubscriberBase
             if (enumeratorOriginal.Current.InternalName != enumeratorOther.Current.InternalName) return false;
         }
     }
+#pragma warning restore
 
     public PluginWatcherService(ILogger<PluginWatcherService> logger, IDalamudPluginInterface pluginInterface, MareMediator mediator) : base(logger, mediator)
     {
@@ -85,22 +87,22 @@ public class PluginWatcherService : MediatorSubscriberBase
             // The same plugin can be installed multiple times -- InternalName is not unique
 
             var oldDict = _prevInstalledPluginState.Where(x => x.InternalName.Length > 0)
-                .GroupBy(x => x.InternalName)
-                .ToDictionary(x => x.Key);
+                .GroupBy(x => x.InternalName, StringComparer.Ordinal)
+                .ToDictionary(x => x.Key, StringComparer.Ordinal);
 
             var newDict = state.Where(x => x.InternalName.Length > 0)
-                .GroupBy(x => x.InternalName)
-                .ToDictionary(x => x.Key);
+                .GroupBy(x => x.InternalName, StringComparer.Ordinal)
+                .ToDictionary(x => x.Key, StringComparer.Ordinal);
 
             _prevInstalledPluginState = state;
 
-            foreach (var internalName in newDict.Keys.Except(oldDict.Keys))
+            foreach (var internalName in newDict.Keys.Except(oldDict.Keys, StringComparer.Ordinal))
             {
                 var p = newDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
                 Mediator.Publish(new PluginChangeMessage(internalName, p.Version, p.IsLoaded));
             }
 
-            foreach (var internalName in oldDict.Keys.Except(newDict.Keys))
+            foreach (var internalName in oldDict.Keys.Except(newDict.Keys, StringComparer.Ordinal))
             {
                 var p = newDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
                 Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, p.IsLoaded));

@@ -39,7 +39,6 @@ public class CompactUi : WindowMediatorSubscriberBase
     private readonly GroupPanel _groupPanel;
     private readonly PairGroupsUi _pairGroupsUi;
     private readonly PairManager _pairManager;
-    private readonly ChatService _chatService;
     private readonly SelectGroupForPairUi _selectGroupForPairUi;
     private readonly SelectPairForGroupUi _selectPairsForGroupUi;
     private readonly ServerConfigurationManager _serverManager;
@@ -68,14 +67,13 @@ public class CompactUi : WindowMediatorSubscriberBase
         _configService = configService;
         _apiController = apiController;
         _pairManager = pairManager;
-        _chatService = chatService;
         _serverManager = serverManager;
         _fileTransferManager = fileTransferManager;
         _uidDisplayHandler = uidDisplayHandler;
         _charaDataManager = charaDataManager;
         var tagHandler = new TagHandler(_serverManager);
 
-        _groupPanel = new(this, uiShared, _pairManager, _chatService, uidDisplayHandler, _configService, _serverManager, _charaDataManager);
+        _groupPanel = new(this, uiShared, _pairManager, chatService, uidDisplayHandler, _configService, _serverManager, _charaDataManager);
         _selectGroupForPairUi = new(tagHandler, uidDisplayHandler, _uiSharedService);
         _selectPairsForGroupUi = new(tagHandler, uidDisplayHandler);
         _pairGroupsUi = new(configService, tagHandler, uidDisplayHandler, apiController, _selectPairsForGroupUi, _uiSharedService);
@@ -107,17 +105,10 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     protected override void DrawInternal()
     {
-        /*if (_apiController.ServerInfo.AccentColor.HasValue)
-        {
-            UiSharedService.AccentColor = _apiController.ServerInfo.AccentColor.Value;
-        }
-        else*/
-        {
-            if (_serverManager.CurrentApiUrl == ApiController.LoporritServiceUri)
-                UiSharedService.AccentColor = new Vector4(1.0f, 0.8666f, 0.06666f, 1.0f);
-            else
-                UiSharedService.AccentColor = ImGuiColors.ParsedGreen;
-        }
+        if (_serverManager.CurrentApiUrl.Equals(ApiController.LoporritServiceUri, StringComparison.Ordinal))
+            UiSharedService.AccentColor = new Vector4(1.0f, 0.8666f, 0.06666f, 1.0f);
+        else
+            UiSharedService.AccentColor = ImGuiColors.ParsedGreen;
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ImGui.GetStyle().WindowPadding.Y - 1f * ImGuiHelpers.GlobalScale + ImGui.GetStyle().ItemSpacing.Y);
         WindowContentWidth = UiSharedService.GetWindowContentRegionWidth();
         if (!_apiController.IsCurrentVersion)
@@ -292,7 +283,6 @@ public class CompactUi : WindowMediatorSubscriberBase
 
     private void DrawFilter()
     {
-        var buttonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.ArrowUp);
         var playButtonSize = _uiSharedService.GetIconButtonSize(FontAwesomeIcon.Play);
 
         var users = GetFilteredUsers();
@@ -371,7 +361,7 @@ public class CompactUi : WindowMediatorSubscriberBase
         var ySize = TransferPartHeight == 0
             ? 1
             : (ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y) - TransferPartHeight - ImGui.GetCursorPosY();
-        var users = GetFilteredUsers().OrderBy(u => u.GetPairSortKey());
+        var users = GetFilteredUsers().OrderBy(u => u.GetPairSortKey(), StringComparer.Ordinal);
 
         var onlineUsers = users.Where(u => u.UserPair!.OtherPermissions.IsPaired() && (u.IsOnline || u.UserPair!.OwnPermissions.IsPaused())).Select(c => new DrawUserPair("Online" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi, _uiSharedService, _charaDataManager)).ToList();
         var visibleUsers = users.Where(u => u.IsVisible).Select(c => new DrawUserPair("Visible" + c.UserData.UID, c, _uidDisplayHandler, _apiController, Mediator, _selectGroupForPairUi, _uiSharedService, _charaDataManager)).ToList();

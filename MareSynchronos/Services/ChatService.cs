@@ -31,7 +31,7 @@ public class ChatService : DisposableMediatorSubscriberBase
     private readonly Lazy<GameChatHooks> _gameChatHooks;
 
     public ChatService(ILogger<ChatService> logger, DalamudUtilService dalamudUtil, MareMediator mediator, ApiController apiController,
-        PairManager pairManager, ILogger<GameChatHooks> logger2, IGameInteropProvider gameInteropProvider, IChatGui chatGui,
+        PairManager pairManager, LoggerFactory loggerFactory, IGameInteropProvider gameInteropProvider, IChatGui chatGui,
         MareConfigService mareConfig, ServerConfigurationManager serverConfigurationManager) : base(logger, mediator)
     {
         _logger = logger;
@@ -45,7 +45,7 @@ public class ChatService : DisposableMediatorSubscriberBase
         Mediator.Subscribe<UserChatMsgMessage>(this, HandleUserChat);
         Mediator.Subscribe<GroupChatMsgMessage>(this, HandleGroupChat);
 
-        _gameChatHooks = new(() => new GameChatHooks(logger2, gameInteropProvider));
+        _gameChatHooks = new(() => new GameChatHooks(loggerFactory.CreateLogger<GameChatHooks>(), gameInteropProvider));
     }
 
     protected override void Dispose(bool disposing)
@@ -109,7 +109,7 @@ public class ChatService : DisposableMediatorSubscriberBase
         if (color != 0)
             msg.AddUiForeground((ushort)color);
         msg.AddText($"[SS{shellNumber}]<");
-        if (message.ChatMsg.Sender.UID == _apiController.UID)
+        if (message.ChatMsg.Sender.UID.Equals(_apiController.UID, StringComparison.Ordinal))
         {
             // Don't link to your own character
             msg.AddText(chatMsg.SenderName);
@@ -137,7 +137,7 @@ public class ChatService : DisposableMediatorSubscriberBase
 
         foreach (var group in _pairManager.Groups)
         {
-            if (group.Key.GID == gid)
+            if (group.Key.GID.Equals(gid, StringComparison.Ordinal))
             {
                 int shellChatType = _serverConfigurationManager.GetShellConfigForGid(gid).LogKind;
                 if (shellChatType != 0)
@@ -166,7 +166,7 @@ public class ChatService : DisposableMediatorSubscriberBase
                 if (_gameChatHooks.IsValueCreated && _gameChatHooks.Value.ChatChannelOverride != null)
                 {
                     // Very dumb and won't handle re-numbering -- need to identify the active chat channel more reliably later
-                    if (_gameChatHooks.Value.ChatChannelOverride.ChannelName.StartsWith($"SS [{shellNumber}]"))
+                    if (_gameChatHooks.Value.ChatChannelOverride.ChannelName.StartsWith($"SS [{shellNumber}]", StringComparison.Ordinal))
                         SwitchChatShell(shellNumber);
                 }
             }
@@ -207,8 +207,8 @@ public class ChatService : DisposableMediatorSubscriberBase
             var shellConfig = _serverConfigurationManager.GetShellConfigForGid(group.Key.GID);
             if (shellConfig.Enabled && shellConfig.ShellNumber == shellNumber)
             {
-                Task.Run(async () => {
-                    // TODO: Cache the name and home world instead of fetching it every time
+                _ = Task.Run(async () => {
+                    // Should cache the name and home world instead of fetching it every time
                     var chatMsg = await _dalamudUtil.RunOnFrameworkThread(() => {
                         return new ChatMessage()
                         {
@@ -216,9 +216,9 @@ public class ChatService : DisposableMediatorSubscriberBase
                             SenderHomeWorldId = _dalamudUtil.GetHomeWorldId(),
                             PayloadContent = chatBytes
                         };
-                    });
-                    await _apiController.GroupChatSendMsg(new(group.Key), chatMsg);
-                });
+                    }).ConfigureAwait(false);
+                    await _apiController.GroupChatSendMsg(new(group.Key), chatMsg).ConfigureAwait(false);
+                }).ConfigureAwait(false);
                 return;
             }
         }

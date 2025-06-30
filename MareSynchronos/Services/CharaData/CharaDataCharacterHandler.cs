@@ -25,11 +25,11 @@ public sealed class CharaDataCharacterHandler : DisposableMediatorSubscriberBase
         _gameObjectHandlerFactory = gameObjectHandlerFactory;
         _dalamudUtilService = dalamudUtilService;
         _ipcManager = ipcManager;
-        mediator.Subscribe<GposeEndMessage>(this, (_) =>
+        mediator.Subscribe<GposeEndMessage>(this, msg =>
         {
             foreach (var chara in _handledCharaData)
             {
-                RevertHandledChara(chara, false);
+                _ = RevertHandledChara(chara, reapplyPose: false);
             }
         });
 
@@ -56,7 +56,7 @@ public sealed class CharaDataCharacterHandler : DisposableMediatorSubscriberBase
         base.Dispose(disposing);
         foreach (var chara in _handledCharaData)
         {
-            RevertHandledChara(chara, false);
+            _ = RevertHandledChara(chara, reapplyPose: false);
         }
     }
 

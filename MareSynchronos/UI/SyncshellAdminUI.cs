@@ -351,7 +351,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                             using var pushId = ImRaii.PushId(bannedUser.UID);
                             if (_uiSharedService.IconTextButton(FontAwesomeIcon.Check, "Unban"))
                             {
-                                Task.Run(async () => await _apiController.GroupUnbanUser(bannedUser));
+                                _ = Task.Run(async () => await _apiController.GroupUnbanUser(bannedUser).ConfigureAwait(false));
                                 _bannedUsers.RemoveAll(b => string.Equals(b.UID, bannedUser.UID, StringComparison.Ordinal));
                             }
                         }

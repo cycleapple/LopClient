@@ -8,7 +8,7 @@ public class HashingStream : Stream
     private readonly Stream _stream;
     private readonly HashAlgorithm _hashAlgo;
     private bool _finished = false;
-    public bool DisposeUnderlying = true;
+    public bool DisposeUnderlying { get; set; } = true;
 
     public Stream UnderlyingStream { get => _stream; }
 
@@ -20,6 +20,7 @@ public class HashingStream : Stream
 
     protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
         if (!DisposeUnderlying)
             return;
         if (!_finished)
@@ -63,7 +64,6 @@ public class HashingStream : Stream
     {
         ObjectDisposedException.ThrowIf(_finished, this);
         _stream.Write(buffer, offset, count);
-        string x = new(System.Text.Encoding.ASCII.GetChars(buffer.AsSpan().Slice(offset, count).ToArray()));
         _hashAlgo.TransformBlock(buffer, offset, count, buffer, offset);
     }
 
@@ -72,6 +72,7 @@ public class HashingStream : Stream
         if (_finished)
             return _hashAlgo.Hash!;
         _hashAlgo.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+        _finished = true;
         if (DisposeUnderlying)
             _stream.Dispose();
         return _hashAlgo.Hash!;

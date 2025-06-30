@@ -4,9 +4,9 @@ namespace MareSynchronos.Utils;
 public class LimitedStream : Stream
 {
     private readonly Stream _stream;
-    public long _estimatedPosition = 0;
+    private long _estimatedPosition = 0;
     public long MaxPosition { get; private init; }
-    public bool DisposeUnderlying = true;
+    public bool DisposeUnderlying { get; set; } = true;
 
     public Stream UnderlyingStream { get => _stream; }
 
@@ -15,7 +15,7 @@ public class LimitedStream : Stream
         _stream = underlyingStream;
         try
         {
-            _estimatedPosition = Position;
+            _estimatedPosition = _stream.Position;
         }
         catch { }
         MaxPosition = _estimatedPosition + byteLimit;
@@ -23,6 +23,7 @@ public class LimitedStream : Stream
 
     protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
         if (!DisposeUnderlying)
             return;
         _stream.Dispose();
@@ -60,20 +61,20 @@ public class LimitedStream : Stream
             count = remainder;
 
 #pragma warning disable CA1835
-        int n = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
+        int n = await _stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
 #pragma warning restore CA1835
         _estimatedPosition += n;
         return n;
     }
 
-    public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
 
         if (buffer.Length > remainder)
             buffer = buffer[..remainder];
 
-        int n = await _stream.ReadAsync(buffer, cancellationToken);
+        int n = await _stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
         _estimatedPosition += n;
         return n;
     }
@@ -109,19 +110,19 @@ public class LimitedStream : Stream
             count = remainder;
 
 #pragma warning disable CA1835
-        await _stream.WriteAsync(buffer, offset, count, cancellationToken);
+        await _stream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
 #pragma warning restore CA1835
         _estimatedPosition += count;
     }
 
-    public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
 
         if (buffer.Length > remainder)
             buffer = buffer[..remainder];
 
-        await _stream.WriteAsync(buffer, cancellationToken);
+        await _stream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
         _estimatedPosition += buffer.Length;
     }
 }

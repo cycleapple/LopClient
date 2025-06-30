@@ -377,7 +377,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
     }
 
     private static readonly List<(XivChatType, string)> _syncshellChatTypes = [
-        (0, "(use global setting)"),
+        (XivChatType.None, "(use global setting)"),
         (XivChatType.Debug, "Debug"),
         (XivChatType.Echo, "Echo"),
         (XivChatType.StandardEmote, "Standard Emote"),
@@ -448,20 +448,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.BigText("\"Chat 2\" Plugin Integration");
         ImGui.SetWindowFontScale(1.0f);
 
-        // TODO: ExtraChat API impersonation
-        /*
-        var extraChatAPI = _configService.Current.ExtraChatAPI;
-        if (ImGui.Checkbox("ExtraChat replacement mode", ref extraChatAPI))
-        {
-            _configService.Current.ExtraChatAPI = extraChatAPI;
-            if (extraChatAPI)
-                _configService.Current.ExtraChatTags = true;
-            _configService.Save();
-        }
-        ImGui.EndDisabled();
-        UiSharedService.DrawHelpText("Enable ExtraChat APIs for full Chat 2 plugin integration.\n\nDo not enable this if ExtraChat is also installed and running.");
-        */
-
         var extraChatTags = _configService.Current.ExtraChatTags;
         if (ImGui.Checkbox("Tag messages as ExtraChat", ref extraChatTags))
         {
@@ -488,7 +474,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             return;
         }
 
-        foreach (var group in _pairManager.Groups.OrderBy(k => k.Key.GID))
+        foreach (var group in _pairManager.Groups.OrderBy(k => k.Key.GID, StringComparer.Ordinal))
         {
             var gid = group.Key.GID;
             using var pushId = ImRaii.PushId(gid);
@@ -514,11 +500,11 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 bool conflict = false;
                 foreach (var otherGroup in _pairManager.Groups)
                 {
-                    if (gid == otherGroup.Key.GID) continue;
+                    if (gid.Equals(otherGroup.Key.GID, StringComparison.Ordinal)) continue;
                     var otherShellConfig = _serverConfigurationManager.GetShellConfigForGid(otherGroup.Key.GID);
                     if (otherShellConfig.Enabled && otherShellConfig.ShellNumber == shellNumber)
                         conflict = true;
-                    nextNumber = System.Math.Max(nextNumber, otherShellConfig.ShellNumber) + 1;
+                    nextNumber = Math.Max(nextNumber, otherShellConfig.ShellNumber) + 1;
                 }
                 if (conflict)
                     shellConfig.ShellNumber = nextNumber;
@@ -529,24 +515,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
             using var pushDisabled = ImRaii.Disabled(!shellEnabled);
 
             ImGui.SetNextItemWidth(50 * ImGuiHelpers.GlobalScale);
-
-            var setSyncshellNumberFn = (int i) => {
-                // Find an active group with the same syncshell number as selected, and swap it
-                // This logic can leave duplicate IDs present in the config but its not critical
-                foreach (var otherGroup in _pairManager.Groups)
-                {
-                    if (gid == otherGroup.Key.GID) continue;
-                    var otherShellConfig = _serverConfigurationManager.GetShellConfigForGid(otherGroup.Key.GID);
-                    if (otherShellConfig.Enabled && otherShellConfig.ShellNumber == i)
-                    {
-                        otherShellConfig.ShellNumber = shellNumber;
-                        _serverConfigurationManager.SaveShellConfigForGid(otherGroup.Key.GID, otherShellConfig);
-                        break;
-                    }
-                }
-                shellConfig.ShellNumber = i;
-                _serverConfigurationManager.SaveShellConfigForGid(gid, shellConfig);
-            };
 
             // _uiShared.DrawCombo() remembers the selected option -- we don't want that, because the value can change
             if (ImGui.BeginCombo("Syncshell number##{gid}", $"{shellNumber}"))
@@ -560,7 +528,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         // This logic can leave duplicate IDs present in the config but its not critical
                         foreach (var otherGroup in _pairManager.Groups)
                         {
-                            if (gid == otherGroup.Key.GID) continue;
+                            if (gid.Equals(otherGroup.Key.GID, StringComparison.Ordinal)) continue;
                             var otherShellConfig = _serverConfigurationManager.GetShellConfigForGid(otherGroup.Key.GID);
                             if (otherShellConfig.Enabled && otherShellConfig.ShellNumber == i)
                             {
@@ -945,8 +913,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
         }
 
         _lastTab = "General";
-        //UiSharedService.FontText("Experimental", _uiShared.UidFont);
-        //ImGui.Separator();
 
         _uiShared.BigText("Notes");
         if (_uiShared.IconTextButton(FontAwesomeIcon.StickyNote, "Export all your user notes to clipboard"))
@@ -1785,13 +1751,13 @@ public class SettingsUi : WindowMediatorSubscriberBase
                                 var postUri = MareAuth.AuthRegisterFullPath(new Uri(selectedServer.ServerUri
                                     .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                                     .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                                _logger.LogInformation("Registering new account: " + postUri.ToString());
+                                _logger.LogInformation("Registering new account: {uri}", postUri.ToString());
                                 var result = await httpClient.PostAsync(postUri, null).ConfigureAwait(false);
                                 result.EnsureSuccessStatusCode();
                                 var reply = await result.Content.ReadFromJsonAsync<RegisterReplyDto>().ConfigureAwait(false) ?? new();
                                 if (!reply.Success)
                                 {
-                                    _logger.LogWarning("Registration failed: " + reply.ErrorMessage);
+                                    _logger.LogWarning("Registration failed: {err}", reply.ErrorMessage);
                                     _registrationMessage = reply.ErrorMessage;
                                     if (_registrationMessage.IsNullOrEmpty())
                                         _registrationMessage = "An unknown error occured. Please try again later.";
@@ -1816,7 +1782,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                             {
                                 _registrationInProgress = false;
                             }
-                        });
+                        }, CancellationToken.None);
                     }
                     if (_registrationInProgress)
                     {

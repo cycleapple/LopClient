@@ -182,27 +182,19 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
         try
         {
-            await UploadFileStream(compressedFile, fileHash, false, postProgress, uploadToken).ConfigureAwait(false);
+            await UploadFileStream(compressedFile, fileHash, munged: false, postProgress, uploadToken).ConfigureAwait(false);
             _verifiedUploadedHashes[fileHash] = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
-            if (false && ex is not OperationCanceledException)
-            {
-                Logger.LogWarning(ex, "[{hash}] Error during file upload, trying alternative file upload", fileHash);
-                await UploadFileStream(compressedFile, fileHash, munged: true, postProgress, uploadToken).ConfigureAwait(false);
-            }
-            else
-            {
-                Logger.LogWarning(ex, "[{hash}] File upload cancelled", fileHash);
-            }
+            Logger.LogWarning(ex, "[{hash}] File upload cancelled", fileHash);
         }
     }
 
     private async Task UploadFileStream(byte[] compressedFile, string fileHash, bool munged, bool postProgress, CancellationToken uploadToken)
     {
         if (munged)
-            throw new NotImplementedException();
+            throw new InvalidOperationException();
 
         using var ms = new MemoryStream(compressedFile);
 

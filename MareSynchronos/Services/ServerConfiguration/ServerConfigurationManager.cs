@@ -13,19 +13,17 @@ public class ServerConfigurationManager
     private readonly ServerConfigService _configService;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly ILogger<ServerConfigurationManager> _logger;
-    private readonly MareMediator _mareMediator;
     private readonly NotesConfigService _notesConfig;
     private readonly ServerBlockConfigService _blockConfig;
     private readonly ServerTagConfigService _serverTagConfig;
     private readonly SyncshellConfigService _syncshellConfig;
 
-    private HashSet<string>? CachedWhitelistedUIDs = null;
-    private HashSet<string>? CachedBlacklistedUIDs = null;
+    private HashSet<string>? _cachedWhitelistedUIDs = null;
+    private HashSet<string>? _cachedBlacklistedUIDs = null;
 
     public ServerConfigurationManager(ILogger<ServerConfigurationManager> logger, ServerConfigService configService,
         ServerTagConfigService serverTagConfig, SyncshellConfigService syncshellConfig, NotesConfigService notesConfig,
-        ServerBlockConfigService blockConfig,
-        DalamudUtilService dalamudUtil, MareMediator mareMediator)
+        ServerBlockConfigService blockConfig, DalamudUtilService dalamudUtil)
     {
         _logger = logger;
         _configService = configService;
@@ -34,7 +32,6 @@ public class ServerConfigurationManager
         _notesConfig = notesConfig;
         _blockConfig = blockConfig;
         _dalamudUtil = dalamudUtil;
-        _mareMediator = mareMediator;
         EnsureMainExists();
     }
 
@@ -49,8 +46,8 @@ public class ServerConfigurationManager
         set
         {
             _configService.Current.CurrentServer = value;
-            CachedWhitelistedUIDs = null;
-            CachedBlacklistedUIDs = null;
+            _cachedWhitelistedUIDs = null;
+            _cachedBlacklistedUIDs = null;
             _configService.Save();
         }
         get
@@ -399,7 +396,7 @@ public class ServerConfigurationManager
     {
         if (string.IsNullOrEmpty(uid)) return;
 
-        if (CurrentNotesStorage().UidLastSeenNames.TryGetValue(uid, out var currentName) && currentName == name)
+        if (CurrentNotesStorage().UidLastSeenNames.TryGetValue(uid, out var currentName) && currentName.Equals(name, StringComparison.Ordinal))
             return;
 
         CurrentNotesStorage().UidLastSeenNames[uid] = name;
@@ -418,24 +415,24 @@ public class ServerConfigurationManager
 
     internal bool IsUidWhitelisted(string uid)
     {
-        CachedWhitelistedUIDs ??= [.. CurrentBlockStorage().Whitelist];
-        return CachedWhitelistedUIDs.Contains(uid);
+        _cachedWhitelistedUIDs ??= [.. CurrentBlockStorage().Whitelist];
+        return _cachedWhitelistedUIDs.Contains(uid);
     }
 
     internal bool IsUidBlacklisted(string uid)
     {
-        CachedBlacklistedUIDs ??= [.. CurrentBlockStorage().Blacklist];
-        return CachedBlacklistedUIDs.Contains(uid);
+        _cachedBlacklistedUIDs ??= [.. CurrentBlockStorage().Blacklist];
+        return _cachedBlacklistedUIDs.Contains(uid);
     }
 
     internal void AddWhitelistUid(string uid)
     {
         if (IsUidWhitelisted(uid))
             return;
-        if (CurrentBlockStorage().Blacklist.RemoveAll(u => u == uid) > 0)
-            CachedBlacklistedUIDs = null;
+        if (CurrentBlockStorage().Blacklist.RemoveAll(u => u.Equals(uid, StringComparison.Ordinal)) > 0)
+            _cachedBlacklistedUIDs = null;
         CurrentBlockStorage().Whitelist.Add(uid);
-        CachedWhitelistedUIDs = null;
+        _cachedWhitelistedUIDs = null;
         _blockConfig.Save();
     }
 
@@ -443,24 +440,24 @@ public class ServerConfigurationManager
     {
         if (IsUidBlacklisted(uid))
             return;
-        if (CurrentBlockStorage().Whitelist.RemoveAll(u => u == uid) > 0)
-            CachedWhitelistedUIDs = null;
+        if (CurrentBlockStorage().Whitelist.RemoveAll(u => u.Equals(uid, StringComparison.Ordinal)) > 0)
+            _cachedWhitelistedUIDs = null;
         CurrentBlockStorage().Blacklist.Add(uid);
-        CachedBlacklistedUIDs = null;
+        _cachedBlacklistedUIDs = null;
         _blockConfig.Save();
     }
 
     internal void RemoveWhitelistUid(string uid)
     {
-        if (CurrentBlockStorage().Whitelist.RemoveAll(u => u == uid) > 0)
-            CachedWhitelistedUIDs = null;
+        if (CurrentBlockStorage().Whitelist.RemoveAll(u => u.Equals(uid, StringComparison.Ordinal)) > 0)
+            _cachedWhitelistedUIDs = null;
         _blockConfig.Save();
     }
 
     internal void RemoveBlacklistUid(string uid)
     {
-        if (CurrentBlockStorage().Blacklist.RemoveAll(u => u == uid) > 0)
-            CachedBlacklistedUIDs = null;
+        if (CurrentBlockStorage().Blacklist.RemoveAll(u => u.Equals(uid, StringComparison.Ordinal)) > 0)
+            _cachedBlacklistedUIDs = null;
         _blockConfig.Save();
     }
 

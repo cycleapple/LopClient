@@ -13,7 +13,6 @@ namespace MareSynchronos.Interop.Ipc;
 
 public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCaller
 {
-    private readonly IDalamudPluginInterface _pi;
     private readonly DalamudUtilService _dalamudUtil;
     private readonly MareMediator _mareMediator;
     private readonly RedrawManager _redrawManager;
@@ -59,7 +58,6 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     public IpcCallerPenumbra(ILogger<IpcCallerPenumbra> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
         MareMediator mareMediator, RedrawManager redrawManager) : base(logger, mareMediator)
     {
-        _pi = pi;
         _dalamudUtil = dalamudUtil;
         _mareMediator = mareMediator;
         _redrawManager = redrawManager;
@@ -86,7 +84,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
 
         _penumbraGameObjectResourcePathResolved = GameObjectResourcePathResolved.Subscriber(pi, ResourceLoaded);
 
-        var plugin = _pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Penumbra", StringComparison.Ordinal));
+        var plugin = pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Penumbra", StringComparison.Ordinal));
 
         _pluginLoaded = plugin?.IsLoaded ?? false;
         _pluginVersion = plugin?.Version ?? new(0, 0, 0, 0);

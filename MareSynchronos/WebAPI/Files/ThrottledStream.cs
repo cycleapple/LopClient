@@ -102,7 +102,7 @@
 #pragma warning restore CA1835
         }
 
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             await Throttle(buffer.Length, cancellationToken).ConfigureAwait(false);
             return await _baseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
@@ -125,7 +125,7 @@
         }
 
         /// <inheritdoc />
-        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
             await Throttle(buffer.Length, cancellationToken).ConfigureAwait(false);
             await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);

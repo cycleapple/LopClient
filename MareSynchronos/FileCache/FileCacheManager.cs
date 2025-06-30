@@ -26,7 +26,7 @@ public sealed class FileCacheManager : IHostedService
     private readonly string _csvPath;
     private readonly ConcurrentDictionary<string, List<FileCacheEntity>> _fileCaches = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _getCachesByPathsSemaphore = new(1, 1);
-    private readonly object _fileWriteLock = new();
+    private readonly Lock _fileWriteLock = new();
     private readonly IpcManager _ipcManager;
     private readonly ILogger<FileCacheManager> _logger;
 
@@ -127,7 +127,7 @@ public sealed class FileCacheManager : IHostedService
                 var computedHash = Crypto.GetFileHash(fileCache.ResolvedFilepath);
                 if (!string.Equals(computedHash, fileCache.Hash, StringComparison.Ordinal))
                 {
-                    _logger.LogInformation("Failed to validate {file}, got hash {hash}, expected hash {hash}", fileCache.ResolvedFilepath, computedHash, fileCache.Hash);
+                    _logger.LogInformation("Failed to validate {file}, got hash {hash}, expected hash {expectedHash}", fileCache.ResolvedFilepath, computedHash, fileCache.Hash);
                     brokenEntities.Add(fileCache);
                 }
             }
@@ -271,7 +271,7 @@ public sealed class FileCacheManager : IHostedService
 
             if (caches?.Count == 0)
             {
-                _fileCaches.Remove(hash, out var entity);
+                _fileCaches.Remove(hash, out var _);
             }
         }
     }

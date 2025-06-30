@@ -106,7 +106,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
         {
             if (_isZoning) return;
             var changedType = _playerRelatedObjects.FirstOrDefault(f => f.Value.Address == msg.Address);
-            if (!default(KeyValuePair<ObjectKind, GameObjectHandler>).Equals(changedType))
+            if (changedType.Key != default || changedType.Value != default)
             {
                 GlamourerChanged(changedType.Key);
             }
@@ -133,16 +133,16 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
         {
             if (_isZoning) return;
             var changedType = _playerRelatedObjects.FirstOrDefault(f => f.Value.Address == msg.Address);
-            if (!default(KeyValuePair<ObjectKind, GameObjectHandler>).Equals(changedType) && changedType.Key == ObjectKind.Player)
+            if (changedType.Key == ObjectKind.Player && changedType.Value != default)
             {
                 Logger.LogDebug("Received Moodles change, updating player");
                 MoodlesChanged();
             }
         });
-        Mediator.Subscribe<PenumbraModSettingChangedMessage>(this, async (msg) =>
+        Mediator.Subscribe<PenumbraModSettingChangedMessage>(this, (msg) =>
         {
             Logger.LogDebug("Received Penumbra Mod settings change, updating player");
-            await AddPlayerCacheToCreate();
+            AddPlayerCacheToCreate().GetAwaiter().GetResult();
         });
 
         Mediator.Subscribe<DelayedFrameworkUpdateMessage>(this, (msg) => ProcessCacheCreation());

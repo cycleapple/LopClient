@@ -15,7 +15,7 @@ public class FileTransferOrchestrator : DisposableMediatorSubscriberBase
     private readonly ConcurrentDictionary<Guid, bool> _downloadReady = new();
     private readonly HttpClient _httpClient;
     private readonly MareConfigService _mareConfig;
-    private readonly object _semaphoreModificationLock = new();
+    private readonly Lock _semaphoreModificationLock = new();
     private readonly TokenProvider _tokenProvider;
     private int _availableDownloadSlots;
     private SemaphoreSlim _downloadSemaphore;

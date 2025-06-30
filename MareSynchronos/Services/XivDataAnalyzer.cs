@@ -236,7 +236,7 @@ public sealed class XivDataAnalyzer
             using var r = new LuminaBinaryReader(stream);
             var texHeader = r.ReadStructure<Lumina.Data.Files.TexFile.TexHeader>();
 
-            if (texHeader.Format == 0 || texHeader.MipCount == 0 || texHeader.ArraySize != 0 || texHeader.MipCount > 13)
+            if (texHeader.Format == default || texHeader.MipCount == 0 || texHeader.ArraySize != 0 || texHeader.MipCount > 13)
             {
                 _failedCalculatedTex.Add(hash);
                 _configService.Current.TexDictionary[hash] = default;

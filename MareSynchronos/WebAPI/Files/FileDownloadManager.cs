@@ -323,7 +323,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                     fileBlockStream.Position += fileLengthBytes;
 
                     while (tasks.Count > threadCount && tasks.Where(t => !t.IsCompleted).Count() > 4)
-                        await Task.Delay(10, CancellationToken.None);
+                        await Task.Delay(10, CancellationToken.None).ConfigureAwait(false);
 
                     var fileExtension = fileReplacement.First(f => string.Equals(f.Hash, fileHash, StringComparison.OrdinalIgnoreCase)).GamePaths[0].Split(".")[^1];
                     var tmpPath = _fileDbManager.GetCacheFilePath(Guid.NewGuid().ToString(), "tmp");
@@ -362,7 +362,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
 
                             string calculatedHash = BitConverter.ToString(tmpFileStream.Finish()).Replace("-", "", StringComparison.Ordinal);
 
-                            if (calculatedHash != fileHash)
+                            if (!calculatedHash.Equals(fileHash, StringComparison.Ordinal))
                             {
                                 Logger.LogError("Hash mismatch after extracting, got {hash}, expected {expectedHash}, deleting file", calculatedHash, fileHash);
                                 return;
@@ -388,7 +388,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
                             if (File.Exists(tmpPath))
                                 File.Delete(tmpPath);
                         }
-                    }));
+                    }, CancellationToken.None));
                 }
 
                 Task.WaitAll([..tasks], CancellationToken.None);

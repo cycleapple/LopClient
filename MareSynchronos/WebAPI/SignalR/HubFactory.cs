@@ -57,7 +57,7 @@ public class HubFactory : MediatorSubscriberBase
     {
         if (!_isDisposed && _instance != null) return _instance;
 
-        _cachedConfig = await ResolveHubConfig();
+        _cachedConfig = await ResolveHubConfig().ConfigureAwait(false);
         _cachedConfigFor = _serverConfigurationManager.CurrentApiUrl;
 
         return BuildHubConnection(_cachedConfig, ct);
@@ -71,7 +71,7 @@ public class HubFactory : MediatorSubscriberBase
 
         HubConnectionConfig defaultConfig;
 
-        if (_cachedConfig != null && _serverConfigurationManager.CurrentApiUrl == _cachedConfigFor)
+        if (_cachedConfig != null && _serverConfigurationManager.CurrentApiUrl.Equals(_cachedConfigFor, StringComparison.Ordinal))
         {
             defaultConfig = _cachedConfig;
         }
@@ -84,7 +84,7 @@ public class HubFactory : MediatorSubscriberBase
             };
         }
 
-        if (_serverConfigurationManager.CurrentApiUrl == ApiController.LoporritServiceUri)
+        if (_serverConfigurationManager.CurrentApiUrl.Equals(ApiController.LoporritServiceUri, StringComparison.Ordinal))
             defaultConfig.HubUrl = ApiController.LoporritServiceHubUri;
 
         string jsonResponse;
@@ -126,7 +126,7 @@ public class HubFactory : MediatorSubscriberBase
 
                 var contentType = response.Content.Headers.ContentType?.MediaType;
 
-                if (contentType == null || contentType != "application/json")
+                if (contentType == null || !contentType.Equals("application/json", StringComparison.Ordinal))
                     return defaultConfig;
 
                 jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);

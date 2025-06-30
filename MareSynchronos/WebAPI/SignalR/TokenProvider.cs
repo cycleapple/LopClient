@@ -21,7 +21,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
     private readonly ILogger<TokenProvider> _logger;
     private readonly ServerConfigurationManager _serverManager;
     private readonly ConcurrentDictionary<JwtIdentifier, string> _tokenCache = new();
-    private readonly ConcurrentDictionary<string, string?> _wellKnownCache = new();
+    private readonly ConcurrentDictionary<string, string?> _wellKnownCache = new(StringComparer.Ordinal);
 
     public TokenProvider(ILogger<TokenProvider> logger, ServerConfigurationManager serverManager, DalamudUtilService dalamudUtil, MareMediator mareMediator)
     {
@@ -70,22 +70,20 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                 .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
             var secretKey = _serverManager.GetSecretKey(out _)!;
             var auth = secretKey.GetHash256();
-            result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent(new[]
-            {
-                        new KeyValuePair<string, string>("auth", auth),
-                        new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
-            }), token).ConfigureAwait(false);
+            result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent([
+                new("auth", auth),
+                new("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
+            ]), token).ConfigureAwait(false);
 
             if (result.StatusCode == HttpStatusCode.NotFound)
             {
                 tokenUri = MareAuth.AuthFullPath(new Uri(_serverManager.CurrentApiUrl
                     .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                     .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent(new[]
-                {
-                            new KeyValuePair<string, string>("auth", auth),
-                            new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
-                }), token).ConfigureAwait(false);
+                result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent([
+                    new("auth", auth),
+                    new("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
+                ]), token).ConfigureAwait(false);
 
                 var textResponse = await result.Content.ReadAsStringAsync(token).ConfigureAwait(false) ?? string.Empty;
                 result.EnsureSuccessStatusCode();

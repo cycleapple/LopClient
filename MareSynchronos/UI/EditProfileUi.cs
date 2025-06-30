@@ -123,7 +123,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
         ImGui.Checkbox("Is NSFW", ref nsfw);
         ImGui.EndDisabled();
 
-        if (_serverConfigurationManager.CurrentApiUrl == ApiController.MainServiceUri)
+        if (_serverConfigurationManager.CurrentApiUrl.Equals(ApiController.MainServiceUri, StringComparison.Ordinal))
         {
             ImGui.Separator();
             _uiSharedService.BigText("Notes and Rules for Profiles");

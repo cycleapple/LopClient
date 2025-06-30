@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MareSynchronos.Interop;
 
-public class ChatChannelOverride
+public record ChatChannelOverride
 {
     public string ChannelName = string.Empty;
     public Action<byte[]>? ChatMessageHandler;
@@ -30,7 +30,7 @@ public unsafe sealed class GameChatHooks : IDisposable
     #pragma warning disable CS0649
     // I do not know what kind of black magic this function performs
     [Signature("E8 ?? ?? ?? ?? 0F B7 7F 08 48 8B CE")]
-    private readonly delegate* unmanaged<PronounModule*, Utf8String*, byte, Utf8String*> ProcessStringStep2;
+    private readonly delegate* unmanaged<PronounModule*, Utf8String*, byte, Utf8String*> _processStringStep2;
 
     // Component::Shell::ShellCommandModule::ExecuteCommandInner
     private delegate void SendMessageDelegate(ShellCommandModule* module, Utf8String* message, UIModule* uiModule);
@@ -133,7 +133,7 @@ public unsafe sealed class GameChatHooks : IDisposable
                 if (payload != null && payload.Text.Length > 2 && payload.Text[2] == '/')
                 {
                     isCommand = true;
-                    if (payload.Text[2..].StartsWith("/r ") || payload.Text[2..].StartsWith("/reply "))
+                    if (payload.Text[2..].StartsWith("/r ", StringComparison.Ordinal) || payload.Text[2..].StartsWith("/reply ", StringComparison.Ordinal))
                         isReply = true;
                 }
             }
@@ -155,7 +155,7 @@ public unsafe sealed class GameChatHooks : IDisposable
             // The chat input string is rendered in to a payload for display first
             var pronounModule = UIModule.Instance()->GetPronounModule();
             var chatString1 = pronounModule->ProcessString(message, true);
-            var chatString2 = this.ProcessStringStep2(pronounModule, chatString1, 1);
+            var chatString2 = this._processStringStep2(pronounModule, chatString1, 1);
             var chatBytes = MemoryHelper.ReadRaw((nint)chatString2->StringPtr.Value, chatString2->Length);
 
             if (chatBytes.Length > 0)

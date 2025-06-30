@@ -8,8 +8,7 @@ namespace MareSynchronos.Services;
 public class VisibilityService : DisposableMediatorSubscriberBase
 {
     private readonly DalamudUtilService _dalamudUtil;
-    private ConcurrentDictionary<string, bool> _trackedPlayerVisibility = new();
-    private ConcurrentQueue<string> _removedPlayerMessageQueue = new();
+    private readonly ConcurrentDictionary<string, bool> _trackedPlayerVisibility = new(StringComparer.Ordinal);
 
     public VisibilityService(ILogger<PairAnalyzer> logger, MareMediator mediator, DalamudUtilService dalamudUtil)
         : base(logger, mediator)
@@ -20,7 +19,7 @@ public class VisibilityService : DisposableMediatorSubscriberBase
 
     public void StartTracking(string ident)
     {
-        _trackedPlayerVisibility.TryAdd(ident, false);
+        _trackedPlayerVisibility.TryAdd(ident, value: false);
     }
 
     public void StopTracking(string ident)

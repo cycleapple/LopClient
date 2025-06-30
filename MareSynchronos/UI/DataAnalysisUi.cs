@@ -460,8 +460,8 @@ public class DataAnalysisUi : WindowMediatorSubscriberBase
                 if (_enableBc7ConversionMode)
                 {
                     ImGui.TableNextColumn();
-                    if (item.Format.Value.StartsWith("BC") || item.Format.Value.StartsWith("DXT")
-                        || item.Format.Value.StartsWith("24864")) // BC4
+                    if (item.Format.Value.StartsWith("BC", StringComparison.Ordinal) || item.Format.Value.StartsWith("DXT", StringComparison.Ordinal)
+                        || item.Format.Value.StartsWith("24864", StringComparison.Ordinal)) // BC4
                     {
                         ImGui.TextUnformatted("");
                         continue;

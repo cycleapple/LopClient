@@ -35,6 +35,8 @@ public partial class FileReplacement
         return $"HasReplacement:{HasFileReplacement},IsFileSwap:{IsFileSwap} - {string.Join(",", GamePaths)} => {ResolvedPath}";
     }
 
+#pragma warning disable MA0009
     [GeneratedRegex(@"^[a-zA-Z]:(/|\\)", RegexOptions.ECMAScript)]
     private static partial Regex LocalPathRegex();
+#pragma warning restore MA0009
 }

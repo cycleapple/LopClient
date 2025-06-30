@@ -53,7 +53,7 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
             _activeGameObjectHandlers.Remove(msg.GameObjectHandler);
         });
 
-        _marePluginEnabled = pi.InstalledPlugins.Any(p => p.InternalName == "MareSynchronos" && p.IsLoaded);
+        _marePluginEnabled = pi.InstalledPlugins.Any(p => p.InternalName.Equals("MareSynchronos", StringComparison.Ordinal) && p.IsLoaded);
         Mediator.SubscribeKeyed<PluginChangeMessage>(this, "MareSynchronos", p => {
             _marePluginEnabled = p.IsLoaded;
             HandleMareImpersonation();
