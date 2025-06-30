@@ -9,8 +9,8 @@
         public static long Infinite => long.MaxValue;
         private readonly Stream _baseStream;
         private long _bandwidthLimit;
-        private Bandwidth _bandwidth;
-        private CancellationTokenSource _bandwidthChangeTokenSource = new CancellationTokenSource();
+        private readonly Bandwidth _bandwidth = new();
+        private CancellationTokenSource _bandwidthChangeTokenSource = new();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="T:ThrottledStream" /> class.
@@ -42,7 +42,6 @@
             {
                 if (_bandwidthLimit == value) return;
                 _bandwidthLimit = value <= 0 ? Infinite : value;
-                _bandwidth ??= new Bandwidth();
                 _bandwidth.BandwidthLimit = _bandwidthLimit;
                 _bandwidthChangeTokenSource.Cancel();
                 _bandwidthChangeTokenSource.Dispose();
@@ -98,7 +97,15 @@
             CancellationToken cancellationToken)
         {
             await Throttle(count, cancellationToken).ConfigureAwait(false);
+#pragma warning disable CA1835
             return await _baseStream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA1835
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        {
+            await Throttle(buffer.Length, cancellationToken).ConfigureAwait(false);
+            return await _baseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -112,7 +119,16 @@
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             await Throttle(count, cancellationToken).ConfigureAwait(false);
+#pragma warning disable CA1835
             await _baseStream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA1835
+        }
+
+        /// <inheritdoc />
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+        {
+            await Throttle(buffer.Length, cancellationToken).ConfigureAwait(false);
+            await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
         }
 
         public override void Close()

@@ -41,8 +41,7 @@ public class HashingStream : Stream
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        if (_finished)
-            throw new ObjectDisposedException("HashingStream");
+        ObjectDisposedException.ThrowIf(_finished, this);
         int n = _stream.Read(buffer, offset, count);
         if (n > 0)
             _hashAlgo.TransformBlock(buffer, offset, n, buffer, offset);
@@ -56,15 +55,13 @@ public class HashingStream : Stream
 
     public override void SetLength(long value)
     {
-        if (_finished)
-            throw new ObjectDisposedException("HashingStream");
+        ObjectDisposedException.ThrowIf(_finished, this);
         _stream.SetLength(value);
     }
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        if (_finished)
-            throw new ObjectDisposedException("HashingStream");
+        ObjectDisposedException.ThrowIf(_finished, this);
         _stream.Write(buffer, offset, count);
         string x = new(System.Text.Encoding.ASCII.GetChars(buffer.AsSpan().Slice(offset, count).ToArray()));
         _hashAlgo.TransformBlock(buffer, offset, count, buffer, offset);
@@ -73,10 +70,10 @@ public class HashingStream : Stream
     public byte[] Finish()
     {
         if (_finished)
-            return _hashAlgo.Hash;
+            return _hashAlgo.Hash!;
         _hashAlgo.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
         if (DisposeUnderlying)
             _stream.Dispose();
-        return _hashAlgo.Hash;
+        return _hashAlgo.Hash!;
     }
 }

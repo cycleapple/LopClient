@@ -59,7 +59,21 @@ public class LimitedStream : Stream
         if (count > remainder)
             count = remainder;
 
+#pragma warning disable CA1835
         int n = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
+#pragma warning restore CA1835
+        _estimatedPosition += n;
+        return n;
+    }
+
+    public async override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
+
+        if (buffer.Length > remainder)
+            buffer = buffer[..remainder];
+
+        int n = await _stream.ReadAsync(buffer, cancellationToken);
         _estimatedPosition += n;
         return n;
     }
@@ -94,7 +108,20 @@ public class LimitedStream : Stream
         if (count > remainder)
             count = remainder;
 
+#pragma warning disable CA1835
         await _stream.WriteAsync(buffer, offset, count, cancellationToken);
+#pragma warning restore CA1835
         _estimatedPosition += count;
+    }
+
+    public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    {
+        int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
+
+        if (buffer.Length > remainder)
+            buffer = buffer[..remainder];
+
+        await _stream.WriteAsync(buffer, cancellationToken);
+        _estimatedPosition += buffer.Length;
     }
 }
