@@ -27,7 +27,7 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
         Pair = pair;
         _uiSharedService = uiSharedService;
         _apiController = apiController;
-        _ownPermissions = pair.UserPair.OwnPermissions.DeepClone();
+        _ownPermissions = pair.UserPair?.OwnPermissions.DeepClone() ?? default;
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize;
         SizeConstraints = new()
         {
@@ -48,6 +48,9 @@ public class PermissionWindowUI : WindowMediatorSubscriberBase
 
         _uiSharedService.BigText("Permissions for " + Pair.UserData.AliasOrUID);
         ImGuiHelpers.ScaledDummy(1f);
+
+        if (Pair.UserPair == null)
+            return;
 
         if (ImGui.Checkbox("Pause Sync", ref paused))
         {

@@ -215,13 +215,14 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
 
                 if (_dalamudUtil.HasModifiedGameFiles)
                 {
-                    Logger.LogError("Detected modified game files on connection");
-                    if (false)
+                    Logger.LogWarning("Detected modified game files on connection");
+#if false
                         Mediator.Publish(new NotificationMessage("Modified Game Files detected",
                             "Dalamud has reported modified game files in your FFXIV installation. " +
                             "You will be able to connect, but the synchronization functionality might be (partially) broken. " +
                             "Exit the game and repair it through XIVLauncher to get rid of this message.",
                             NotificationType.Error, TimeSpan.FromSeconds(15)));
+#endif
                 }
 
                 await LoadIninitialPairs().ConfigureAwait(false);

@@ -153,7 +153,7 @@ public sealed class XivDataAnalyzer
         return output;
     }
 
-    public async Task<long> GetTrianglesByHash(string hash)
+    public long GetTrianglesByHash(string hash)
     {
         if (_configService.Current.TriangleDictionary.TryGetValue(hash, out var cachedTris) && cachedTris > 0)
             return cachedTris;
@@ -215,7 +215,7 @@ public sealed class XivDataAnalyzer
         }
     }
 
-    public async Task<(uint Format, int MipCount, ushort Width, ushort Height)> GetTexFormatByHash(string hash)
+    public (uint Format, int MipCount, ushort Width, ushort Height) GetTexFormatByHash(string hash)
     {
         if (_configService.Current.TexDictionary.TryGetValue(hash, out var cachedTex) && cachedTex.Mip0Size > 0)
             return cachedTex;

@@ -66,7 +66,7 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
 
         foreach (var hash in moddedModelHashes)
         {
-            triUsage += await _xivDataAnalyzer.GetTrianglesByHash(hash).ConfigureAwait(false);
+            triUsage += await Task.Run(() => _xivDataAnalyzer.GetTrianglesByHash(hash)).ConfigureAwait(false);
         }
 
         pair.LastAppliedDataTris = triUsage;
@@ -208,7 +208,7 @@ public class PlayerPerformanceService : DisposableMediatorSubscriberBase
                 if (fileEntry == null) return;
                 if (fileEntry.IsSubstEntry) return;
 
-                var texFormat = await _xivDataAnalyzer.GetTexFormatByHash(hash);
+                var texFormat = await Task.Run(() => _xivDataAnalyzer.GetTexFormatByHash(hash));
                 var filePath = fileEntry.ResolvedFilepath;
                 var tmpFilePath = _fileCacheManager.GetSubstFilePath(Guid.NewGuid().ToString(), "tmp");
                 var newFilePath = _fileCacheManager.GetSubstFilePath(hash, "tex");

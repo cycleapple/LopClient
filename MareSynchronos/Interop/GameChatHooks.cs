@@ -27,6 +27,7 @@ public unsafe sealed class GameChatHooks : IDisposable
     private readonly ILogger<GameChatHooks> _logger;
 
     #region signatures
+    #pragma warning disable CS0649
     // I do not know what kind of black magic this function performs
     [Signature("E8 ?? ?? ?? ?? 0F B7 7F 08 48 8B CE")]
     private readonly delegate* unmanaged<PronounModule*, Utf8String*, byte, Utf8String*> ProcessStringStep2;
@@ -62,7 +63,7 @@ public unsafe sealed class GameChatHooks : IDisposable
         DetourName = nameof(ShouldDoNameLookupDetour)
     )]
     private Hook<ShouldDoNameLookupDelegate>? ShouldDoNameLookupHook { get; init; }
-
+    #pragma warning restore CS0649
     #endregion
 
     private ChatChannelOverride? _chatChannelOverride;

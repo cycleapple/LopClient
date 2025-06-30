@@ -142,7 +142,7 @@ public sealed class CacheCreationService : DisposableMediatorSubscriberBase
         Mediator.Subscribe<PenumbraModSettingChangedMessage>(this, async (msg) =>
         {
             Logger.LogDebug("Received Penumbra Mod settings change, updating player");
-            _ = AddPlayerCacheToCreate();
+            await AddPlayerCacheToCreate();
         });
 
         Mediator.Subscribe<DelayedFrameworkUpdateMessage>(this, (msg) => ProcessCacheCreation());

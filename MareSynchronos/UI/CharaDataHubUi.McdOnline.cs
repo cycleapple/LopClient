@@ -480,8 +480,8 @@ internal sealed partial class CharaDataHubUi
                 ImGui.SameLine();
                 ImGuiHelpers.ScaledDummy(10, 1);
                 ImGui.SameLine();
-                var worldData = pose.WorldData;
-                bool hasWorldData = (worldData ?? default) != default;
+                var worldData = pose.WorldData ?? default;
+                bool hasWorldData = worldData != default;
                 _uiSharedService.IconText(FontAwesomeIcon.Globe, UiSharedService.GetBoolColor(hasWorldData));
                 var tooltipText = !hasWorldData ? "This Pose has no world data attached." : "This Pose has world data attached.";
                 if (hasWorldData)
@@ -491,8 +491,8 @@ internal sealed partial class CharaDataHubUi
                 UiSharedService.AttachToolTip(tooltipText);
                 if (hasWorldData && ImGui.IsItemClicked(ImGuiMouseButton.Left))
                 {
-                    _dalamudUtilService.SetMarkerAndOpenMap(position: new Vector3(worldData.Value.PositionX, worldData.Value.PositionY, worldData.Value.PositionZ),
-                        _dalamudUtilService.MapData.Value[worldData.Value.LocationInfo.MapId].Map);
+                    _dalamudUtilService.SetMarkerAndOpenMap(position: new Vector3(worldData.PositionX, worldData.PositionY, worldData.PositionZ),
+                        _dalamudUtilService.MapData.Value[worldData.LocationInfo.MapId].Map);
                 }
                 ImGui.SameLine();
                 using (ImRaii.Disabled(!_uiSharedService.IsInGpose || !(_charaDataManager.AttachingPoseTask?.IsCompleted ?? true) || !_charaDataManager.BrioAvailable))

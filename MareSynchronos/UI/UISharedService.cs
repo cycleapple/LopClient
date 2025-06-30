@@ -661,7 +661,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     }
 
     public T? DrawColorCombo<T>(string comboName, IEnumerable<T> comboItems, Func<T, (uint Color, string Name)> toEntry,
-        Action<T>? onSelected = null, T? initialSelectedItem = default)
+        Action<T?>? onSelected = null, T? initialSelectedItem = default)
     {
         if (!comboItems.Any()) return default;
 
@@ -689,7 +689,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
             {
                 entry = toEntry(item);
                 ImGui.PushStyleColor(ImGuiCol.Text, ColorHelpers.RgbaUintToVector4(ColorHelpers.SwapEndianness(entry.Color)));
-                bool isSelected = EqualityComparer<T>.Default.Equals(item, (T)selectedItem);
+                bool isSelected = EqualityComparer<T>.Default.Equals(item, (T)selectedItem!);
                 if (ImGui.Selectable(entry.Name, isSelected))
                 {
                     _selectedComboItems[comboName] = item!;

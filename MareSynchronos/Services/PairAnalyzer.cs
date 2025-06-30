@@ -147,7 +147,7 @@ public sealed class PairAnalyzer : DisposableMediatorSubscriberBase
                     Logger.LogWarning(ex, "Could not identify extension for {path}", filePath);
                 }
 
-                var tris = await _xivDataAnalyzer.GetTrianglesByHash(fileEntry.Hash).ConfigureAwait(false);
+                var tris = await Task.Run(() => _xivDataAnalyzer.GetTrianglesByHash(fileEntry.Hash)).ConfigureAwait(false);
 
                 foreach (var entry in fileCacheEntries)
                 {

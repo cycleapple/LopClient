@@ -13,14 +13,16 @@ internal sealed partial class CharaDataHubUi
 		AccessTypeDto.AllPairs => "All Pairs",
 		AccessTypeDto.ClosePairs => "Direct Pairs",
 		AccessTypeDto.Individuals => "Specified",
-		AccessTypeDto.Public => "Everyone"
+		AccessTypeDto.Public => "Everyone",
+        _ => ((int)dto).ToString()
 	};
 
 	private static string GetShareTypeString(ShareTypeDto dto) => dto switch
-	{
-		ShareTypeDto.Private => "Code Only",
-		ShareTypeDto.Shared => "Shared"
-	};
+    {
+        ShareTypeDto.Private => "Code Only",
+        ShareTypeDto.Shared => "Shared",
+        _ => ((int)dto).ToString()
+    };
 
 	private static string GetWorldDataTooltipText(PoseEntryExtended poseEntry)
 	{

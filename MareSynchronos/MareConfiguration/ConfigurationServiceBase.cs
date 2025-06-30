@@ -56,11 +56,6 @@ public abstract class ConfigurationServiceBase<T> : IConfigService<T> where T : 
         if (!File.Exists(ConfigurationPath))
         {
             config = AttemptToLoadBackup();
-            if (Equals(config, default(T)))
-            {
-                config = (T)Activator.CreateInstance(typeof(T))!;
-                Save();
-            }
         }
         else
         {
@@ -73,12 +68,12 @@ public abstract class ConfigurationServiceBase<T> : IConfigService<T> where T : 
                 // config failed to load for some reason
                 config = AttemptToLoadBackup();
             }
+        }
 
-            if (config == null || Equals(config, default(T)))
-            {
-                config = (T)Activator.CreateInstance(typeof(T))!;
-                Save();
-            }
+        if (config == null || Equals(config, default(T)))
+        {
+            config = Activator.CreateInstance<T>();
+            Save();
         }
 
         _configLastWriteTime = GetConfigLastWriteTime();

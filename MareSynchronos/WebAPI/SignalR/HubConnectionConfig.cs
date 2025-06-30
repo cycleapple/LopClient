@@ -39,7 +39,7 @@ public record HubConnectionConfig
                     "longpolling" => HttpTransportType.LongPolling,
                     _ => HttpTransportType.None
                 };
-            };
+            }
 
             return result;
         }
