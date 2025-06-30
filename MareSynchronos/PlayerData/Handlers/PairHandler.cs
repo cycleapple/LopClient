@@ -388,19 +388,11 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             _ => throw new NotSupportedException("ObjectKind not supported: " + changes.Key)
         };
 
-        try
+        async Task processApplication(IEnumerable<PlayerChanges> changeList)
         {
-            if (handler.Address == nint.Zero)
+            foreach (var change in changeList)
             {
-                return;
-            }
-
-            Logger.LogDebug("[{applicationId}] Applying Customization Data for {handler}", applicationId, handler);
-            await _dalamudUtil.WaitWhileCharacterIsDrawing(Logger, handler, applicationId, 30000, token).ConfigureAwait(false);
-            token.ThrowIfCancellationRequested();
-            foreach (var change in changes.Value.OrderBy(p => (int)p))
-            {
-                Logger.LogDebug("[{applicationId}] Processing {change} for {handler}", applicationId, change, handler);
+                Logger.LogDebug("[{applicationId}{ft}] Processing {change} for {handler}", applicationId, _dalamudUtil.IsOnFrameworkThread ? "*" : "", change, handler);
                 switch (change)
                 {
                     case PlayerChanges.Customize:
@@ -426,7 +418,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     case PlayerChanges.Glamourer:
                         if (charaData.GlamourerData.TryGetValue(changes.Key, out var glamourerData))
                         {
-                            await _ipcManager.Glamourer.ApplyAllAsync(Logger, handler, glamourerData, applicationId, token).ConfigureAwait(false);
+                            await _ipcManager.Glamourer.ApplyAllAsync(Logger, handler, glamourerData, applicationId, token, allowImmediate: true).ConfigureAwait(false);
                         }
                         break;
 
@@ -446,6 +438,29 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                         break;
                 }
                 token.ThrowIfCancellationRequested();
+            }
+        }
+
+        try
+        {
+            if (handler.Address == nint.Zero)
+            {
+                return;
+            }
+
+            Logger.LogDebug("[{applicationId}] Applying Customization Data for {handler}", applicationId, handler);
+            await _dalamudUtil.WaitWhileCharacterIsDrawing(Logger, handler, applicationId, 30000, token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            if (_configService.Current.SerialApplication)
+            {
+                var serialChangeList = changes.Value.Where(p => p <= PlayerChanges.ForcedRedraw).OrderBy(p => (int)p);
+                var asyncChangeList = changes.Value.Where(p => p > PlayerChanges.ForcedRedraw).OrderBy(p => (int)p);
+                await _dalamudUtil.RunOnFrameworkThread(async () => await processApplication(serialChangeList).ConfigureAwait(false)).ConfigureAwait(false);
+                await Task.Run(async () => await processApplication(asyncChangeList).ConfigureAwait(false), CancellationToken.None).ConfigureAwait(false);
+            }
+            else
+            {
+                _ = processApplication(changes.Value.OrderBy(p => (int)p));
             }
         }
         finally

@@ -115,15 +115,26 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         }
     }
 
-    public async Task ApplyAllAsync(ILogger logger, GameObjectHandler handler, string? customization, Guid applicationId, CancellationToken token, bool fireAndForget = false)
+    public async Task ApplyAllAsync(ILogger logger, GameObjectHandler handler, string? customization, Guid applicationId, CancellationToken token, bool allowImmediate = false)
     {
         if (!APIAvailable || string.IsNullOrEmpty(customization) || _dalamudUtil.IsZoning) return;
+
+        // Call immediately if possible
+        if (allowImmediate && _dalamudUtil.IsOnFrameworkThread && !await handler.IsBeingDrawnRunOnFrameworkAsync().ConfigureAwait(false))
+        {
+            var gameObj = await _dalamudUtil.CreateGameObjectAsync(handler.Address).ConfigureAwait(false);
+            if (gameObj is ICharacter chara)
+            {
+                logger.LogDebug("[{appid}] Calling on IPC: GlamourerApplyAll", applicationId);
+                _glamourerApplyAll!.Invoke(customization, chara.ObjectIndex, LockCode);
+                return;
+            }
+        }
 
         await _redrawManager.RedrawSemaphore.WaitAsync(token).ConfigureAwait(false);
 
         try
         {
-
             await _redrawManager.PenumbraRedrawInternalAsync(logger, handler, applicationId, (chara) =>
             {
                 try
