@@ -31,7 +31,7 @@ public class ChatService : DisposableMediatorSubscriberBase
     private readonly Lazy<GameChatHooks> _gameChatHooks;
 
     public ChatService(ILogger<ChatService> logger, DalamudUtilService dalamudUtil, MareMediator mediator, ApiController apiController,
-        PairManager pairManager, LoggerFactory loggerFactory, IGameInteropProvider gameInteropProvider, IChatGui chatGui,
+        PairManager pairManager, ILoggerFactory loggerFactory, IGameInteropProvider gameInteropProvider, IChatGui chatGui,
         MareConfigService mareConfig, ServerConfigurationManager serverConfigurationManager) : base(logger, mediator)
     {
         _logger = logger;
