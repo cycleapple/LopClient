@@ -4,8 +4,8 @@ namespace MareSynchronos.Utils;
 public class LimitedStream : Stream
 {
     private readonly Stream _stream;
-	public long _estimatedPosition = 0;
-	public long MaxPosition { get; private init; }
+    public long _estimatedPosition = 0;
+    public long MaxPosition { get; private init; }
     public bool DisposeUnderlying = true;
 
     public Stream UnderlyingStream { get => _stream; }
@@ -13,12 +13,12 @@ public class LimitedStream : Stream
     public LimitedStream(Stream underlyingStream, long byteLimit)
     {
         _stream = underlyingStream;
-		try
-		{
-			_estimatedPosition = Position;
-		}
-		catch { }
-		MaxPosition = _estimatedPosition + byteLimit;
+        try
+        {
+            _estimatedPosition = Position;
+        }
+        catch { }
+        MaxPosition = _estimatedPosition + byteLimit;
     }
 
     protected override void Dispose(bool disposing)
@@ -42,33 +42,33 @@ public class LimitedStream : Stream
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-		int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
+        int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
 
-		if (count > remainder)
-			count = remainder;
+        if (count > remainder)
+            count = remainder;
 
         int n = _stream.Read(buffer, offset, count);
-		_estimatedPosition += n;
-		return n;
+        _estimatedPosition += n;
+        return n;
     }
 
     public async override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-		int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
+        int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
 
-		if (count > remainder)
-			count = remainder;
+        if (count > remainder)
+            count = remainder;
 
         int n = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
-		_estimatedPosition += n;
-		return n;
+        _estimatedPosition += n;
+        return n;
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
         long result = _stream.Seek(offset, origin);
-		_estimatedPosition = result;
-		return result;
+        _estimatedPosition = result;
+        return result;
     }
 
     public override void SetLength(long value)
@@ -78,23 +78,23 @@ public class LimitedStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-		int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
+        int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
 
-		if (count > remainder)
-			count = remainder;
+        if (count > remainder)
+            count = remainder;
 
         _stream.Write(buffer, offset, count);
-		_estimatedPosition += count;
+        _estimatedPosition += count;
     }
 
     public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-		int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
+        int remainder = (int)long.Clamp(MaxPosition - _estimatedPosition, 0, int.MaxValue);
 
-		if (count > remainder)
-			count = remainder;
+        if (count > remainder)
+            count = remainder;
 
         await _stream.WriteAsync(buffer, offset, count, cancellationToken);
-		_estimatedPosition += count;
+        _estimatedPosition += count;
     }
 }

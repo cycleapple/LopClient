@@ -5,8 +5,8 @@ namespace MareSynchronos.WebAPI.SignalR;
 
 public record HubConnectionConfig
 {
-	[JsonPropertyName("hub_url")]
-	public string HubUrl { get; set; } = string.Empty;
+    [JsonPropertyName("hub_url")]
+    public string HubUrl { get; set; } = string.Empty;
 
     private readonly bool? _skipNegotiation;
 
@@ -20,28 +20,28 @@ public record HubConnectionConfig
     [JsonPropertyName("transports")]
     public string[]? Transports { get; set; }
 
-	[JsonIgnore]
-	public HttpTransportType TransportType
-	{
-		get
-		{
-			if (Transports == null || Transports.Length == 0)
-				return HttpTransportType.WebSockets;
+    [JsonIgnore]
+    public HttpTransportType TransportType
+    {
+        get
+        {
+            if (Transports == null || Transports.Length == 0)
+                return HttpTransportType.WebSockets;
 
             HttpTransportType result = HttpTransportType.None;
 
             foreach (var transport in Transports)
             {
-				result |= transport.ToLowerInvariant() switch
-				{
-					"websockets" => HttpTransportType.WebSockets,
-					"serversentevents" => HttpTransportType.ServerSentEvents,
-					"longpolling" => HttpTransportType.LongPolling,
-					_ => HttpTransportType.None
-				};
+                result |= transport.ToLowerInvariant() switch
+                {
+                    "websockets" => HttpTransportType.WebSockets,
+                    "serversentevents" => HttpTransportType.ServerSentEvents,
+                    "longpolling" => HttpTransportType.LongPolling,
+                    _ => HttpTransportType.None
+                };
             };
 
-			return result;
-		}
-	}
+            return result;
+        }
+    }
 }

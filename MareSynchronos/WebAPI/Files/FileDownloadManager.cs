@@ -8,7 +8,6 @@ using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Utils;
 using MareSynchronos.WebAPI.Files.Models;
-using MareSynchronosStaticFilesServer.Utils;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
@@ -189,7 +188,7 @@ public partial class FileDownloadManager : DisposableMediatorSubscriberBase
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             try
             {

@@ -2,9 +2,9 @@
 
 public enum TextureShrinkMode
 {
-	Never,
-	Default,
-	DefaultHiRes,
-	Always,
-	AlwaysHiRes
+    Never,
+    Default,
+    DefaultHiRes,
+    Always,
+    AlwaysHiRes
 }

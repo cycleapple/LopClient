@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace MareSynchronosStaticFilesServer.Utils;
+namespace MareSynchronos.Utils;
 
 // Calculates the hash of content read or written to a stream
 public class HashingStream : Stream

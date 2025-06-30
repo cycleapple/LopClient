@@ -7,7 +7,7 @@ using MareSynchronos.Utils;
 using MareSynchronos.API.Dto;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
@@ -76,7 +76,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                         new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
             }), token).ConfigureAwait(false);
 
-            if (!result.IsSuccessStatusCode)
+            if (result.StatusCode == HttpStatusCode.NotFound)
             {
                 tokenUri = MareAuth.AuthFullPath(new Uri(_serverManager.CurrentApiUrl
                     .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
@@ -87,14 +87,14 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                             new KeyValuePair<string, string>("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
                 }), token).ConfigureAwait(false);
 
-                var textResponse = await result.Content.ReadAsStringAsync().ConfigureAwait(false) ?? string.Empty;
+                var textResponse = await result.Content.ReadAsStringAsync(token).ConfigureAwait(false) ?? string.Empty;
                 result.EnsureSuccessStatusCode();
                 _tokenCache[identifier] = textResponse;
                 _wellKnownCache[_serverManager.CurrentApiUrl] = null;
                 return textResponse;
             }
 
-            var response = await result.Content.ReadFromJsonAsync<AuthReplyDto>().ConfigureAwait(false) ?? new();
+            var response = await result.Content.ReadFromJsonAsync<AuthReplyDto>(token).ConfigureAwait(false) ?? new();
             result.EnsureSuccessStatusCode();
             _tokenCache[identifier] = response.Token;
             _wellKnownCache[_serverManager.CurrentApiUrl] = response.WellKnown;
@@ -107,7 +107,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
 
             _logger.LogError(ex, "GetNewToken: Failure to get token");
 
-            if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            if (ex.StatusCode == HttpStatusCode.Unauthorized)
             {
                 Mediator.Publish(new NotificationMessage("Error refreshing token", "Your authentication token could not be renewed. Try reconnecting manually.", NotificationType.Error));
                 Mediator.Publish(new DisconnectedMessage());
