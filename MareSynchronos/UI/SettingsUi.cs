@@ -55,7 +55,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private readonly PlayerPerformanceService _playerPerformanceService;
     private readonly UiSharedService _uiShared;
     private bool _deleteAccountPopupModalShown = false;
-    private bool _deleteFilesPopupModalShown = false;
     private string _lastTab = string.Empty;
     private bool? _notesSuccessfullyApplied = null;
     private bool _overwriteExistingLabels = false;
@@ -65,7 +64,6 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private bool _wasOpen = false;
     private readonly IProgress<(int, int, FileCacheEntity)> _validationProgress;
     private (int, int, FileCacheEntity) _currentProgress;
-    private Task? _exportTask;
 
     private bool _registrationInProgress = false;
     private bool _registrationSuccess = false;

@@ -4,7 +4,6 @@ using Dalamud.Interface.Utility;
 using Dalamud.Utility;
 using ImGuiNET;
 using MareSynchronos.FileCache;
-using MareSynchronos.Localization;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services;
@@ -28,17 +27,14 @@ public partial class IntroUi : WindowMediatorSubscriberBase
 {
     private readonly MareConfigService _configService;
     private readonly CacheMonitor _cacheMonitor;
-    private readonly Dictionary<string, string> _languages = new(StringComparer.Ordinal) { { "English", "en" }, { "Deutsch", "de" }, { "Français", "fr" } };
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly UiSharedService _uiShared;
-    private int _currentLanguage;
     private bool _readFirstPage;
 
     private string _secretKey = string.Empty;
     private string _timeoutLabel = string.Empty;
     private Task? _timeoutTask;
-    private string[]? _tosParagraphs;
     private bool _registrationInProgress = false;
     private bool _registrationSuccess = false;
     private string? _registrationMessage;
@@ -62,8 +58,6 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             MinimumSize = new Vector2(650, 500),
             MaximumSize = new Vector2(650, 2000),
         };
-
-        GetToSLocalization();
 
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (_) => IsOpen = false);
         Mediator.Subscribe<SwitchToIntroUiMessage>(this, (_) =>
@@ -136,7 +130,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
                 {
                     for (int i = 10; i > 0; i--)
                     {
-                        _timeoutLabel = $"{Strings.ToS.ButtonWillBeAvailableIn} {i}s";
+                        _timeoutLabel = $"'I agree' button will be available in {i}s";
                         await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                     }
                 });
@@ -147,47 +141,43 @@ public partial class IntroUi : WindowMediatorSubscriberBase
         }
         else if (!_configService.Current.AcceptedAgreement && _readFirstPage)
         {
-            Vector2 textSize;
             using (_uiShared.UidFont.Push())
             {
-                textSize = ImGui.CalcTextSize(Strings.ToS.LanguageLabel);
-                ImGui.TextUnformatted(Strings.ToS.AgreementLabel);
-            }
-
-            ImGui.SameLine();
-            var languageSize = ImGui.CalcTextSize(Strings.ToS.LanguageLabel);
-            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - languageSize.X - 80);
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + textSize.Y / 2 - languageSize.Y / 2);
-
-            ImGui.TextUnformatted(Strings.ToS.LanguageLabel);
-            ImGui.SameLine();
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + textSize.Y / 2 - (languageSize.Y + ImGui.GetStyle().FramePadding.Y) / 2);
-            ImGui.SetNextItemWidth(80 * ImGuiHelpers.GlobalScale);
-            if (ImGui.Combo("", ref _currentLanguage, _languages.Keys.ToArray(), _languages.Count))
-            {
-                GetToSLocalization(_currentLanguage);
+                ImGui.TextUnformatted("Agreement of Usage of Service");
             }
 
             ImGui.Separator();
             ImGui.SetWindowFontScale(1.5f);
-            string readThis = Strings.ToS.ReadLabel;
-            textSize = ImGui.CalcTextSize(readThis);
+            string readThis = "READ THIS CAREFULLY";
+            Vector2 textSize = ImGui.CalcTextSize(readThis);
             ImGui.SetCursorPosX(ImGui.GetWindowSize().X / 2 - textSize.X / 2);
             UiSharedService.ColorText(readThis, ImGuiColors.DalamudRed);
             ImGui.SetWindowFontScale(1.0f);
             ImGui.Separator();
 
-            UiSharedService.TextWrapped(_tosParagraphs![0]);
-            UiSharedService.TextWrapped(_tosParagraphs![1]);
-            UiSharedService.TextWrapped(_tosParagraphs![2]);
-            UiSharedService.TextWrapped(_tosParagraphs![3]);
-            UiSharedService.TextWrapped(_tosParagraphs![4]);
-            UiSharedService.TextWrapped(_tosParagraphs![5]);
+            UiSharedService.TextWrapped("""
+All of the mod files currently active on your character as well as your current character state will be uploaded to the service you registered yourself at automatically. The plugin will exclusively upload the necessary mod files and not the whole mod.
+""");
+            UiSharedService.TextWrapped("""
+If you are on a data capped internet connection, higher fees due to data usage depending on the amount of downloaded and uploaded mod files might occur. Mod files will be compressed on up- and download to save on bandwidth usage. Due to varying up- and download speeds, changes in characters might not be visible immediately. Files present on the service that already represent your active mod files will not be uploaded again.
+""");
+            UiSharedService.TextWrapped("""
+The mod files you are uploading are confidential and will not be distributed to parties other than the ones who are requesting the exact same mod files. Please think about who you are going to pair since it is unavoidable that they will receive and locally cache the necessary mod files that you have currently in use. Locally cached mod files will have arbitrary file names to discourage attempts at replicating the original mod.
+""");
+            UiSharedService.TextWrapped("""
+The plugin creator tried their best to keep you secure. However, there is no guarantee for 100% security. Do not blindly pair your client with everyone.
+""");
+            UiSharedService.TextWrapped("""
+Mod files that are saved on the service will remain on the service as long as there are requests for the files from clients. After a period of not being used, the mod files will be automatically deleted.
+""");
+            UiSharedService.TextWrapped("""
+This service is provided as-is.
+""");
 
             ImGui.Separator();
             if (_timeoutTask?.IsCompleted ?? true)
             {
-                if (ImGui.Button(Strings.ToS.AgreeLabel + "##toSetup"))
+                if (ImGui.Button("I agree##toSetup"))
                 {
                     _configService.Current.AcceptedAgreement = true;
                     _configService.Save();
@@ -382,16 +372,6 @@ public partial class IntroUi : WindowMediatorSubscriberBase
             Mediator.Publish(new SwitchToMainUiMessage());
             IsOpen = false;
         }
-    }
-
-    private void GetToSLocalization(int changeLanguageTo = -1)
-    {
-        if (changeLanguageTo != -1)
-        {
-            _uiShared.LoadLocalization(_languages.ElementAt(changeLanguageTo).Value);
-        }
-
-        _tosParagraphs = [Strings.ToS.Paragraph1, Strings.ToS.Paragraph2, Strings.ToS.Paragraph3, Strings.ToS.Paragraph4, Strings.ToS.Paragraph5, Strings.ToS.Paragraph6];
     }
 
     [GeneratedRegex("^([A-F0-9]{2})+")]

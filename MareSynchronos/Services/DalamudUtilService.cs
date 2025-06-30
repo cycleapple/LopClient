@@ -452,7 +452,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
     {
         _logger.LogInformation("Starting DalamudUtilService");
 #pragma warning disable S2696 // Instance members should not write to "static" fields
-        LoporritSync.Plugin.Self._realOnFrameworkUpdate = this.FrameworkOnUpdate;
+        LoporritSync.Plugin.Self.RealOnFrameworkUpdate = this.FrameworkOnUpdate;
 #pragma warning restore S2696
         _framework.Update += LoporritSync.Plugin.Self.OnFrameworkUpdate;
         if (IsLoggedIn)

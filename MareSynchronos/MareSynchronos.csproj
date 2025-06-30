@@ -57,21 +57,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="CheapLoc">
-      <HintPath>$(DalamudLibPath)CheapLoc.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="images\icon.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <EmbeddedResource Include="Localization\de.json" />
-    <EmbeddedResource Include="Localization\fr.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 

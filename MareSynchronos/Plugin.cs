@@ -34,13 +34,15 @@ public sealed class Plugin : IDalamudPlugin
 {
     private readonly IHost _host;
 
+#pragma warning disable CA2211, CS8618
     public static Plugin Self;
-    public Action<IFramework>? _realOnFrameworkUpdate { get; set; }
+#pragma warning restore CA2211, CS8618
+    public Action<IFramework>? RealOnFrameworkUpdate { get; set; }
 
     // Proxy function in the LoporritSync namespace to avoid confusion in /xlstats
     public void OnFrameworkUpdate(IFramework framework)
     {
-        _realOnFrameworkUpdate?.Invoke(framework);
+        RealOnFrameworkUpdate?.Invoke(framework);
     }
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commandManager, IDataManager gameData,
@@ -62,7 +64,6 @@ public sealed class Plugin : IDalamudPlugin
         {
             collection.AddSingleton(new WindowSystem("MareSynchronos"));
             collection.AddSingleton<FileDialogManager>();
-            collection.AddSingleton(new Dalamud.Localization("MareSynchronos.Localization.", "", useEmbedded: true));
 
             // add dalamud services
             collection.AddSingleton(_ => pluginInterface);

@@ -13,7 +13,6 @@ using Dalamud.Utility;
 using ImGuiNET;
 using MareSynchronos.FileCache;
 using MareSynchronos.Interop.Ipc;
-using MareSynchronos.Localization;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Pairs;
@@ -52,7 +51,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
     private readonly DalamudUtilService _dalamudUtil;
     private readonly IpcManager _ipcManager;
-    private readonly Dalamud.Localization _localization;
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly ITextureProvider _textureProvider;
     private readonly Dictionary<string, object> _selectedComboItems = new(StringComparer.Ordinal);
@@ -86,7 +84,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         CacheMonitor cacheMonitor, FileDialogManager fileDialogManager,
         MareConfigService configService, DalamudUtilService dalamudUtil, IDalamudPluginInterface pluginInterface,
         ITextureProvider textureProvider,
-        Dalamud.Localization localization,
         ServerConfigurationManager serverManager, MareMediator mediator) : base(logger, mediator)
     {
         _ipcManager = ipcManager;
@@ -97,9 +94,7 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         _dalamudUtil = dalamudUtil;
         _pluginInterface = pluginInterface;
         _textureProvider = textureProvider;
-        _localization = localization;
         _serverConfigurationManager = serverManager;
-        _localization.SetupWithLangCode("en");
 
         _isDirectoryWritable = IsDirectoryWritable(_configService.Current.CacheFolder);
 
@@ -961,12 +956,6 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
     public IDalamudTextureWrap LoadImage(byte[] imageData)
     {
         return _textureProvider.CreateFromImageAsync(imageData).Result;
-    }
-
-    public void LoadLocalization(string languageCode)
-    {
-        _localization.SetupWithLangCode(languageCode);
-        Strings.ToS = new Strings.ToSStrings();
     }
 
     internal static void DistanceSeparator()
