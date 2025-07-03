@@ -363,7 +363,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
 
         while (!ct.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
             if (!_dalamudUtil.IsInGpose) continue;
             if (_usersInLobby.Count == 0) continue;
 
@@ -415,7 +415,7 @@ public class CharaDataGposeTogetherManager : DisposableMediatorSubscriberBase
     {
         while (!ct.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromSeconds(_dalamudUtil.IsInGpose ? 10 : 1), ct).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(_dalamudUtil.IsInGpose ? 2 : 1), ct).ConfigureAwait(false);
 
             // if there are no players in lobby, don't do anything
             if (_usersInLobby.Count == 0) continue;
