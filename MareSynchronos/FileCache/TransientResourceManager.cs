@@ -178,13 +178,17 @@ public sealed class TransientResourceManager : DisposableMediatorSubscriberBase
     {
         base.Dispose(disposing);
 
-        TransientResources.Clear();
-        SemiTransientResources.Clear();
-        if (SemiTransientResources.TryGetValue(ObjectKind.Player, out HashSet<string>? value))
+        try
         {
-            _configurationService.Current.PlayerPersistentTransientCache[PlayerPersistentDataKey] = value;
-            _configurationService.Save();
+            TransientResources.Clear();
+            SemiTransientResources.Clear();
+            if (SemiTransientResources.TryGetValue(ObjectKind.Player, out HashSet<string>? value))
+            {
+                _configurationService.Current.PlayerPersistentTransientCache[PlayerPersistentDataKey] = value;
+                _configurationService.Save();
+            }
         }
+        catch { }
     }
 
     private void DalamudUtil_ClassJobChanged()
