@@ -957,6 +957,16 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
 
     public IDalamudTextureWrap LoadImage(byte[] imageData)
     {
+        if (imageData.Length == 0)
+        {
+            return _textureProvider.CreateEmpty(new()
+            {
+                Width = 256,
+                Height = 256,
+                DxgiFormat = 3,
+                Pitch = 1024
+            }, cpuRead: false, cpuWrite: false);
+        }
         return _textureProvider.CreateFromImageAsync(imageData).Result;
     }
 

@@ -91,6 +91,7 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
             {
                 _textureWrap?.Dispose();
                 _lastProfilePicture = mareProfile.ImageData.Value;
+
                 _textureWrap = _uiSharedService.LoadImage(_lastProfilePicture);
             }
 
