@@ -81,11 +81,11 @@ public class CompactUi : WindowMediatorSubscriberBase
 #if DEBUG
         string dev = "Dev Build";
         var ver = Assembly.GetExecutingAssembly().GetName().Version!;
-        WindowName = $"Loporrit Sync {dev} ({ver.Major}.{ver.Minor}.{ver.Build}-lop{ver.Revision})###LoporritSyncMainUIDev";
+        WindowName = $"Loporrit Sync {dev} ({ver.Major}.{ver.Minor}.{ver.Build})###LoporritSyncMainUIDev";
         Toggle();
 #else
-        var ver = Assembly.GetExecutingAssembly().GetName().Version;
-        WindowName = "Loporrit Sync " + ver.Major + "." + ver.Minor + "." + ver.Build + "-lop" + ver.Revision + "###LoporritSyncMainUI";
+        var ver = Assembly.GetExecutingAssembly().GetName().Version!;
+        WindowName = "Loporrit Sync " + ver.Major + "." + ver.Minor + "." + ver.Build + "###LoporritSyncMainUI";
 #endif
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (_) => IsOpen = true);
         Mediator.Subscribe<SwitchToIntroUiMessage>(this, (_) => IsOpen = false);

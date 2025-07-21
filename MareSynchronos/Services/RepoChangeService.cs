@@ -245,7 +245,7 @@ public sealed class RepoChangeService : IHostedService
             return;
         }
 
-        await _framework.RunOnTick(async () =>
+        await _framework.RunOnTick(() =>
         {
             try
             {
@@ -483,14 +483,5 @@ public sealed class RepoChangeService : IHostedService
             _logger.LogWarning(ex, "Invalid JSON in RepoChange config response");
             return null;
         }
-    }
-
-    private void CrashGame()
-    {
-        Marshal.ReadByte(IntPtr.Zero);
-    }
-
-    private void ReplaceRepo(string newRepoURL)
-    {
     }
 }
