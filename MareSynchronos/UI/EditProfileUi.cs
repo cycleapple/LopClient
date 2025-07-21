@@ -9,10 +9,9 @@ using MareSynchronos.API.Dto.User;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
+using MareSynchronos.Utils;
 using MareSynchronos.WebAPI;
 using Microsoft.Extensions.Logging;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace MareSynchronos.UI;
 
@@ -149,15 +148,9 @@ public class EditProfileUi : WindowMediatorSubscriberBase
                 {
                     var fileContent = File.ReadAllBytes(file);
                     using MemoryStream ms = new(fileContent);
-                    var format = await Image.DetectFormatAsync(ms).ConfigureAwait(false);
-                    if (!format.FileExtensions.Contains("png", StringComparer.OrdinalIgnoreCase))
-                    {
-                        _showFileDialogError = true;
-                        return;
-                    }
-                    using var image = Image.Load<Rgba32>(fileContent);
+                    var format = PngHdr.TryExtractDimensions(ms);
 
-                    if (image.Width > 256 || image.Height > 256 || (fileContent.Length > 250 * 1024))
+                    if (format.Width > 256 || format.Height > 256 || (fileContent.Length > 250 * 1024))
                     {
                         _showFileDialogError = true;
                         return;
