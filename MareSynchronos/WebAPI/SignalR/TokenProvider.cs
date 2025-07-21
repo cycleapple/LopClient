@@ -28,7 +28,13 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
         _logger = logger;
         _serverManager = serverManager;
         _dalamudUtil = dalamudUtil;
-        _httpClient = new();
+        _httpClient = new(
+            new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 5
+            }
+        );
         var ver = Assembly.GetExecutingAssembly().GetName().Version;
         Mediator = mareMediator;
         Mediator.Subscribe<DalamudLogoutMessage>(this, (_) =>
@@ -75,25 +81,15 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
                 new("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
             ]), token).ConfigureAwait(false);
 
-            if (result.StatusCode == HttpStatusCode.NotFound)
+            if (!result.IsSuccessStatusCode)
             {
-                tokenUri = MareAuth.AuthFullPath(new Uri(_serverManager.CurrentApiUrl
-                    .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
-                    .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                result = await _httpClient.PostAsync(tokenUri, new FormUrlEncodedContent([
-                    new("auth", auth),
-                    new("charaIdent", await _dalamudUtil.GetPlayerNameHashedAsync().ConfigureAwait(false)),
-                ]), token).ConfigureAwait(false);
-
+                Mediator.Publish(new NotificationMessage("Error refreshing token", "Your authentication token could not be renewed. Try reconnecting manually.", NotificationType.Error));
+                Mediator.Publish(new DisconnectedMessage());
                 var textResponse = await result.Content.ReadAsStringAsync(token).ConfigureAwait(false) ?? string.Empty;
-                result.EnsureSuccessStatusCode();
-                _tokenCache[identifier] = textResponse;
-                _wellKnownCache[_serverManager.CurrentApiUrl] = null;
-                return textResponse;
+                throw new MareAuthFailureException(textResponse);
             }
 
             var response = await result.Content.ReadFromJsonAsync<AuthReplyDto>(token).ConfigureAwait(false) ?? new();
-            result.EnsureSuccessStatusCode();
             _tokenCache[identifier] = response.Token;
             _wellKnownCache[_serverManager.CurrentApiUrl] = response.WellKnown;
             return response.Token;
@@ -109,6 +105,7 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             {
                 Mediator.Publish(new NotificationMessage("Error refreshing token", "Your authentication token could not be renewed. Try reconnecting manually.", NotificationType.Error));
                 Mediator.Publish(new DisconnectedMessage());
+                throw new MareAuthFailureException(ex.Message);
             }
 
             throw;
