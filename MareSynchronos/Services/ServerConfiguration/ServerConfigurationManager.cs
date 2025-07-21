@@ -488,7 +488,6 @@ public class ServerConfigurationManager
     private void EnsureMainExists()
     {
         bool lopExists = false;
-        int mainIdx = -1;
         for (int i = 0; i < _configService.Current.ServerStorage.Count; ++i)
         {
             var x = _configService.Current.ServerStorage[i];
@@ -499,15 +498,6 @@ public class ServerConfigurationManager
             }
             if (x.ServerUri.Equals(ApiController.LoporritServiceUri, StringComparison.OrdinalIgnoreCase))
                 lopExists = true;
-            if (x.ServerUri.Equals(ApiController.MainServiceUri, StringComparison.OrdinalIgnoreCase))
-                mainIdx = i;
-        }
-        if (mainIdx >= 0)
-        {
-            _logger.LogDebug("Removing main server {uri}", ApiController.MainServiceUri);
-            _configService.Current.ServerStorage.RemoveAt(mainIdx);
-            if (_configService.Current.CurrentServer >= mainIdx)
-                _configService.Current.CurrentServer--;
         }
         if (!lopExists)
         {

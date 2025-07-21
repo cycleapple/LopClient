@@ -21,8 +21,6 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
     private readonly UiSharedService _uiSharedService;
     private bool _adjustedForScrollBars = false;
     private byte[] _lastProfilePicture = [];
-    private byte[] _lastSupporterPicture = [];
-    private IDalamudTextureWrap? _supporterTextureWrap;
     private IDalamudTextureWrap? _textureWrap;
 
     public StandaloneProfileUi(ILogger<StandaloneProfileUi> logger, MareMediator mediator, UiSharedService uiBuilder,
@@ -59,17 +57,6 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
                 _textureWrap?.Dispose();
                 _lastProfilePicture = mareProfile.ImageData.Value;
                 _textureWrap = _uiSharedService.LoadImage(_lastProfilePicture);
-            }
-
-            if (_supporterTextureWrap == null || !mareProfile.SupporterImageData.Value.SequenceEqual(_lastSupporterPicture))
-            {
-                _supporterTextureWrap?.Dispose();
-                _supporterTextureWrap = null;
-                if (!string.IsNullOrEmpty(mareProfile.Base64SupporterPicture))
-                {
-                    _lastSupporterPicture = mareProfile.SupporterImageData.Value;
-                    _supporterTextureWrap = _uiSharedService.LoadImage(_lastSupporterPicture);
-                }
             }
 
             var drawList = ImGui.GetWindowDrawList();
@@ -166,13 +153,6 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             var remainingHeight = (256f * ImGuiHelpers.GlobalScale - newHeight) / 2f;
             drawList.AddImage(_textureWrap.ImGuiHandle, new Vector2(rectMin.X + padding + remainingWidth, rectMin.Y + spacing.Y + pos.Y + remainingHeight),
                 new Vector2(rectMin.X + padding + remainingWidth + newWidth, rectMin.Y + spacing.Y + pos.Y + remainingHeight + newHeight));
-            if (_supporterTextureWrap != null)
-            {
-                const float iconSize = 38;
-                drawList.AddImage(_supporterTextureWrap.ImGuiHandle,
-                    new Vector2(rectMax.X - iconSize - spacing.X, rectMin.Y + (textPos / 2) - (iconSize / 2)),
-                    new Vector2(rectMax.X - spacing.X, rectMin.Y + iconSize + (textPos / 2) - (iconSize / 2)));
-            }
         }
         catch (Exception ex)
         {

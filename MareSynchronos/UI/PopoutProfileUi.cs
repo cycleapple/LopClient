@@ -95,17 +95,6 @@ public class PopoutProfileUi : WindowMediatorSubscriberBase
                 _textureWrap = _uiSharedService.LoadImage(_lastProfilePicture);
             }
 
-            if (_supporterTextureWrap == null || !mareProfile.SupporterImageData.Value.SequenceEqual(_lastSupporterPicture))
-            {
-                _supporterTextureWrap?.Dispose();
-                _supporterTextureWrap = null;
-                if (!string.IsNullOrEmpty(mareProfile.Base64SupporterPicture))
-                {
-                    _lastSupporterPicture = mareProfile.SupporterImageData.Value;
-                    _supporterTextureWrap = _uiSharedService.LoadImage(_lastSupporterPicture);
-                }
-            }
-
             var drawList = ImGui.GetWindowDrawList();
             var rectMin = drawList.GetClipRectMin();
             var rectMax = drawList.GetClipRectMax();
