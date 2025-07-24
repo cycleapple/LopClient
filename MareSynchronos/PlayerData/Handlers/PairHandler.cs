@@ -29,7 +29,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     private readonly FileCacheManager _fileDbManager;
     private readonly GameObjectHandlerFactory _gameObjectHandlerFactory;
     private readonly IpcManager _ipcManager;
-    private readonly IHostApplicationLifetime _lifetime;
     private readonly PlayerPerformanceService _playerPerformanceService;
     private readonly ServerConfigurationManager _serverConfigManager;
     private readonly PluginWarningNotificationService _pluginWarningNotificationManager;
@@ -65,7 +64,6 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         _downloadManager = transferManager;
         _pluginWarningNotificationManager = pluginWarningNotificationManager;
         _dalamudUtil = dalamudUtil;
-        _lifetime = lifetime;
         _fileDbManager = fileDbManager;
         _playerPerformanceService = playerPerformanceService;
         _serverConfigManager = serverConfigManager;
@@ -290,8 +288,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 Mediator.Publish(new EventMessage(new Event(name, Pair.UserData, nameof(PairHandler), EventSeverity.Informational, "Disposing User")));
             }
 
-            if (!_lifetime.ApplicationStopping.IsCancellationRequested)
-                UndoApplicationAsync(applicationId).GetAwaiter().GetResult();
+            UndoApplicationAsync(applicationId).GetAwaiter().GetResult();
 
             _applicationCancellationTokenSource?.Dispose();
             _applicationCancellationTokenSource = null;

@@ -37,7 +37,6 @@ SOFTWARE.
 
 public class PluginWatcherService : MediatorSubscriberBase
 {
-    private readonly ConcurrentDictionary<UserData, OptionalPluginWarning> _cachedOptionalPluginWarnings = new(UserDataComparer.Instance);
     private readonly IDalamudPluginInterface _pluginInterface;
 
     private CapturedPluginState[] _prevInstalledPluginState = [];
