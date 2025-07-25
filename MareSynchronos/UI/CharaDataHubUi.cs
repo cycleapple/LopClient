@@ -203,7 +203,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
         using var tabs = ImRaii.TabBar("TabsTopLevel");
         bool smallUi = false;
 
-        _isHandlingSelf = _charaDataManager.HandledCharaData.Any(c => c.IsSelf);
+        _isHandlingSelf = _charaDataManager.HandledCharaData.Any(c => c.Value.IsSelf);
         if (_isHandlingSelf) _openMcdOnlineOnNextRun = false;
 
         using (var gposeTogetherTabItem = ImRaii.TabItem("GPose Together"))
@@ -388,7 +388,7 @@ internal sealed partial class CharaDataHubUi : WindowMediatorSubscriberBase
                     ImGui.TextUnformatted(CharaName(actor.Name.TextValue));
                 }
                 ImGui.SameLine(250);
-                var handled = _charaDataManager.HandledCharaData.FirstOrDefault(c => string.Equals(c.Name, actor.Name.TextValue, StringComparison.Ordinal));
+                var handled = _charaDataManager.HandledCharaData.GetValueOrDefault(actor.Name.TextValue);
                 using (ImRaii.Disabled(handled == null))
                 {
                     _uiSharedService.IconText(FontAwesomeIcon.InfoCircle);

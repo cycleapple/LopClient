@@ -93,7 +93,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
     public Task<List<CharaDataFullExtendedDto>>? GetAllDataTask { get; private set; }
     public Task<List<CharaDataMetaInfoDto>>? GetSharedWithYouTask { get; private set; }
     public Task? GetSharedWithYouTimeoutTask { get; private set; }
-    public IEnumerable<HandledCharaDataEntry> HandledCharaData => _characterHandler.HandledCharaData;
+    public IReadOnlyDictionary<string, HandledCharaDataEntry> HandledCharaData => _characterHandler.HandledCharaData;
     public bool Initialized { get; private set; }
     public CharaDataMetaInfoExtendedDto? LastDownloadedMetaInfo { get; private set; }
     public Task<(MareCharaFileHeader LoadedFile, long ExpectedLength)>? LoadedMcdfHeader { get; private set; }
@@ -546,7 +546,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
 
             await ApplyCharaData(charaDataDownloadDto, newActor.Name.TextValue).ConfigureAwait(false);
 
-            return _characterHandler.HandledCharaData.FirstOrDefault(f => string.Equals(f.Name, newActor.Name.TextValue, StringComparison.Ordinal));
+            return _characterHandler.HandledCharaData.GetValueOrDefault(newActor.Name.TextValue);
         });
         UiBlockingComputation = task;
         return task;
@@ -562,7 +562,7 @@ public sealed partial class CharaDataManager : DisposableMediatorSubscriberBase
 
             await ApplyCharaData(charaDataMetaInfoDto, newActor.Name.TextValue).ConfigureAwait(false);
 
-            return _characterHandler.HandledCharaData.FirstOrDefault(f => string.Equals(f.Name, newActor.Name.TextValue, StringComparison.Ordinal));
+            return _characterHandler.HandledCharaData.GetValueOrDefault(newActor.Name.TextValue);
         });
         UiBlockingComputation = task;
         return task;
