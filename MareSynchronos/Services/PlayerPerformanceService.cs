@@ -1,4 +1,3 @@
-using Lumina.Data;
 using MareSynchronos.API.Data;
 using MareSynchronos.FileCache;
 using MareSynchronos.MareConfiguration;
@@ -9,7 +8,6 @@ using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.UI;
 using MareSynchronos.WebAPI.Files.Models;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel;
 
 namespace MareSynchronos.Services;
 

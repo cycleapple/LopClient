@@ -1,5 +1,4 @@
-﻿using Lumina.Data.Files;
-using MareSynchronos.API.Data;
+﻿using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Enum;
 using MareSynchronos.FileCache;
 using MareSynchronos.PlayerData.Pairs;
