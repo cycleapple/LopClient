@@ -63,10 +63,36 @@ public unsafe sealed class GameChatHooks : IDisposable
         DetourName = nameof(ShouldDoNameLookupDetour)
     )]
     private Hook<ShouldDoNameLookupDelegate>? ShouldDoNameLookupHook { get; init; }
+
+    // Temporary chat channel change (via hotkey)
+    private delegate ulong TempChatChannelDelegate(RaptureShellModule* module, uint x, uint y, ulong z);
+    [Signature(
+        "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 83 B9 ?? ?? ?? ?? ?? 49 8B F9 41 8B F0",
+        DetourName = nameof(TempChatChannelDetour)
+    )]
+    private Hook<TempChatChannelDelegate>? TempChatChannelHook { get; init; }
+
+    // Temporary tell target change (via hotkey)
+    // Client::UI::Shell::RaptureShellModule::SetContextTellTargetInForay
+    private delegate ulong TempTellTargetDelegate(RaptureShellModule* module, ulong a, ulong b, ulong c, ushort d, ulong e, ulong f, ushort g);
+    [Signature(
+        "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 83 B9 ?? ?? ?? ?? ?? 41 0F B7 F9",
+        DetourName = nameof(TempTellTargetDetour)
+    )]
+    private Hook<TempTellTargetDelegate>? TempTellTargetHook { get; init; }
+
+    // Called every frame while the chat bar is not focused
+    private delegate void UnfocusTickDelegate(RaptureShellModule* module);
+    [Signature(
+        "40 53 48 83 EC ?? 83 B9 ?? ?? ?? ?? ?? 48 8B D9 0F 84 ?? ?? ?? ?? 48 8D 91",
+        DetourName = nameof(UnfocusTickDetour)
+    )]
+    private Hook<UnfocusTickDelegate>? UnfocusTickHook { get; init; }
     #pragma warning restore CS0649
     #endregion
 
     private ChatChannelOverride? _chatChannelOverride;
+    private ChatChannelOverride? _chatChannelOverrideTempBuffer;
     private bool _shouldForceNameLookup = false;
 
     private DateTime _nextMessageIsReply = DateTime.UnixEpoch;
@@ -76,7 +102,27 @@ public unsafe sealed class GameChatHooks : IDisposable
         get => _chatChannelOverride;
         set {
             _chatChannelOverride = value;
-            this._shouldForceNameLookup = true;
+            _shouldForceNameLookup = true;
+        }
+    }
+
+    private void StashChatChannel()
+    {
+        if (_chatChannelOverride != null)
+        {
+            _logger.LogTrace("Stashing chat channel");
+            _chatChannelOverrideTempBuffer = _chatChannelOverride;
+            ChatChannelOverride = null;
+        }
+    }
+
+    private void UnstashChatChannel()
+    {
+        if (_chatChannelOverrideTempBuffer != null)
+        {
+            _logger.LogTrace("Unstashing chat channel");
+            ChatChannelOverride = _chatChannelOverrideTempBuffer;
+            _chatChannelOverrideTempBuffer = null;
         }
     }
 
@@ -87,18 +133,24 @@ public unsafe sealed class GameChatHooks : IDisposable
         logger.LogInformation("Initializing GameChatHooks");
         gameInteropProvider.InitializeFromAttributes(this);
 
-        this.SendMessageHook?.Enable();
-        this.SetChatChannelHook?.Enable();
-        this.ChangeChannelNameHook?.Enable();
-        this.ShouldDoNameLookupHook?.Enable();
+        SendMessageHook?.Enable();
+        SetChatChannelHook?.Enable();
+        ChangeChannelNameHook?.Enable();
+        ShouldDoNameLookupHook?.Enable();
+        TempChatChannelHook?.Enable();
+        TempTellTargetHook?.Enable();
+        UnfocusTickHook?.Enable();
     }
 
     public void Dispose()
     {
-        this.SendMessageHook?.Dispose();
-        this.SetChatChannelHook?.Dispose();
-        this.ChangeChannelNameHook?.Dispose();
-        this.ShouldDoNameLookupHook?.Dispose();
+        SendMessageHook?.Dispose();
+        SetChatChannelHook?.Dispose();
+        ChangeChannelNameHook?.Dispose();
+        ShouldDoNameLookupHook?.Dispose();
+        TempChatChannelHook?.Dispose();
+        TempTellTargetHook?.Dispose();
+        UnfocusTickHook?.Dispose();
     }
 
     private void SendMessageDetour(ShellCommandModule* thisPtr, Utf8String* message, UIModule* uiModule)
@@ -145,7 +197,7 @@ public unsafe sealed class GameChatHooks : IDisposable
                 _nextMessageIsReply = utcNow + TimeSpan.FromMilliseconds(100);
 
             // If not a command, or no override is set, then call the original chat handler
-            if (isCommand || this._chatChannelOverride == null)
+            if (isCommand || _chatChannelOverride == null)
             {
                 SendMessageHook!.OriginalDisposeSafe(thisPtr, message, uiModule);
                 return;
@@ -155,11 +207,11 @@ public unsafe sealed class GameChatHooks : IDisposable
             // The chat input string is rendered in to a payload for display first
             var pronounModule = UIModule.Instance()->GetPronounModule();
             var chatString1 = pronounModule->ProcessString(message, true);
-            var chatString2 = this._processStringStep2(pronounModule, chatString1, 1);
+            var chatString2 = _processStringStep2(pronounModule, chatString1, 1);
             var chatBytes = MemoryHelper.ReadRaw((nint)chatString2->StringPtr.Value, chatString2->Length);
 
             if (chatBytes.Length > 0)
-                this._chatChannelOverride.ChatMessageHandler?.Invoke(chatBytes);
+                _chatChannelOverride.ChatMessageHandler?.Invoke(chatBytes);
         }
         catch (Exception e)
         {
@@ -171,10 +223,10 @@ public unsafe sealed class GameChatHooks : IDisposable
     {
         try
         {
-            if (this._chatChannelOverride != null)
+            if (_chatChannelOverride != null)
             {
-                this._chatChannelOverride = null;
-                this._shouldForceNameLookup = true;
+                _chatChannelOverride = null;
+                _shouldForceNameLookup = true;
             }
         }
         catch (Exception e)
@@ -185,6 +237,32 @@ public unsafe sealed class GameChatHooks : IDisposable
         SetChatChannelHook!.OriginalDisposeSafe(module, channel);
     }
 
+    private ulong TempChatChannelDetour(RaptureShellModule* module, uint x, uint y, ulong z)
+    {
+        var result = TempChatChannelHook!.OriginalDisposeSafe(module, x, y, z);
+
+        if (result != 0)
+            StashChatChannel();
+
+        return result;
+    }
+
+    private ulong TempTellTargetDetour(RaptureShellModule* module, ulong a, ulong b, ulong c, ushort d, ulong e, ulong f, ushort g)
+    {
+        var result = TempTellTargetHook!.OriginalDisposeSafe(module, a, b, c, d, e, f, g);
+
+        if (result != 0)
+            StashChatChannel();
+
+        return result;
+    }
+
+    private void UnfocusTickDetour(RaptureShellModule* module)
+    {
+        UnfocusTickHook!.OriginalDisposeSafe(module);
+        UnstashChatChannel();
+    }
+
     private byte* ChangeChannelNameDetour(AgentChatLog* agent)
     {
         var originalResult = ChangeChannelNameHook!.OriginalDisposeSafe(agent);
@@ -192,9 +270,9 @@ public unsafe sealed class GameChatHooks : IDisposable
         try
         {
             // Replace the chat channel name on the UI if active
-            if (this._chatChannelOverride != null)
+            if (_chatChannelOverride != null)
             {
-                agent->ChannelLabel.SetString(this._chatChannelOverride.ChannelName);
+                agent->ChannelLabel.SetString(_chatChannelOverride.ChannelName);
             }
         }
         catch (Exception e)
@@ -212,7 +290,7 @@ public unsafe sealed class GameChatHooks : IDisposable
         try
         {
             // Force the chat channel name to update when required
-            if (this._shouldForceNameLookup)
+            if (_shouldForceNameLookup)
             {
                 _shouldForceNameLookup = false;
                 return 1;
