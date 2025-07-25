@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Client.UI.Shell;
 using FFXIVClientStructs.FFXIV.Component.Shell;
+using MareSynchronos.Services;
 using Microsoft.Extensions.Logging;
 
 namespace MareSynchronos.Interop;
@@ -25,6 +26,7 @@ public unsafe sealed class GameChatHooks : IDisposable
     // Based on https://git.anna.lgbt/anna/ExtraChat/src/branch/main/client/ExtraChat/GameFunctions.cs
 
     private readonly ILogger<GameChatHooks> _logger;
+    private readonly Action<int, byte[]> _ssCommandHandler;
 
     #region signatures
     #pragma warning disable CS0649
@@ -126,9 +128,10 @@ public unsafe sealed class GameChatHooks : IDisposable
         }
     }
 
-    public GameChatHooks(ILogger<GameChatHooks> logger, IGameInteropProvider gameInteropProvider)
+    public GameChatHooks(ILogger<GameChatHooks> logger, IGameInteropProvider gameInteropProvider, Action<int, byte[]> ssCommandHandler)
     {
         _logger = logger;
+        _ssCommandHandler = ssCommandHandler;
 
         logger.LogInformation("Initializing GameChatHooks");
         gameInteropProvider.InitializeFromAttributes(this);
@@ -151,6 +154,14 @@ public unsafe sealed class GameChatHooks : IDisposable
         TempChatChannelHook?.Dispose();
         TempTellTargetHook?.Dispose();
         UnfocusTickHook?.Dispose();
+    }
+
+    private byte[] ProcessChatMessage(Utf8String* message)
+    {
+        var pronounModule = UIModule.Instance()->GetPronounModule();
+        var chatString1 = pronounModule->ProcessString(message, true);
+        var chatString2 = _processStringStep2(pronounModule, chatString1, 1);
+        return MemoryHelper.ReadRaw((nint)chatString2->StringPtr.Value, chatString2->Length);
     }
 
     private void SendMessageDetour(ShellCommandModule* thisPtr, Utf8String* message, UIModule* uiModule)
@@ -196,6 +207,23 @@ public unsafe sealed class GameChatHooks : IDisposable
             if (isReply)
                 _nextMessageIsReply = utcNow + TimeSpan.FromMilliseconds(100);
 
+            // If it is a command, check if it begins with /ss first so we can handle the message directly
+            // Letting Dalamud handle the commands causes all of the special payloads to be dropped
+            if (isCommand && messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes("/ss")))
+            {
+                for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
+                {
+                    var cmdString = $"/ss{i} ";
+                    if (messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes(cmdString)))
+                    {
+                        var ssChatBytes = ProcessChatMessage(message);
+                        ssChatBytes = ssChatBytes.Skip(cmdString.Length).ToArray();
+                        _ssCommandHandler?.Invoke(i, ssChatBytes);
+                        return;
+                    }
+                }
+            }
+
             // If not a command, or no override is set, then call the original chat handler
             if (isCommand || _chatChannelOverride == null)
             {
@@ -205,10 +233,7 @@ public unsafe sealed class GameChatHooks : IDisposable
 
             // Otherwise, the text is to be sent to the emulated chat channel handler
             // The chat input string is rendered in to a payload for display first
-            var pronounModule = UIModule.Instance()->GetPronounModule();
-            var chatString1 = pronounModule->ProcessString(message, true);
-            var chatString2 = _processStringStep2(pronounModule, chatString1, 1);
-            var chatBytes = MemoryHelper.ReadRaw((nint)chatString2->StringPtr.Value, chatString2->Length);
+            var chatBytes = ProcessChatMessage(message);
 
             if (chatBytes.Length > 0)
                 _chatChannelOverride.ChatMessageHandler?.Invoke(chatBytes);

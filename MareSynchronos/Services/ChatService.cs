@@ -45,7 +45,20 @@ public class ChatService : DisposableMediatorSubscriberBase
         Mediator.Subscribe<UserChatMsgMessage>(this, HandleUserChat);
         Mediator.Subscribe<GroupChatMsgMessage>(this, HandleGroupChat);
 
-        _gameChatHooks = new(() => new GameChatHooks(loggerFactory.CreateLogger<GameChatHooks>(), gameInteropProvider));
+        _gameChatHooks = new(() => new GameChatHooks(loggerFactory.CreateLogger<GameChatHooks>(), gameInteropProvider, SendChatShell));
+
+        // Initialize chat hooks in advance
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                _ = _gameChatHooks.Value;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize chat hooks");
+            }
+        });
     }
 
     protected override void Dispose(bool disposing)
