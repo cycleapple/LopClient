@@ -75,6 +75,19 @@ public class PluginWatcherService : MediatorSubscriberBase
                 Logger.LogError(e, "PluginWatcherService exception");
             }
         });
+
+        // Continue scanning plugins during gpose as well
+        Mediator.Subscribe<CutsceneFrameworkUpdateMessage>(this, (_) =>
+        {
+            try
+            {
+                Update();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "PluginWatcherService exception");
+            }
+        });
     }
 
     private void Update()

@@ -271,6 +271,13 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         }
     }
 
+    public void RedrawNow(ILogger logger, Guid applicationId, int objectIndex)
+    {
+        if (!APIAvailable || _dalamudUtil.IsZoning) return;
+        logger.LogTrace("[{applicationId}] Immediately redrawing object index {objId}", applicationId, objectIndex);
+        _penumbraRedraw.Invoke(objectIndex);
+    }
+
     public async Task RemoveTemporaryCollectionAsync(ILogger logger, Guid applicationId, Guid collId)
     {
         if (!APIAvailable) return;

@@ -204,6 +204,13 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         }
     }
 
+    public void RevertNow(ILogger logger, Guid applicationId, int objectIndex)
+    {
+        if ((!APIAvailable) || _dalamudUtil.IsZoning) return;
+        logger.LogTrace("[{applicationId}] Immediately reverting object index {objId}", applicationId, objectIndex);
+        _glamourerRevert.Invoke(objectIndex, LockCode);
+    }
+
     public async Task RevertByNameAsync(ILogger logger, string name, Guid applicationId)
     {
         if ((!APIAvailable) || _dalamudUtil.IsZoning) return;
