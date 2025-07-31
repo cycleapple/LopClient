@@ -385,6 +385,10 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                     }
                 }
             }
+            else if (_dalamudUtil.IsInCutscene && !string.IsNullOrEmpty(name))
+            {
+                _noSnapService.AddGposerNamed(name);
+            }
         }
         catch (Exception ex)
         {

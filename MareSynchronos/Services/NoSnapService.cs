@@ -17,6 +17,7 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
         ["Meddle.Plugin"] = false
     };
     private static readonly HashSet<int> _gposers = new();
+    private static readonly HashSet<string> _gposersNamed = new(StringComparer.Ordinal);
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly IpcManager _ipcManager;
@@ -57,13 +58,7 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
         if (AnyLoaded || _hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
         {
             _logger.LogInformation("Immediately reverting object index {id}", objectIndex);
-            try
-            {
-                Guid applicationId = Guid.NewGuid();
-                _ipcManager.Glamourer.RevertNow(_logger, applicationId, objectIndex);
-                _ipcManager.Penumbra.RedrawNow(_logger, applicationId, objectIndex);
-            }
-            catch { }
+            RevertAndRedraw(objectIndex);
             return;
         }
 
@@ -79,44 +74,99 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
             _gposers.Remove(objectIndex);
     }
 
+    public void AddGposerNamed(string name)
+    {
+        if (AnyLoaded || _hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
+        {
+            _logger.LogInformation("Immediately reverting {name}", name);
+            RevertAndRedraw(name);
+            return;
+        }
+
+        _logger.LogInformation("Registering gposer {name}", name);
+        lock (_gposers)
+            _gposersNamed.Add(name);
+    }
+
     private void ClearGposeList()
     {
-        if (_gposers.Count > 0)
+        if (_gposers.Count > 0 || _gposersNamed.Count > 0)
             _logger.LogInformation("Clearing gposer list");
         lock (_gposers)
             _gposers.Clear();
+        lock (_gposersNamed)
+            _gposersNamed.Clear();
+    }
+
+    private void RevertAndRedraw(int objIndex, Guid applicationId = default)
+    {
+        if (applicationId == default)
+            applicationId = Guid.NewGuid();
+
+        try
+        {
+            _ipcManager.Glamourer.RevertNow(_logger, applicationId, objIndex);
+            _ipcManager.Penumbra.RedrawNow(_logger, applicationId, objIndex);
+        }
+        catch { }
+    }
+
+    private void RevertAndRedraw(string name, Guid applicationId = default)
+    {
+        if (applicationId == default)
+            applicationId = Guid.NewGuid();
+
+        try
+        {
+            _ipcManager.Glamourer.RevertByNameNow(_logger, applicationId, name);
+            var addr = _dalamudUtilService.GetPlayerCharacterFromCachedTableByName(name);
+            if (addr != 0)
+            {
+                var obj = _dalamudUtilService.CreateGameObject(addr);
+                if (obj != null)
+                    _ipcManager.Penumbra.RedrawNow(_logger, applicationId, obj.ObjectIndex);
+            }
+        }
+        catch { }
     }
 
     private void RevertGposers()
     {
         List<int>? gposersList = null;
+        List<string>? gposersList2 = null;
 
         lock (_gposers)
         {
             if (_gposers.Count > 0)
             {
-                _logger.LogInformation("Reverting gposers");
                 gposersList = _gposers.ToList();
                 _gposers.Clear();
             }
         }
 
-        if (gposersList == null)
+        lock (_gposersNamed)
+        {
+            if (_gposersNamed.Count > 0)
+            {
+                gposersList2 = _gposersNamed.ToList();
+                _gposersNamed.Clear();
+            }
+        }
+
+        if (gposersList == null && gposersList2 == null)
             return;
+
+        _logger.LogInformation("Reverting gposers");
 
         _dalamudUtilService.RunOnFrameworkThread(() =>
         {
             Guid applicationId = Guid.NewGuid();
 
-            foreach (var gposer in gposersList)
-            {
-                try
-                {
-                    _ipcManager.Glamourer.RevertNow(_logger, applicationId, gposer);
-                    _ipcManager.Penumbra.RedrawNow(_logger, applicationId, gposer);
-                }
-                catch { }
-            }
+            foreach (var gposer in gposersList ?? [])
+                RevertAndRedraw(gposer, applicationId);
+
+            foreach (var gposerName in gposersList2 ?? [])
+                RevertAndRedraw(gposerName, applicationId);
         }).GetAwaiter().GetResult();
     }
 

@@ -284,6 +284,16 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         return _clientState.LocalPlayer!;
     }
 
+    public IntPtr GetPlayerCharacterFromCachedTableByName(string characterName)
+    {
+        foreach (var c in _playerCharas.Values)
+        {
+            if (c.Name.Equals(characterName, StringComparison.Ordinal))
+                return c.Address;
+        }
+        return 0;
+    }
+
     public IntPtr GetPlayerCharacterFromCachedTableByIdent(string characterName)
     {
         if (_playerCharas.TryGetValue(characterName, out var pchar)) return pchar.Address;
