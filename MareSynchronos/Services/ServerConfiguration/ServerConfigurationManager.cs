@@ -500,11 +500,6 @@ public class ServerConfigurationManager
         for (int i = 0; i < _configService.Current.ServerStorage.Count; ++i)
         {
             var x = _configService.Current.ServerStorage[i];
-            if (x.ServerUri.Equals(ApiController.LoporritServiceUriOld, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogDebug("Updating server URI {old} => {new}", x.ServerUri, ApiController.LoporritServiceUri);
-                x.ServerUri = _configService.Current.ServerStorage[i].ServerUri = ApiController.LoporritServiceUri;
-            }
             if (x.ServerUri.Equals(ApiController.LoporritServiceUri, StringComparison.OrdinalIgnoreCase))
                 lopExists = true;
         }

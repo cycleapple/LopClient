@@ -90,9 +90,9 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version!;
-        Logger.LogInformation("Launching {name} {major}.{minor}.{build}-lop{rev}", "Loporrit Sync", version.Major, version.Minor, version.Build, version.Revision);
+        Logger.LogInformation("Launching {name} {major}.{minor}.{build}.{rev}", "Loporrit Sync", version.Major, version.Minor, version.Build, version.Revision);
         Mediator.Publish(new EventMessage(new Services.Events.Event(nameof(MarePlugin), Services.Events.EventSeverity.Informational,
-            $"Starting Loporrit Sync {version.Major}.{version.Minor}.{version.Build}-lop{version.Revision}")));
+            $"Starting Loporrit Sync {version.Major}.{version.Minor}.{version.Build}.{version.Revision}")));
 
         Mediator.Subscribe<SwitchToMainUiMessage>(this, (msg) => { if (_launchTask == null || _launchTask.IsCompleted) _launchTask = Task.Run(WaitForPlayerAndLaunchCharacterManager); });
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());

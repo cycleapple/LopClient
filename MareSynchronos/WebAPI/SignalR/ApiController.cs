@@ -25,7 +25,6 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
     public const string LoporritServer = "Loporrit Main Server";
     public const string LoporritServiceUri = "wss://lop-sync.com";
     public const string LoporritServiceHubUri = "wss://hub.lop-sync.com/mare";
-    public const string LoporritServiceUriOld = "wss://loporrit.us.to";
 
     private readonly DalamudUtilService _dalamudUtil;
     private readonly HubFactory _hubFactory;
