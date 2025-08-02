@@ -5,6 +5,9 @@ namespace MareSynchronos.WebAPI.SignalR;
 
 public record HubConnectionConfig
 {
+    [JsonPropertyName("api_url")]
+    public string ApiUrl { get; set; } = string.Empty;
+
     [JsonPropertyName("hub_url")]
     public string HubUrl { get; set; } = string.Empty;
 

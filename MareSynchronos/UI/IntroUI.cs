@@ -264,7 +264,7 @@ This service is provided as-is.
                             using HttpClient httpClient = new();
                             var ver = Assembly.GetExecutingAssembly().GetName().Version;
                             httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
-                            var postUri = MareAuth.AuthRegisterFullPath(new Uri(_serverConfigurationManager.CurrentApiUrl
+                            var postUri = MareAuth.AuthRegisterFullPath(new Uri(_serverConfigurationManager.CurrentRealApiUrl
                                 .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
                                 .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
                             _logger.LogInformation("Registering new account: {uri}", postUri.ToString());

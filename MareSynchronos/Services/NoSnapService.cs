@@ -4,72 +4,71 @@ using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services.Mediator;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MareSynchronos.Services;
 
-public class NoSnapService : IHostedService, IMediatorSubscriber
+public sealed class NoSnapService : IHostedService, IMediatorSubscriber
 {
+    private record NoSnapConfig
+    {
+        [JsonPropertyName("listOfPlugins")]
+        public string[]? ListOfPlugins { get; set; }
+    }
+
     private readonly ILogger<NoSnapService> _logger;
+    private readonly IDalamudPluginInterface _pluginInterface;
     private readonly Dictionary<string, bool> _listOfPlugins = new(StringComparer.Ordinal)
     {
         ["Snapper"] = false,
         ["Snappy"] = false,
-        ["Meddle.Plugin"] = false
+        ["Meddle.Plugin"] = false,
     };
     private static readonly HashSet<int> _gposers = new();
     private static readonly HashSet<string> _gposersNamed = new(StringComparer.Ordinal);
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly DalamudUtilService _dalamudUtilService;
     private readonly IpcManager _ipcManager;
+    private readonly RemoteConfigurationService _remoteConfig;
 
     public static bool AnyLoaded { get; private set; } = false;
 
     public MareMediator Mediator { get; init; }
 
-    public NoSnapService(ILogger<NoSnapService> logger, IDalamudPluginInterface pi, MareMediator mediator,
-        IHostApplicationLifetime hostApplicationLifetime, DalamudUtilService dalamudUtilService, IpcManager ipcManager)
+    public NoSnapService(ILogger<NoSnapService> logger, IDalamudPluginInterface pluginInterface, MareMediator mediator,
+        IHostApplicationLifetime hostApplicationLifetime, DalamudUtilService dalamudUtilService, IpcManager ipcManager,
+        RemoteConfigurationService remoteConfig)
     {
         _logger = logger;
+        _pluginInterface = pluginInterface;
         Mediator = mediator;
         _hostApplicationLifetime = hostApplicationLifetime;
         _dalamudUtilService = dalamudUtilService;
         _ipcManager = ipcManager;
-        foreach (var pluginName in _listOfPlugins.Keys)
-        {
-            var plugin = pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals(pluginName, StringComparison.Ordinal));
-            if (plugin?.IsLoaded ?? false)
-                _listOfPlugins[pluginName] = true;
-            Mediator.SubscribeKeyed<PluginChangeMessage>(this, pluginName, (msg) =>
-            {
-                _logger.LogInformation("{pluginName} isLoaded = {isLoaded}", pluginName, msg.IsLoaded);
-                _listOfPlugins[pluginName] = msg.IsLoaded;
-                Update();
-            });
-        }
+        _remoteConfig = remoteConfig;
 
         Mediator.Subscribe<GposeEndMessage>(this, msg => ClearGposeList());
         Mediator.Subscribe<CutsceneEndMessage>(this, msg => ClearGposeList());
-
-        Update();
     }
 
     public void AddGposer(int objectIndex)
     {
         if (AnyLoaded || _hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
         {
-            _logger.LogInformation("Immediately reverting object index {id}", objectIndex);
+            _logger.LogTrace("Immediately reverting object index {id}", objectIndex);
             RevertAndRedraw(objectIndex);
             return;
         }
 
-        _logger.LogInformation("Registering gposer object index {id}", objectIndex);
+        _logger.LogTrace("Registering gposer object index {id}", objectIndex);
         lock (_gposers)
             _gposers.Add(objectIndex);
     }
 
     public void RemoveGposer(int objectIndex)
     {
-        _logger.LogInformation("Un-registering gposer object index {id}", objectIndex);
+        _logger.LogTrace("Un-registering gposer object index {id}", objectIndex);
         lock (_gposers)
             _gposers.Remove(objectIndex);
     }
@@ -78,12 +77,12 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
     {
         if (AnyLoaded || _hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
         {
-            _logger.LogInformation("Immediately reverting {name}", name);
+            _logger.LogTrace("Immediately reverting {name}", name);
             RevertAndRedraw(name);
             return;
         }
 
-        _logger.LogInformation("Registering gposer {name}", name);
+        _logger.LogTrace("Registering gposer {name}", name);
         lock (_gposers)
             _gposersNamed.Add(name);
     }
@@ -91,7 +90,7 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
     private void ClearGposeList()
     {
         if (_gposers.Count > 0 || _gposersNamed.Count > 0)
-            _logger.LogInformation("Clearing gposer list");
+            _logger.LogTrace("Clearing gposer list");
         lock (_gposers)
             _gposers.Clear();
         lock (_gposersNamed)
@@ -170,9 +169,31 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
         }).GetAwaiter().GetResult();
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        var config = await _remoteConfig.GetConfigAsync<NoSnapConfig>("noSnap").ConfigureAwait(false) ?? new();
+
+        if (config.ListOfPlugins != null)
+        {
+            _listOfPlugins.Clear();
+            foreach (var pluginName in config.ListOfPlugins)
+                _listOfPlugins.TryAdd(pluginName, value: false);
+        }
+
+        foreach (var pluginName in _listOfPlugins.Keys)
+        {
+            var plugin = _pluginInterface.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals(pluginName, StringComparison.Ordinal));
+            if (plugin?.IsLoaded ?? false)
+                _listOfPlugins[pluginName] = true;
+            Mediator.SubscribeKeyed<PluginChangeMessage>(this, pluginName, (msg) =>
+            {
+                _listOfPlugins[pluginName] = msg.IsLoaded;
+                _logger.LogDebug("{pluginName} isLoaded = {isLoaded}", pluginName, msg.IsLoaded);
+                Update();
+            });
+        }
+
+        Update();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -187,7 +208,6 @@ public class NoSnapService : IHostedService, IMediatorSubscriber
 
         if (AnyLoaded != anyLoadedNow)
         {
-            _logger.LogInformation("AnyLoaded is now {AnyLoaded}", AnyLoaded);
             AnyLoaded = anyLoadedNow;
             Mediator.Publish(new RecalculatePerformanceMessage(null));
 

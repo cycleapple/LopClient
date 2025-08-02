@@ -53,6 +53,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MareAPI\MareSynchronosAPI\MareSynchronos.API.csproj" />
+    <ProjectReference Include="..\BunnyWhispers\Chaos.NaCl\Chaos.NaCl.csproj" />
   </ItemGroup>
 
   <ItemGroup>

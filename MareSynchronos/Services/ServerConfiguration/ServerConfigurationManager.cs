@@ -20,6 +20,7 @@ public class ServerConfigurationManager
 
     private HashSet<string>? _cachedWhitelistedUIDs = null;
     private HashSet<string>? _cachedBlacklistedUIDs = null;
+    private string? _realApiUrl = null;
 
     public ServerConfigurationManager(ILogger<ServerConfigurationManager> logger, ServerConfigService configService,
         ServerTagConfigService serverTagConfig, SyncshellConfigService syncshellConfig, NotesConfigService notesConfig,
@@ -36,6 +37,13 @@ public class ServerConfigurationManager
     }
 
     public string CurrentApiUrl => CurrentServer.ServerUri;
+    public string CurrentRealApiUrl
+    {
+        get
+        {
+            return _realApiUrl ?? CurrentApiUrl;
+        }
+    }
     public ServerStorage CurrentServer => _configService.Current.ServerStorage[CurrentServerIndex];
 
     public IReadOnlyList<string> Whitelist => CurrentBlockStorage().Whitelist;
@@ -48,6 +56,7 @@ public class ServerConfigurationManager
             _configService.Current.CurrentServer = value;
             _cachedWhitelistedUIDs = null;
             _cachedBlacklistedUIDs = null;
+            _realApiUrl = null;
             _configService.Save();
         }
         get

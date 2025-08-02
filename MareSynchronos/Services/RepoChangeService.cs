@@ -1,4 +1,3 @@
-
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
@@ -6,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace MareSynchronos.Services;
@@ -215,12 +213,14 @@ public sealed class RepoChangeService : IHostedService
     #endregion
 
     private readonly ILogger<RepoChangeService> _logger;
+    private readonly RemoteConfigurationService _remoteConfig;
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IFramework _framework;
 
-    public RepoChangeService(ILogger<RepoChangeService> logger, IDalamudPluginInterface pluginInterface, IFramework framework)
+    public RepoChangeService(ILogger<RepoChangeService> logger, RemoteConfigurationService remoteConfig, IDalamudPluginInterface pluginInterface, IFramework framework)
     {
         _logger = logger;
+        _remoteConfig = remoteConfig;
         _pluginInterface = pluginInterface;
         _framework = framework;
     }
@@ -228,10 +228,7 @@ public sealed class RepoChangeService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Starting RepoChange Service");
-        var repoChangeConfig = await DownloadRepoChangeConfig().ConfigureAwait(false);
-
-        if (repoChangeConfig == null)
-            return;
+        var repoChangeConfig = await _remoteConfig.GetConfigAsync<RepoChangeConfig>("repoChange").ConfigureAwait(false) ?? new();
 
         var currentRepo = repoChangeConfig.CurrentRepo;
         var validRepos = (repoChangeConfig.ValidRepos ?? []).ToList();
@@ -402,86 +399,5 @@ public sealed class RepoChangeService : IHostedService
         _ = cancellationToken;
         _logger.LogDebug("Stopping RepoChange Service");
         return Task.CompletedTask;
-    }
-
-    private async Task<RepoChangeConfig?> DownloadRepoChangeConfig()
-    {
-        string[] repoChangeSources = [
-            "https://plugin.lop-sync.com/repochange/config.json",
-            "https://plugin.lop-sync.net/repochange/config.json",
-        ];
-
-        string? jsonResponse = null;
-
-        foreach (var repoChangeUrl in repoChangeSources)
-        {
-            try
-            {
-                _logger.LogTrace("Fetching {url}", repoChangeUrl);
-
-                using var httpClient = new HttpClient(
-                    new HttpClientHandler
-                    {
-                        AllowAutoRedirect = true,
-                        MaxAutomaticRedirections = 5
-                    }
-                );
-
-                var ver = Assembly.GetExecutingAssembly().GetName().Version;
-                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
-
-                var response = await httpClient.GetAsync(repoChangeUrl).ConfigureAwait(false);
-
-                response.EnsureSuccessStatusCode();
-
-                var contentType = response.Content.Headers.ContentType?.MediaType;
-
-                if (contentType == null || !contentType.Equals("application/json", StringComparison.Ordinal))
-                {
-                    _logger.LogWarning("HTTP request for RepoChange config failed: wrong MIME type");
-                    continue;
-                }
-
-                jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "HTTP request for RepoChange config failed");
-            }
-        }
-
-        if (jsonResponse == null)
-        {
-            _logger.LogWarning("Could not download RepoChange config");
-            return null;
-        }
-
-        try
-        {
-            var config = JsonSerializer.Deserialize<RepoChangeConfig>(
-                jsonResponse,
-                new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    AllowTrailingCommas = true
-                }
-            );
-
-            if (config == null)
-            {
-                _logger.LogWarning("Deserialization of RepoChange config returned null");
-                return null;
-            }
-
-            config.ValidRepos ??= [];
-
-            return config;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Invalid JSON in RepoChange config response");
-            return null;
-        }
     }
 }

@@ -7,3 +7,6 @@
 [submodule "Glamourer.Api"]
 	path = Glamourer.Api
 	url = https://github.com/loporrit/Glamourer.Api.git
+[submodule "BunnyWhispers"]
+	path = BunnyWhispers
+	url = https://github.com/loporrit/BunnyWhispers.git

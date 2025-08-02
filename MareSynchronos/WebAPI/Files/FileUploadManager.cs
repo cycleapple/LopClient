@@ -108,7 +108,7 @@ public sealed class FileUploadManager : DisposableMediatorSubscriberBase
 
         _uploadCancellationTokenSource = new CancellationTokenSource();
         var uploadToken = _uploadCancellationTokenSource.Token;
-        Logger.LogDebug("Sending Character data {hash} to service {url}", data.DataHash.Value, _serverManager.CurrentApiUrl);
+        Logger.LogDebug("Sending Character data {hash} to service {url}", data.DataHash.Value, _serverManager.CurrentRealApiUrl);
 
         HashSet<string> unverifiedUploads = GetUnverifiedFiles(data);
         if (unverifiedUploads.Any())

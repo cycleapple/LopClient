@@ -1,4 +1,5 @@
 ﻿using MareSynchronos.API.SignalR;
+using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.WebAPI.SignalR.Utils;
@@ -18,6 +19,7 @@ public class HubFactory : MediatorSubscriberBase
 {
     private readonly ILoggerProvider _loggingProvider;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+    private readonly RemoteConfigurationService _remoteConfig;
     private readonly TokenProvider _tokenProvider;
     private HubConnection? _instance;
     private string _cachedConfigFor = string.Empty;
@@ -25,10 +27,11 @@ public class HubFactory : MediatorSubscriberBase
     private bool _isDisposed = false;
 
     public HubFactory(ILogger<HubFactory> logger, MareMediator mediator,
-        ServerConfigurationManager serverConfigurationManager,
+        ServerConfigurationManager serverConfigurationManager, RemoteConfigurationService remoteConfig,
         TokenProvider tokenProvider, ILoggerProvider pluginLog) : base(logger, mediator)
     {
         _serverConfigurationManager = serverConfigurationManager;
+        _remoteConfig = remoteConfig;
         _tokenProvider = tokenProvider;
         _loggingProvider = pluginLog;
     }
@@ -85,7 +88,12 @@ public class HubFactory : MediatorSubscriberBase
         }
 
         if (_serverConfigurationManager.CurrentApiUrl.Equals(ApiController.LoporritServiceUri, StringComparison.Ordinal))
-            defaultConfig.HubUrl = ApiController.LoporritServiceHubUri;
+        {
+            var mainServerConfig = await _remoteConfig.GetConfigAsync<HubConnectionConfig>("mainServer").ConfigureAwait(false) ?? new();
+            defaultConfig = mainServerConfig;
+            if (string.IsNullOrEmpty(mainServerConfig.HubUrl))
+                defaultConfig.HubUrl = ApiController.LoporritServiceHubUri;
+        }
 
         string jsonResponse;
 
@@ -140,21 +148,18 @@ public class HubFactory : MediatorSubscriberBase
 
         try
         {
-            var config = JsonSerializer.Deserialize<HubConnectionConfig>(
-                jsonResponse,
-                new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    AllowTrailingCommas = true
-                });
+            var config = JsonSerializer.Deserialize<HubConnectionConfig>(jsonResponse);
 
             if (config == null)
                 return defaultConfig;
 
+            if (string.IsNullOrEmpty(config.ApiUrl))
+                config.ApiUrl = defaultConfig.ApiUrl;
+
             if (string.IsNullOrEmpty(config.HubUrl))
                 config.HubUrl = defaultConfig.HubUrl;
 
-            config.Transports ??= [];
+            config.Transports ??= defaultConfig.Transports ?? [];
 
             return config;
         }
