@@ -780,8 +780,9 @@ public partial class UiSharedService : DisposableMediatorSubscriberBase
         ImGui.SameLine();
         AttachToolTip($"Penumbra is " + (_penumbraExists ? "available and up to date." : "unavailable or not up to date."));
 
+        ImGui.TextUnformatted("Glamourer");
         ImGui.SameLine();
-        ColorText("Glamourer", GetBoolColor(_glamourerExists));
+        IconText(_glamourerExists ? check : cross, GetBoolColor(_glamourerExists));
         AttachToolTip($"Glamourer is " + (_glamourerExists ? "available and up to date." : "unavailable or not up to date."));
 
         if (intro)
