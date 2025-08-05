@@ -79,6 +79,8 @@ public sealed class TokenProvider : IDisposable, IMediatorSubscriber
             var config = await _remoteConfig.GetConfigAsync<HubConnectionConfig>("mainServer").ConfigureAwait(false) ?? new();
             if (!string.IsNullOrEmpty(config.ApiUrl))
                 authApiUrl = config.ApiUrl;
+            else
+                authApiUrl = ApiController.LoporritServiceApiUri;
         }
 
         try

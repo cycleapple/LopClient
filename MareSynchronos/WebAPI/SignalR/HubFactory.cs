@@ -91,6 +91,8 @@ public class HubFactory : MediatorSubscriberBase
         {
             var mainServerConfig = await _remoteConfig.GetConfigAsync<HubConnectionConfig>("mainServer").ConfigureAwait(false) ?? new();
             defaultConfig = mainServerConfig;
+            if (string.IsNullOrEmpty(mainServerConfig.ApiUrl))
+                defaultConfig.ApiUrl = ApiController.LoporritServiceApiUri;
             if (string.IsNullOrEmpty(mainServerConfig.HubUrl))
                 defaultConfig.HubUrl = ApiController.LoporritServiceHubUri;
         }
