@@ -31,13 +31,14 @@ public unsafe sealed class GameChatHooks : IDisposable
     #region signatures
     #pragma warning disable CS0649
     // I do not know what kind of black magic this function performs
-    [Signature("E8 ?? ?? ?? ?? 0F B7 7F 08 48 8B CE")]
+    // Client::UI::Misc::PronounModule::???
+    [Signature("E8 ?? ?? ?? ?? 44 88 74 24 ?? 4C 8D 45")]
     private readonly delegate* unmanaged<PronounModule*, Utf8String*, byte, Utf8String*> _processStringStep2;
 
     // Component::Shell::ShellCommandModule::ExecuteCommandInner
     private delegate void SendMessageDelegate(ShellCommandModule* module, Utf8String* message, UIModule* uiModule);
     [Signature(
-        "E8 ?? ?? ?? ?? FE 86 ?? ?? ?? ?? C7 86",
+        "E8 ?? ?? ?? ?? FE 87 ?? ?? ?? ?? C7 87",
         DetourName = nameof(SendMessageDetour)
     )]
     private Hook<SendMessageDelegate>? SendMessageHook { get; init; }
@@ -45,12 +46,12 @@ public unsafe sealed class GameChatHooks : IDisposable
     // Client::UI::Shell::RaptureShellModule::SetChatChannel
     private delegate void SetChatChannelDelegate(RaptureShellModule* module, uint channel);
     [Signature(
-        "E8 ?? ?? ?? ?? 33 C0 EB 1D",
+        "E8 ?? ?? ?? ?? 33 C0 EB ?? 85 D2",
         DetourName = nameof(SetChatChannelDetour)
     )]
     private Hook<SetChatChannelDelegate>? SetChatChannelHook { get; init; }
 
-    // Component::Shell::ShellCommandModule::ExecuteCommandInner
+    // Component::Shell::ShellCommandModule::ChangeChannelName
     private delegate byte* ChangeChannelNameDelegate(AgentChatLog* agent);
     [Signature(
         "E8 ?? ?? ?? ?? BA ?? ?? ?? ?? 48 8D 4D B0 48 8B F8 E8 ?? ?? ?? ?? 41 8B D6",
@@ -58,15 +59,16 @@ public unsafe sealed class GameChatHooks : IDisposable
     )]
     private Hook<ChangeChannelNameDelegate>? ChangeChannelNameHook { get; init; }
 
-    // Client::UI::Agent::AgentChatLog_???
+    // Client::UI::Agent::AgentChatLog::???
     private delegate byte ShouldDoNameLookupDelegate(AgentChatLog* agent);
     [Signature(
-        "48 89 5C 24 ?? 57 48 83 EC 20 48 8B D9 40 32 FF 48 8B 49 10",
+        "48 89 5C 24 ?? 57 48 83 EC ?? 48 8B D9 40 32 FF 48 8B 49 ?? ?? ?? ?? FF 50",
         DetourName = nameof(ShouldDoNameLookupDetour)
     )]
     private Hook<ShouldDoNameLookupDelegate>? ShouldDoNameLookupHook { get; init; }
 
     // Temporary chat channel change (via hotkey)
+    // Client::UI::Shell::RaptureShellModule::???
     private delegate ulong TempChatChannelDelegate(RaptureShellModule* module, uint x, uint y, ulong z);
     [Signature(
         "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 83 B9 ?? ?? ?? ?? ?? 49 8B F9 41 8B F0",
