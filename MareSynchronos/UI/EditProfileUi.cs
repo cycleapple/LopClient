@@ -3,7 +3,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Dto.User;
 using MareSynchronos.Services;
@@ -89,14 +89,14 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
         if (_pfpTextureWrap != null)
         {
-            ImGui.Image(_pfpTextureWrap.ImGuiHandle, ImGuiHelpers.ScaledVector2(_pfpTextureWrap.Width, _pfpTextureWrap.Height));
+            ImGui.Image(_pfpTextureWrap.Handle, ImGuiHelpers.ScaledVector2(_pfpTextureWrap.Width, _pfpTextureWrap.Height));
         }
 
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         ImGuiHelpers.ScaledRelativeSameLine(256, spacing);
         using (_uiSharedService.GameFont.Push())
         {
-            var descriptionTextSize = ImGui.CalcTextSize(profile.Description, 256f);
+            var descriptionTextSize = ImGui.CalcTextSize(profile.Description, hideTextAfterDoubleHash: false, 256f);
             var childFrame = ImGuiHelpers.ScaledVector2(256 + ImGui.GetStyle().WindowPadding.X + ImGui.GetStyle().WindowBorderSize, 256);
             if (descriptionTextSize.Y > childFrame.Y)
             {
@@ -178,7 +178,7 @@ public class EditProfileUi : WindowMediatorSubscriberBase
 
         using (_uiSharedService.GameFont.Push())
         {
-            var descriptionTextSizeLocal = ImGui.CalcTextSize(_descriptionText, 256f);
+            var descriptionTextSizeLocal = ImGui.CalcTextSize(_descriptionText, hideTextAfterDoubleHash: false, 256f);
             var childFrameLocal = ImGuiHelpers.ScaledVector2(256 + ImGui.GetStyle().WindowPadding.X + ImGui.GetStyle().WindowBorderSize, 200);
             if (descriptionTextSizeLocal.Y > childFrameLocal.Y)
             {

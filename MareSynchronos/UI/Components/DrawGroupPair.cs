@@ -1,7 +1,7 @@
 ﻿using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.WebAPI;

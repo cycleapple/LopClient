@@ -2,7 +2,7 @@
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.PlayerData.Pairs;
 using System.Numerics;
 using MareSynchronos.API.Data.Extensions;

@@ -88,9 +88,11 @@ public class PluginWatcherService : MediatorSubscriberBase
                 Logger.LogError(e, "PluginWatcherService exception");
             }
         });
+
+        Update(publish: false);
     }
 
-    private void Update()
+    private void Update(bool publish = true)
     {
         if (!ExposedPluginsEqual(_pluginInterface.InstalledPlugins, _prevInstalledPluginState))
         {
@@ -111,20 +113,20 @@ public class PluginWatcherService : MediatorSubscriberBase
             foreach (var internalName in newDict.Keys.Except(oldDict.Keys, StringComparer.Ordinal))
             {
                 var p = newDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
-                Mediator.Publish(new PluginChangeMessage(internalName, p.Version, p.IsLoaded));
+                if (publish) Mediator.Publish(new PluginChangeMessage(internalName, p.Version, p.IsLoaded));
             }
 
             foreach (var internalName in oldDict.Keys.Except(newDict.Keys, StringComparer.Ordinal))
             {
                 var p = newDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
-                Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, p.IsLoaded));
+                if (publish) Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, p.IsLoaded));
             }
 
             foreach (var changedGroup in newDict.Where(p => oldDict.TryGetValue(p.Key, out var old) && !old.SequenceEqual(p.Value)))
             {
                 var internalName = changedGroup.Value.First().InternalName;
                 var p = newDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
-                Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, p.IsLoaded));
+                if (publish) Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, p.IsLoaded));
             }
         }
     }

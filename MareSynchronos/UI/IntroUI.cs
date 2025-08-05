@@ -2,7 +2,7 @@
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.FileCache;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;

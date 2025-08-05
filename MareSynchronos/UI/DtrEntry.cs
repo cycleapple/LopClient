@@ -105,7 +105,7 @@ public sealed class DtrEntry : IDisposable, IHostedService
     {
         _logger.LogTrace("Creating new DtrBar entry");
         var entry = _dtrBar.Get("Loporrit");
-        entry.OnClick = () => _mareMediator.Publish(new UiToggleMessage(typeof(CompactUi)));
+        entry.OnClick = _ => _mareMediator.Publish(new UiToggleMessage(typeof(CompactUi)));
 
         return entry;
     }

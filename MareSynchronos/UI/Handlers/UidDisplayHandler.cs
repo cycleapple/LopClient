@@ -1,10 +1,9 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.MareConfiguration;
-using ImGuiScene;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.UI.Components;
 
@@ -22,7 +21,6 @@ public class UidDisplayHandler
     private string _lastMouseOverUid = string.Empty;
     private bool _popupShown = false;
     private DateTime? _popupTime;
-    private TextureWrap? _textureWrap;
 
     public UidDisplayHandler(MareMediator mediator, PairManager pairManager,
         ServerConfigurationManager serverManager, MareConfigService mareConfigService)
@@ -96,8 +94,6 @@ public class UidDisplayHandler
                     _mediator.Publish(new ProfilePopoutToggle(null));
                     _lastMouseOverUid = string.Empty;
                     _popupShown = false;
-                    _textureWrap?.Dispose();
-                    _textureWrap = null;
                 }
             }
 

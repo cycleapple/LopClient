@@ -9,7 +9,7 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.API.Dto.User;
 using MareSynchronos.MareConfiguration;

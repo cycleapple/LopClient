@@ -2,7 +2,7 @@
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
@@ -79,7 +79,7 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             ImGuiHelpers.ScaledDummy(new Vector2(256, 256 + spacing.Y));
             var postDummy = ImGui.GetCursorPosY();
             ImGui.SameLine();
-            var descriptionTextSize = ImGui.CalcTextSize(mareProfile.Description, 256f);
+            var descriptionTextSize = ImGui.CalcTextSize(mareProfile.Description, hideTextAfterDoubleHash: false, 256f);
             var descriptionChildHeight = rectMax.Y - pos.Y - rectMin.Y - spacing.Y * 2;
             if (descriptionTextSize.Y > descriptionChildHeight && !_adjustedForScrollBars)
             {
@@ -151,7 +151,7 @@ public class StandaloneProfileUi : WindowMediatorSubscriberBase
             var newHeight = _textureWrap.Height * stretchFactor;
             var remainingWidth = (256f * ImGuiHelpers.GlobalScale - newWidth) / 2f;
             var remainingHeight = (256f * ImGuiHelpers.GlobalScale - newHeight) / 2f;
-            drawList.AddImage(_textureWrap.ImGuiHandle, new Vector2(rectMin.X + padding + remainingWidth, rectMin.Y + spacing.Y + pos.Y + remainingHeight),
+            drawList.AddImage(_textureWrap.Handle, new Vector2(rectMin.X + padding + remainingWidth, rectMin.Y + spacing.Y + pos.Y + remainingHeight),
                 new Vector2(rectMin.X + padding + remainingWidth + newWidth, rectMin.Y + spacing.Y + pos.Y + remainingHeight + newHeight));
         }
         catch (Exception ex)
