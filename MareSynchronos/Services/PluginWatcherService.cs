@@ -1,10 +1,6 @@
 using Dalamud.Plugin;
-using MareSynchronos.API.Data;
-using MareSynchronos.API.Data.Comparer;
-using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services.Mediator;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using CapturedPluginState = (string InternalName, System.Version Version, bool IsLoaded);
 
 namespace MareSynchronos.Services;
@@ -118,8 +114,8 @@ public class PluginWatcherService : MediatorSubscriberBase
 
             foreach (var internalName in oldDict.Keys.Except(newDict.Keys, StringComparer.Ordinal))
             {
-                var p = newDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
-                if (publish) Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, p.IsLoaded));
+                var p = oldDict[internalName].OrderBy(p => (!p.IsLoaded, p.Version)).First();
+                if (publish) Mediator.Publish(new PluginChangeMessage(p.InternalName, p.Version, IsLoaded: false));
             }
 
             foreach (var changedGroup in newDict.Where(p => oldDict.TryGetValue(p.Key, out var old) && !old.SequenceEqual(p.Value)))
