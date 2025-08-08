@@ -434,7 +434,7 @@ internal sealed partial class CharaDataHubUi
             }
             else
             {
-                var desc = pose.Description;
+                var desc = pose.Description ?? string.Empty;
                 if (ImGui.InputTextWithHint("##description", "Description", ref desc, 100))
                 {
                     pose.Description = desc;
