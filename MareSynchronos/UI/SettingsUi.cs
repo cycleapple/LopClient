@@ -50,9 +50,10 @@ public class SettingsUi : WindowMediatorSubscriberBase
     private readonly ChatService _chatService;
     private readonly GuiHookService _guiHookService;
     private readonly PerformanceCollectorService _performanceCollector;
-    private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly PlayerPerformanceConfigService _playerPerformanceConfigService;
     private readonly PlayerPerformanceService _playerPerformanceService;
+    private readonly AccountRegistrationService _registerService;
+    private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly UiSharedService _uiShared;
     private bool _deleteAccountPopupModalShown = false;
     private string _lastTab = string.Empty;
@@ -80,7 +81,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         FileCacheManager fileCacheManager,
         FileCompactor fileCompactor, ApiController apiController,
         IpcManager ipcManager, IpcProvider ipcProvider, CacheMonitor cacheMonitor,
-        DalamudUtilService dalamudUtilService) : base(logger, mediator, "Loporrit Settings", performanceCollector)
+        DalamudUtilService dalamudUtilService, AccountRegistrationService registerService) : base(logger, mediator, "Loporrit Settings", performanceCollector)
     {
         _configService = configService;
         _pairManager = pairManager;
@@ -98,6 +99,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _ipcProvider = ipcProvider;
         _cacheMonitor = cacheMonitor;
         _dalamudUtilService = dalamudUtilService;
+        _registerService = registerService;
         _fileCompactor = fileCompactor;
         _uiShared = uiShared;
         AllowClickthrough = false;
@@ -1753,16 +1755,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                         _ = Task.Run(async () => {
                             try
                             {
-                                using HttpClient httpClient = new();
-                                var ver = Assembly.GetExecutingAssembly().GetName().Version;
-                                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
-                                var postUri = MareAuth.AuthRegisterFullPath(new Uri(selectedServer.ServerUri
-                                    .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
-                                    .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                                _logger.LogInformation("Registering new account: {uri}", postUri.ToString());
-                                var result = await httpClient.PostAsync(postUri, null).ConfigureAwait(false);
-                                result.EnsureSuccessStatusCode();
-                                var reply = await result.Content.ReadFromJsonAsync<RegisterReplyDto>().ConfigureAwait(false) ?? new();
+                                var reply = await _registerService.RegisterAccount(CancellationToken.None).ConfigureAwait(false);
                                 if (!reply.Success)
                                 {
                                     _logger.LogWarning("Registration failed: {err}", reply.ErrorMessage);

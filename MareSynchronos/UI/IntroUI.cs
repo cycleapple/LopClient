@@ -29,6 +29,7 @@ public partial class IntroUi : WindowMediatorSubscriberBase
     private readonly CacheMonitor _cacheMonitor;
     private readonly ServerConfigurationManager _serverConfigurationManager;
     private readonly DalamudUtilService _dalamudUtilService;
+    private readonly AccountRegistrationService _registerService;
     private readonly UiSharedService _uiShared;
     private bool _readFirstPage;
 
@@ -42,13 +43,14 @@ public partial class IntroUi : WindowMediatorSubscriberBase
 
     public IntroUi(ILogger<IntroUi> logger, UiSharedService uiShared, MareConfigService configService,
         CacheMonitor fileCacheManager, ServerConfigurationManager serverConfigurationManager, MareMediator mareMediator,
-        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService) : base(logger, mareMediator, "Loporrit Setup", performanceCollectorService)
+        PerformanceCollectorService performanceCollectorService, DalamudUtilService dalamudUtilService, AccountRegistrationService registerService) : base(logger, mareMediator, "Loporrit Setup", performanceCollectorService)
     {
         _uiShared = uiShared;
         _configService = configService;
         _cacheMonitor = fileCacheManager;
         _serverConfigurationManager = serverConfigurationManager;
         _dalamudUtilService = dalamudUtilService;
+        _registerService = registerService;
         IsOpen = false;
         ShowCloseButton = false;
         RespectCloseHotkey = false;
@@ -261,16 +263,7 @@ This service is provided as-is.
                     _ = Task.Run(async () => {
                         try
                         {
-                            using HttpClient httpClient = new();
-                            var ver = Assembly.GetExecutingAssembly().GetName().Version;
-                            httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MareSynchronos", ver!.Major + "." + ver!.Minor + "." + ver!.Build));
-                            var postUri = MareAuth.AuthRegisterFullPath(new Uri(_serverConfigurationManager.CurrentRealApiUrl
-                                .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
-                                .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)));
-                            _logger.LogInformation("Registering new account: {uri}", postUri.ToString());
-                            var result = await httpClient.PostAsync(postUri, null).ConfigureAwait(false);
-                            result.EnsureSuccessStatusCode();
-                            var reply = await result.Content.ReadFromJsonAsync<RegisterReplyDto>().ConfigureAwait(false) ?? new();
+                            var reply = await _registerService.RegisterAccount(CancellationToken.None).ConfigureAwait(false);
                             if (!reply.Success)
                             {
                                 _logger.LogWarning("Registration failed: {err}", reply.ErrorMessage);
