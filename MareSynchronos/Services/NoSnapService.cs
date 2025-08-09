@@ -33,6 +33,7 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
     private readonly RemoteConfigurationService _remoteConfig;
 
     public static bool AnyLoaded { get; private set; } = false;
+    public static string ActivePlugins { get; private set; } = string.Empty;
 
     public MareMediator Mediator { get; init; }
 
@@ -215,6 +216,11 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
                 var pluginList = string.Join(", ", _listOfPlugins.Where(p => p.Value).Select(p => p.Key));
                 Mediator.Publish(new NotificationMessage("Incompatible plugin loaded", $"Synced player appearances will not apply until incompatible plugins are disabled: {pluginList}.",
                     NotificationType.Error));
+                ActivePlugins = pluginList;
+            }
+            else
+            {
+                ActivePlugins = string.Empty;
             }
         }
     }
