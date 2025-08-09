@@ -27,6 +27,7 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
 
     private bool _marePluginEnabled = false;
     private bool _impersonating = false;
+    private readonly CancellationTokenSource _registerDelayCts = new();
 
     public bool MarePluginEnabled => _marePluginEnabled;
     public bool ImpersonationActive => _impersonating;
@@ -95,19 +96,39 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
         {
             if (_mareConfig.Current.MareAPI)
             {
-                _loadFileProviderMare?.RegisterFunc(LoadMcdf);
-                _loadFileAsyncProviderMare?.RegisterFunc(LoadMcdfAsync);
-                _handledGameAddressesMare?.RegisterFunc(GetHandledAddresses);
-                _impersonating = true;
-                _logger.LogDebug("Registered MareSynchronos API");
+                var cancelToken = _registerDelayCts.Token;
+                Task.Run(async () =>
+                {
+                    // Wait before registering to reduce the chance of a race condition
+                    await Task.Delay(500);
+
+                    if (cancelToken.IsCancellationRequested)
+                        return;
+
+                    if (_marePluginEnabled)
+                    {
+                        _logger.LogDebug("Not registering MareSynchronos API: Mare plugin is loaded");
+                        return;
+                    }
+
+                    _loadFileProviderMare?.RegisterFunc(LoadMcdf);
+                    _loadFileAsyncProviderMare?.RegisterFunc(LoadMcdfAsync);
+                    _handledGameAddressesMare?.RegisterFunc(GetHandledAddresses);
+                    _impersonating = true;
+                    _logger.LogDebug("Registered MareSynchronos API");
+                }, cancelToken);
             }
             else
             {
-                _loadFileProviderMare?.UnregisterFunc();
-                _loadFileAsyncProviderMare?.UnregisterFunc();
-                _handledGameAddressesMare?.UnregisterFunc();
-                _impersonating = false;
-                _logger.LogDebug("Unregistered MareSynchronos API");
+                _registerDelayCts.Cancel();
+                if (_impersonating)
+                {
+                    _loadFileProviderMare?.UnregisterFunc();
+                    _loadFileAsyncProviderMare?.UnregisterFunc();
+                    _handledGameAddressesMare?.UnregisterFunc();
+                    _impersonating = false;
+                    _logger.LogDebug("Unregistered MareSynchronos API");
+                }
             }
         }
     }
@@ -119,6 +140,7 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
         _loadFileAsyncProvider?.UnregisterFunc();
         _handledGameAddresses?.UnregisterFunc();
 
+        _registerDelayCts.Cancel();
         if (_impersonating)
         {
             _loadFileProviderMare?.UnregisterFunc();

@@ -1,5 +1,6 @@
 using Dalamud.Plugin;
 using MareSynchronos.Services.Mediator;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using CapturedPluginState = (string InternalName, System.Version Version, bool IsLoaded);
 
@@ -31,7 +32,7 @@ SOFTWARE.
 
 */
 
-public class PluginWatcherService : MediatorSubscriberBase
+public class PluginWatcherService : MediatorSubscriberBase, IHostedService
 {
     private readonly IDalamudPluginInterface _pluginInterface;
 
@@ -86,6 +87,17 @@ public class PluginWatcherService : MediatorSubscriberBase
         });
 
         Update(publish: false);
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        Mediator.UnsubscribeAll(this);
+        return Task.CompletedTask;
     }
 
     public static PluginChangeMessage? GetInitialPluginState(IDalamudPluginInterface pi, string internalName)
