@@ -88,6 +88,25 @@ public class PluginWatcherService : MediatorSubscriberBase
         Update(publish: false);
     }
 
+    public static PluginChangeMessage? GetInitialPluginState(IDalamudPluginInterface pi, string internalName)
+    {
+        try
+        {
+            var plugin = pi.InstalledPlugins.Where(p => p.InternalName.Equals(internalName, StringComparison.Ordinal))
+                .OrderBy(p => (!p.IsLoaded, p.Version))
+                .FirstOrDefault();
+
+            if (plugin == null)
+                return null;
+
+            return new PluginChangeMessage(plugin.InternalName, plugin.Version, plugin.IsLoaded);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private void Update(bool publish = true)
     {
         if (!ExposedPluginsEqual(_pluginInterface.InstalledPlugins, _prevInstalledPluginState))

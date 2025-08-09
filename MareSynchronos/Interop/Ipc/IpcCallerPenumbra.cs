@@ -84,7 +84,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
 
         _penumbraGameObjectResourcePathResolved = GameObjectResourcePathResolved.Subscriber(pi, ResourceLoaded);
 
-        var plugin = pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Penumbra", StringComparison.Ordinal));
+        var plugin = PluginWatcherService.GetInitialPluginState(pi, "Penumbra");
 
         _pluginLoaded = plugin?.IsLoaded ?? false;
         _pluginVersion = plugin?.Version ?? new(0, 0, 0, 0);

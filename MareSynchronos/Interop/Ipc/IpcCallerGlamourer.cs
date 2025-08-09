@@ -48,7 +48,7 @@ public sealed class IpcCallerGlamourer : DisposableMediatorSubscriberBase, IIpcC
         _mareMediator = mareMediator;
         _redrawManager = redrawManager;
 
-        var plugin = pi.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals("Glamourer", StringComparison.Ordinal));
+        var plugin = PluginWatcherService.GetInitialPluginState(pi, "Glamourer");
 
         _pluginLoaded = plugin?.IsLoaded ?? false;
         _pluginVersion = plugin?.Version ?? new(0, 0, 0, 0);

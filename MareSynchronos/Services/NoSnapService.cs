@@ -182,9 +182,7 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
 
         foreach (var pluginName in _listOfPlugins.Keys)
         {
-            var plugin = _pluginInterface.InstalledPlugins.FirstOrDefault(p => p.InternalName.Equals(pluginName, StringComparison.Ordinal));
-            if (plugin?.IsLoaded ?? false)
-                _listOfPlugins[pluginName] = true;
+            _listOfPlugins[pluginName] = PluginWatcherService.GetInitialPluginState(_pluginInterface, pluginName)?.IsLoaded ?? false;
             Mediator.SubscribeKeyed<PluginChangeMessage>(this, pluginName, (msg) =>
             {
                 _listOfPlugins[pluginName] = msg.IsLoaded;
