@@ -140,6 +140,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddSingleton<IpcCallerMoodles>();
             collection.AddSingleton<IpcCallerPetNames>();
             collection.AddSingleton<IpcCallerBrio>();
+            collection.AddSingleton<IpcCallerMare>();
             collection.AddSingleton<IpcManager>();
             collection.AddSingleton<NotificationService>();
             collection.AddSingleton<NoSnapService>();

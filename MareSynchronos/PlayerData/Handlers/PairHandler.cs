@@ -74,7 +74,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
         _visibilityService.StartTracking(Pair.Ident);
 
-        Mediator.SubscribeKeyed<PlayerVisibilityMessage>(this, Pair.Ident, (msg) => UpdateVisibility(msg.IsVisible));
+        Mediator.SubscribeKeyed<PlayerVisibilityMessage>(this, Pair.Ident, (msg) => UpdateVisibility(msg.IsVisible, msg.Invalidate));
 
         Mediator.Subscribe<ZoneSwitchStartMessage>(this, (_) =>
         {
@@ -694,7 +694,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
         }
     }
 
-    private void UpdateVisibility(bool nowVisible)
+    private void UpdateVisibility(bool nowVisible, bool invalidate = false)
     {
         if (string.IsNullOrEmpty(PlayerName))
         {
@@ -705,6 +705,22 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             Logger.LogDebug("One-Time Initialized {this}", this);
             Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Informational,
                 $"Initializing User For Character {pc.Name}")));
+        }
+
+        // This was triggered by the character becoming handled by Mare, so unapply everything
+        // There seems to be a good chance that this races Mare and then crashes
+        if (!nowVisible && invalidate)
+        {
+            bool wasVisible = IsVisible;
+            IsVisible = false;
+            _charaHandler?.Invalidate();
+            _downloadCancellationTokenSource?.CancelDispose();
+            _downloadCancellationTokenSource = null;
+            if (wasVisible)
+                Logger.LogTrace("{this} visibility changed, now: {visi}", this, IsVisible);
+            Logger.LogDebug("Invalidating {this}", this);
+            UndoApplication();
+            return;
         }
 
         if (!IsVisible && nowVisible)
