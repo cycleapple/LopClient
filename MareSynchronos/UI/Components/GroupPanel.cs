@@ -1,25 +1,24 @@
-﻿using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility.Raii;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Colors;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using Dalamud.Bindings.ImGui;
-using MareSynchronos.WebAPI;
-using System.Numerics;
-using System.Globalization;
 using MareSynchronos.API.Data;
-using MareSynchronos.API.Dto.Group;
+using MareSynchronos.API.Data.Comparer;
 using MareSynchronos.API.Data.Enum;
 using MareSynchronos.API.Data.Extensions;
-using MareSynchronos.API.Data.Comparer;
+using MareSynchronos.API.Dto.Group;
+using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Pairs;
+using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.UI.Components;
 using MareSynchronos.UI.Handlers;
-using Dalamud.Interface.Utility;
-using MareSynchronos.Services;
-using MareSynchronos.MareConfiguration;
-using Dalamud.Interface.Colors;
+using MareSynchronos.WebAPI;
+using System.Globalization;
+using System.Numerics;
 
 namespace MareSynchronos.UI;
 

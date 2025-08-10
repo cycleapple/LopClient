@@ -2,7 +2,6 @@
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.API.Dto;
-using MareSynchronos.API.Dto.CharaData;
 using MareSynchronos.API.Dto.User;
 using MareSynchronos.API.SignalR;
 using MareSynchronos.MareConfiguration;

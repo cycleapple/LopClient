@@ -3,9 +3,7 @@ using Dalamud.Plugin.Services;
 using Dalamud.Utility;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Net.Http.Headers;
 using System.Reflection;
-using System.Text.Json;
 
 namespace MareSynchronos.Services;
 

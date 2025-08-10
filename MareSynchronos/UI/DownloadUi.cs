@@ -1,5 +1,5 @@
-﻿using Dalamud.Interface.Colors;
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Colors;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.Services;

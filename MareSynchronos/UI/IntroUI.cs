@@ -1,8 +1,9 @@
-﻿using Dalamud.Interface;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using Dalamud.Bindings.ImGui;
+using MareSynchronos.API.Dto.Account;
 using MareSynchronos.FileCache;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.MareConfiguration.Models;
@@ -10,16 +11,10 @@ using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.WebAPI;
-using MareSynchronos.API.Dto.Account;
-using MareSynchronos.API.Routes;
-using Microsoft.Extensions.Logging;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Numerics;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using MareSynchronos.WebAPI.SignalR.Utils;
-using Dalamud.Interface.Utility.Raii;
+using Microsoft.Extensions.Logging;
+using System.Numerics;
+using System.Text.RegularExpressions;
 
 namespace MareSynchronos.UI;
 

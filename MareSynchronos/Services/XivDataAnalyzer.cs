@@ -10,7 +10,6 @@ using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Handlers;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace MareSynchronos.Services;
 

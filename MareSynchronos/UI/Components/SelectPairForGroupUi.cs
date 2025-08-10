@@ -1,5 +1,5 @@
-﻿using Dalamud.Interface.Utility;
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.UI.Handlers;
 using System.Numerics;

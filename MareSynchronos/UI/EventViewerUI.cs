@@ -1,10 +1,8 @@
-﻿using Dalamud.Interface;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using Dalamud.Bindings.ImGui;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Events;

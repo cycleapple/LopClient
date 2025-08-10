@@ -1,12 +1,11 @@
-﻿using Dalamud.Interface.Colors;
-using Dalamud.Interface.Utility.Raii;
-using Dalamud.Interface.Utility;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Colors;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using MareSynchronos.API.Dto.CharaData;
 using MareSynchronos.Services.CharaData.Models;
 using System.Numerics;
-using MareSynchronos.Services;
 
 namespace MareSynchronos.UI;
 

@@ -1,17 +1,16 @@
-﻿using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility.Raii;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Bindings.ImGui;
-using MareSynchronos.PlayerData.Pairs;
-using System.Numerics;
+using Dalamud.Interface.Colors;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using MareSynchronos.API.Data.Extensions;
-using MareSynchronos.WebAPI;
 using MareSynchronos.API.Dto.User;
+using MareSynchronos.PlayerData.Pairs;
+using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.UI.Handlers;
-using Dalamud.Interface.Utility;
-using MareSynchronos.Services;
+using MareSynchronos.WebAPI;
+using System.Numerics;
 
 namespace MareSynchronos.UI.Components;
 

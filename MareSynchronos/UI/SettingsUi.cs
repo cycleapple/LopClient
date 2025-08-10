@@ -1,14 +1,12 @@
-﻿using Dalamud.Game.Text;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Game.Text;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
-using Dalamud.Bindings.ImGui;
 using MareSynchronos.API.Data;
 using MareSynchronos.API.Data.Comparer;
-using MareSynchronos.API.Dto.Account;
-using MareSynchronos.API.Routes;
 using MareSynchronos.FileCache;
 using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;
@@ -27,9 +25,6 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Reflection;
 
 namespace MareSynchronos.UI;
 

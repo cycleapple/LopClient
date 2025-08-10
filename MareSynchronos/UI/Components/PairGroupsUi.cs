@@ -1,8 +1,6 @@
-﻿using Dalamud.Interface;
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Bindings.ImGui;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.MareConfiguration;
 using MareSynchronos.UI.Handlers;

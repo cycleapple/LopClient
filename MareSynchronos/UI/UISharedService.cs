@@ -1,6 +1,6 @@
-﻿using Dalamud.Interface;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.GameFonts;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.ManagedFontAtlas;
@@ -10,7 +10,6 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
-using Dalamud.Bindings.ImGui;
 using MareSynchronos.FileCache;
 using MareSynchronos.Interop.Ipc;
 using MareSynchronos.MareConfiguration;

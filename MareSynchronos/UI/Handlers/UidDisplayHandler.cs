@@ -1,10 +1,10 @@
-﻿using Dalamud.Interface;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Bindings.ImGui;
-using MareSynchronos.PlayerData.Pairs;
-using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.MareConfiguration;
+using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services.Mediator;
+using MareSynchronos.Services.ServerConfiguration;
 using MareSynchronos.UI.Components;
 
 namespace MareSynchronos.UI.Handlers;
