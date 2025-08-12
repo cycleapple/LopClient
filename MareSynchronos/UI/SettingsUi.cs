@@ -594,7 +594,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
 
         using (_ = ImRaii.PushIndent())
         {
-            ImGui.SameLine(300.0f);
+            ImGui.SameLine(300.0f * ImGuiHelpers.GlobalScale);
             if (_ipcProvider.ImpersonationActive)
             {
                 UiSharedService.ColorTextWrapped("Mare API active!", ImGuiColors.HealerGreen);
@@ -617,7 +617,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Save();
         }
 
-        ImGui.SameLine(300.0f);
+        ImGui.SameLine(300.0f * ImGuiHelpers.GlobalScale);
         if (_uiShared.IconTextButton(FontAwesomeIcon.NotesMedical, "Open Event Viewer"))
         {
             Mediator.Publish(new UiToggleMessage(typeof(EventViewerUI)));

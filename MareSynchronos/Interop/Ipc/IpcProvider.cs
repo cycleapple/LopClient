@@ -5,6 +5,7 @@ using MareSynchronos.MareConfiguration;
 using MareSynchronos.PlayerData.Handlers;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
+using MareSynchronos.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +28,8 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
 
     private bool _marePluginEnabled = false;
     private bool _impersonating = false;
-    private readonly CancellationTokenSource _registerDelayCts = new();
+    private DateTime _unregisterTime = DateTime.UtcNow;
+    private CancellationTokenSource _registerDelayCts = new();
 
     public bool MarePluginEnabled => _marePluginEnabled;
     public bool ImpersonationActive => _impersonating;
@@ -57,7 +59,7 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
         _marePluginEnabled = PluginWatcherService.GetInitialPluginState(pi, "MareSynchronos")?.IsLoaded ?? false;
         Mediator.SubscribeKeyed<PluginChangeMessage>(this, "MareSynchronos", p => {
             _marePluginEnabled = p.IsLoaded;
-            HandleMareImpersonation();
+            HandleMareImpersonation(automatic: true);
         });
     }
 
@@ -74,22 +76,24 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
         _loadFileProviderMare = _pi.GetIpcProvider<string, IGameObject, bool>("MareSynchronos.LoadMcdf");
         _loadFileAsyncProviderMare = _pi.GetIpcProvider<string, IGameObject, Task<bool>>("MareSynchronos.LoadMcdfAsync");
         _handledGameAddressesMare = _pi.GetIpcProvider<List<nint>>("MareSynchronos.GetHandledAddresses");
-        HandleMareImpersonation();
+        HandleMareImpersonation(automatic: true);
 
         _logger.LogInformation("Started IpcProviderService");
         return Task.CompletedTask;
     }
 
-    public void HandleMareImpersonation()
+    public void HandleMareImpersonation(bool automatic = false)
     {
         if (_marePluginEnabled)
         {
             if (_impersonating)
             {
-                // Do not attempt to unregister the functions at this point, otherwise we risk unregistering Mare's
-                // This may leave the APIs hanging if Mare did not initialize to the point of registering its API though
+                _loadFileProviderMare?.UnregisterFunc();
+                _loadFileAsyncProviderMare?.UnregisterFunc();
+                _handledGameAddressesMare?.UnregisterFunc();
                 _impersonating = false;
-                _logger.LogDebug("Releasing MareSynchronos API");
+                _unregisterTime = DateTime.UtcNow;
+                _logger.LogDebug("Unregistered MareSynchronos API");
             }
         }
         else
@@ -100,7 +104,8 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
                 Task.Run(async () =>
                 {
                     // Wait before registering to reduce the chance of a race condition
-                    await Task.Delay(500);
+                    if (automatic)
+                        await Task.Delay(5000);
 
                     if (cancelToken.IsCancellationRequested)
                         return;
@@ -120,13 +125,14 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
             }
             else
             {
-                _registerDelayCts.Cancel();
+                _registerDelayCts = _registerDelayCts.CancelRecreate();
                 if (_impersonating)
                 {
                     _loadFileProviderMare?.UnregisterFunc();
                     _loadFileAsyncProviderMare?.UnregisterFunc();
                     _handledGameAddressesMare?.UnregisterFunc();
                     _impersonating = false;
+                    _unregisterTime = DateTime.UtcNow;
                     _logger.LogDebug("Unregistered MareSynchronos API");
                 }
             }
@@ -175,6 +181,16 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
 
     private List<nint> GetHandledAddresses()
     {
+        if (!_impersonating)
+        {
+            if ((DateTime.UtcNow - _unregisterTime).TotalSeconds >= 1.0)
+            {
+                _logger.LogWarning("GetHandledAddresses called when it should not be registered");
+                _handledGameAddressesMare?.UnregisterFunc();
+            }
+            return [];
+        }
+
         return _activeGameObjectHandlers.Where(g => g.Address != nint.Zero).Select(g => g.Address).Distinct().ToList();
     }
 }

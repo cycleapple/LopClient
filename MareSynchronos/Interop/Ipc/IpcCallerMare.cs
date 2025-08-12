@@ -21,7 +21,7 @@ public sealed class IpcCallerMare : DisposableMediatorSubscriberBase
 
         Mediator.SubscribeKeyed<PluginChangeMessage>(this, "MareSynchronos", (msg) =>
         {
-             _pluginLoaded = msg.IsLoaded;
+            _pluginLoaded = msg.IsLoaded;
         });
     }
 
