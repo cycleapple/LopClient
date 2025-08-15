@@ -98,7 +98,7 @@ public sealed class Plugin : IDalamudPlugin
         })
         .ConfigureServices(collection =>
         {
-            collection.AddSingleton(new WindowSystem("MareSynchronos"));
+            collection.AddSingleton(new WindowSystem("LoporritSync"));
             collection.AddSingleton<FileDialogManager>();
 
             // add dalamud services
