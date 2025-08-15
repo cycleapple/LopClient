@@ -581,20 +581,26 @@ public class SettingsUi : WindowMediatorSubscriberBase
         _uiShared.BigText("Advanced");
 
         bool mareApi = _configService.Current.MareAPI;
-        if (ImGui.Checkbox("Enable Mare Synchronos API", ref mareApi))
+        using (var disabled = ImRaii.Disabled(true))
         {
-            _configService.Current.MareAPI = mareApi;
-            _configService.Save();
-            _ipcProvider.HandleMareImpersonation();
+            bool dummyFalse = false;
+            if (ImGui.Checkbox("Enable Mare Synchronos API", ref dummyFalse))
+            {
+                _configService.Current.MareAPI = mareApi;
+                _configService.Save();
+                _ipcProvider.HandleMareImpersonation();
+            }
+            _uiShared.DrawHelpText("Enables handling of the Mare Synchronos API. This currently includes:\n\n" +
+                " - MCDF loading support for other plugins\n" +
+                " - Blocking Moodles applications to paired users\n\n" +
+                "If the Mare Synchronos plugin is loaded while this option is enabled, control of its API will be relinquished.");
         }
-        _uiShared.DrawHelpText("Enables handling of the Mare Synchronos API. This currently includes:\n\n" +
-            " - MCDF loading support for other plugins\n" +
-            " - Blocking Moodles applications to paired users\n\n" +
-            "If the Mare Synchronos plugin is loaded while this option is enabled, control of its API will be relinquished.");
 
         using (_ = ImRaii.PushIndent())
         {
             ImGui.SameLine(300.0f * ImGuiHelpers.GlobalScale);
+            UiSharedService.ColorTextWrapped("Mare API impersonation is currently unavailable", ImGuiColors.DalamudGrey2);
+            /*
             if (_ipcProvider.ImpersonationActive)
             {
                 UiSharedService.ColorTextWrapped("Mare API active!", ImGuiColors.HealerGreen);
@@ -608,6 +614,7 @@ public class SettingsUi : WindowMediatorSubscriberBase
                 else
                     UiSharedService.ColorTextWrapped("Mare API inactive: Unknown reason", ImGuiColors.DalamudRed);
             }
+            */
         }
 
         bool logEvents = _configService.Current.LogEvents;

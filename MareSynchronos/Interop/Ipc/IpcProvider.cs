@@ -56,11 +56,14 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
             _activeGameObjectHandlers.Remove(msg.GameObjectHandler);
         });
 
+        /*
         _marePluginEnabled = PluginWatcherService.GetInitialPluginState(pi, "MareSynchronos")?.IsLoaded ?? false;
         Mediator.SubscribeKeyed<PluginChangeMessage>(this, "MareSynchronos", p => {
             _marePluginEnabled = p.IsLoaded;
             HandleMareImpersonation(automatic: true);
         });
+        */
+        _marePluginEnabled = true;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -101,11 +104,11 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
             if (_mareConfig.Current.MareAPI)
             {
                 var cancelToken = _registerDelayCts.Token;
-                Task.Run(async () =>
+                _ = Task.Run(async () =>
                 {
                     // Wait before registering to reduce the chance of a race condition
                     if (automatic)
-                        await Task.Delay(5000);
+                        await Task.Delay(5000).ConfigureAwait(false);
 
                     if (cancelToken.IsCancellationRequested)
                         return;
@@ -118,7 +121,7 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
 
                     _loadFileProviderMare?.RegisterFunc(LoadMcdf);
                     _loadFileAsyncProviderMare?.RegisterFunc(LoadMcdfAsync);
-                    _handledGameAddressesMare?.RegisterFunc(GetHandledAddresses);
+                    _handledGameAddressesMare?.RegisterFunc(MareGetHandledAddresses);
                     _impersonating = true;
                     _logger.LogDebug("Registered MareSynchronos API");
                 }, cancelToken);
@@ -181,6 +184,11 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
 
     private List<nint> GetHandledAddresses()
     {
+        return _activeGameObjectHandlers.Where(g => g.Address != nint.Zero).Select(g => g.Address).Distinct().ToList();
+    }
+
+    private List<nint> MareGetHandledAddresses()
+    {
         if (!_impersonating)
         {
             if ((DateTime.UtcNow - _unregisterTime).TotalSeconds >= 1.0)
@@ -191,6 +199,6 @@ public class IpcProvider : IHostedService, IMediatorSubscriber
             return [];
         }
 
-        return _activeGameObjectHandlers.Where(g => g.Address != nint.Zero).Select(g => g.Address).Distinct().ToList();
+        return GetHandledAddresses();
     }
 }
