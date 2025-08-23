@@ -76,60 +76,104 @@ public class Pair : DisposableMediatorSubscriberBase
 
     private PairHandler? CachedPlayer { get; set; }
 
-    public void AddContextMenu(IMenuOpenedArgs args)
+    public bool IsWhitelisted
     {
-        if (CachedPlayer == null || (args.Target is not MenuTargetDefault target) || target.TargetObjectId != CachedPlayer.PlayerCharacterId || IsPaused) return;
-
-        void Add(string name, Action<IMenuItemClickedArgs>? action)
+        get
         {
-            args.AddMenuItem(new MenuItem()
-            {
-                Name = name,
-                OnClicked = action,
-                PrefixColor = 559,
-                PrefixChar = 'L'
-            });
+            return _serverConfigurationManager.IsUidWhitelisted(UserData.UID);
         }
 
-        bool isBlocked = IsApplicationBlocked;
-        bool isBlacklisted = _serverConfigurationManager.IsUidBlacklisted(UserData.UID);
-        bool isWhitelisted = _serverConfigurationManager.IsUidWhitelisted(UserData.UID);
-
-        Add("Open Profile", _ => Mediator.Publish(new ProfileOpenStandaloneMessage(this)));
-
-        if (!isBlocked && !isBlacklisted)
-            Add("Always Block Modded Appearance", _ => {
-                    _serverConfigurationManager.AddBlacklistUid(UserData.UID);
-                    HoldApplication("Blacklist", maxValue: 1);
-                    ApplyLastReceivedData(forced: true);
-                });
-        else if (isBlocked && !isWhitelisted)
-            Add("Always Allow Modded Appearance", _ => {
-                    _serverConfigurationManager.AddWhitelistUid(UserData.UID);
-                    UnholdApplication("Blacklist", skipApplication: true);
-                    ApplyLastReceivedData(forced: true);
-                });
-
-        if (isWhitelisted)
-            Add("Remove from Whitelist", _ => {
+        set
+        {
+            if (value)
+            {
+                _serverConfigurationManager.AddWhitelistUid(UserData.UID);
+                UnholdApplication("Blacklist", skipApplication: true);
+                ApplyLastReceivedData(forced: true);
+            }
+            else
+            {
                 _serverConfigurationManager.RemoveWhitelistUid(UserData.UID);
                 ApplyLastReceivedData(forced: true);
-            });
-        else if (isBlacklisted)
-            Add("Remove from Blacklist", _ => {
+            }
+        }
+    }
+
+    public bool IsBlacklisted
+    {
+        get
+        {
+            return _serverConfigurationManager.IsUidBlacklisted(UserData.UID);
+        }
+
+        set
+        {
+            if (value)
+            {
+                _serverConfigurationManager.AddBlacklistUid(UserData.UID);
+                HoldApplication("Blacklist", maxValue: 1);
+                ApplyLastReceivedData(forced: true);
+            }
+            else
+            {
                 _serverConfigurationManager.RemoveBlacklistUid(UserData.UID);
                 UnholdApplication("Blacklist", skipApplication: true);
                 ApplyLastReceivedData(forced: true);
-            });
-
-        Add("Reapply last data", _ => ApplyLastReceivedData(forced: true));
-
-        if (UserPair != null)
-        {
-            Add("Change Permissions", _ => Mediator.Publish(new OpenPermissionWindow(this)));
-            Add("Cycle pause state", _ => Mediator.Publish(new CyclePauseMessage(UserData)));
+            }
         }
     }
+
+    public void AddContextMenu(IMenuOpenedArgs args)
+{
+    if (CachedPlayer == null || (args.Target is not MenuTargetDefault target) || target.TargetObjectId != CachedPlayer.PlayerCharacterId || IsPaused) return;
+
+    void Add(string name, Action<IMenuItemClickedArgs>? action)
+    {
+        args.AddMenuItem(new MenuItem()
+        {
+            Name = name,
+            OnClicked = action,
+            PrefixColor = 559,
+            PrefixChar = 'L'
+        });
+    }
+
+    bool isBlocked = IsApplicationBlocked;
+    bool isBlacklisted = IsBlacklisted;
+    bool isWhitelisted = IsWhitelisted;
+
+    Add("Open Profile", _ => Mediator.Publish(new ProfileOpenStandaloneMessage(this)));
+
+    if (!isBlocked && !isBlacklisted)
+        Add("Always Block Modded Appearance", _ =>
+        {
+            IsBlacklisted = true;
+        });
+    else if (isBlocked && !isWhitelisted)
+        Add("Always Allow Modded Appearance", _ =>
+        {
+            IsWhitelisted = true;
+        });
+
+    if (isWhitelisted)
+        Add("Remove from Whitelist", _ =>
+        {
+            IsWhitelisted = false;
+        });
+    else if (isBlacklisted)
+        Add("Remove from Blacklist", _ =>
+        {
+            IsBlacklisted = false;
+        });
+
+    Add("Reapply last data", _ => ApplyLastReceivedData(forced: true));
+
+    if (UserPair != null)
+    {
+        Add("Change Permissions", _ => Mediator.Publish(new OpenPermissionWindow(this)));
+        Add("Cycle pause state", _ => Mediator.Publish(new CyclePauseMessage(UserData)));
+    }
+}
 
     public void ApplyData(OnlineUserCharaDataDto data)
     {

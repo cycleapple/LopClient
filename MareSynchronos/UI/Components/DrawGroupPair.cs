@@ -344,6 +344,7 @@ public class DrawGroupPair : DrawPairBase
                     ImGui.CloseCurrentPopup();
                 }
             }
+
             if (!_pair.IsPaused)
             {
                 if (_uiSharedService.IconTextButton(FontAwesomeIcon.User, "Open Profile"))
@@ -352,6 +353,22 @@ public class DrawGroupPair : DrawPairBase
                     ImGui.CloseCurrentPopup();
                 }
             }
+
+            bool isBlocked = _pair.IsApplicationBlocked;
+            bool isBlacklisted = _pair.IsBlacklisted;
+            bool isWhitelisted = _pair.IsWhitelisted;
+
+            if (!isBlocked && !isBlacklisted)
+            {
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.EyeSlash, "Block Modded Appearance"))
+                    _pair.IsBlacklisted = true;
+            }
+            else if (isBlacklisted)
+            {
+                if (_uiSharedService.IconTextButton(FontAwesomeIcon.ThumbsUp, "Remove from Blacklist"))
+                    _pair.IsBlacklisted = false;
+            }
+
             if (_pair.IsVisible)
             {
 #if DEBUG
