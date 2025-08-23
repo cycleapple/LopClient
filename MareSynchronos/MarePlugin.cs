@@ -115,6 +115,7 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
 
     private void DalamudUtilOnLogIn()
     {
+        LoporritSync.Plugin.Self.ToggleFileLogging(_mareConfigService.Current.LogTraceLog, "Login");
         Logger?.LogDebug("Client login");
         if (_launchTask == null || _launchTask.IsCompleted) _launchTask = Task.Run(WaitForPlayerAndLaunchCharacterManager);
     }
@@ -124,6 +125,7 @@ public class MarePlugin : MediatorSubscriberBase, IHostedService
         Logger?.LogDebug("Client logout");
 
         _runtimeServiceScope?.Dispose();
+        LoporritSync.Plugin.Self.ToggleFileLogging(true, "Logout");
     }
 
     private async Task WaitForPlayerAndLaunchCharacterManager()

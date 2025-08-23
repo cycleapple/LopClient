@@ -22,6 +22,7 @@ using MareSynchronos.WebAPI.Files.Models;
 using MareSynchronos.WebAPI.SignalR.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
@@ -678,6 +679,26 @@ public class SettingsUi : WindowMediatorSubscriberBase
             _configService.Current.LogLevel = l;
             _configService.Save();
         }, _configService.Current.LogLevel);
+
+        bool logTraceToFile = _configService.Current.LogTraceLog;
+        if (ImGui.Checkbox("Enable Trace Logging to File", ref logTraceToFile))
+        {
+            _configService.Current.LogTraceLog = logTraceToFile;
+            _configService.Save();
+            LoporritSync.Plugin.Self.ToggleFileLogging(_configService.Current.LogTraceLog, "Setting Change");
+        }
+
+        ImGui.SameLine(300.0f * ImGuiHelpers.GlobalScale);
+        if (_uiShared.IconTextButton(FontAwesomeIcon.FolderOpen, "Open TraceLog folder"))
+        {
+            ProcessStartInfo ps = new()
+            {
+                FileName = Path.Combine(_configService.ConfigurationDirectory, "tracelog"),
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Normal
+            };
+            Process.Start(ps);
+        }
 
         bool logPerformance = _configService.Current.LogPerformance;
         if (ImGui.Checkbox("Log Performance Counters", ref logPerformance))

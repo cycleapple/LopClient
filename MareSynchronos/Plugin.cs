@@ -34,6 +34,7 @@ namespace LoporritSync;
 public sealed class Plugin : IDalamudPlugin
 {
     private readonly IHost _host;
+    private bool _traceLogEnabled = true;
 
 #pragma warning disable CA2211, CS8618, MA0069, S1104, S2223
     public static Plugin Self;
@@ -87,7 +88,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             lb.ClearProviders();
             lb.AddDalamudLogging(pluginLog);
-            lb.AddFile(Path.Combine(traceDir, $"mare-trace-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), (opt) =>
+            lb.AddFile(Path.Combine(traceDir, $"trace-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), (opt) =>
             {
                 opt.Append = true;
                 opt.RollingFilesConvention = FileLoggerOptions.FileRollingConvention.Ascending;
@@ -95,6 +96,7 @@ public sealed class Plugin : IDalamudPlugin
                 opt.FileSizeLimitBytes = 50 * 1024 * 1024;
             });
             lb.SetMinimumLevel(LogLevel.Trace);
+            lb.AddFilter<FileLoggerProvider>(_ => _traceLogEnabled);
         })
         .ConfigureServices(collection =>
         {
@@ -250,7 +252,8 @@ public sealed class Plugin : IDalamudPlugin
         })
         .Build();
 
-        _ = Task.Run(async () => {
+        _ = Task.Run(async () =>
+        {
             try
             {
                 await _host.StartAsync().ConfigureAwait(false);
@@ -266,5 +269,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         _host.StopAsync().GetAwaiter().GetResult();
         _host.Dispose();
+    }
+
+    public void ToggleFileLogging(bool enable, string reason)
+    {
+        _traceLogEnabled = true;
+        _host.Services.GetService<ILogger<Plugin>>()?.LogInformation("File tracelog {enabled}: {reason}", enable ? "enabled" : "disabled", reason);
+        _traceLogEnabled = enable;
     }
 }
