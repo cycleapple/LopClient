@@ -77,7 +77,7 @@ public class VisibilityService : DisposableMediatorSubscriberBase
 
             if (player.Value == TrackedPlayerStatus.NotVisible && isVisible)
             {
-                if (_makeVisibleNextFrame.Contains(ident))
+                if (_makeVisibleNextFrame.Contains(ident, StringComparer.Ordinal))
                 {
                     if (_trackedPlayerVisibility.TryUpdate(ident, newValue: TrackedPlayerStatus.Visible, comparisonValue: TrackedPlayerStatus.NotVisible))
                         Mediator.Publish<PlayerVisibilityMessage>(new(ident, IsVisible: true));

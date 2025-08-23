@@ -725,7 +725,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
 
         if (!IsVisible && nowVisible)
         {
-            // This is deferred application attempt, avoid any log output
+            // This is a deferred application attempt, avoid any repeat log output
             if (_deferred != Guid.Empty)
             {
                 _isVisible = true;
@@ -733,6 +733,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 {
                     ApplyCharacterData(_deferred, _cachedData!, forceApplyCustomization: true);
                 });
+                return;
             }
 
             IsVisible = true;
