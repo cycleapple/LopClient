@@ -8,7 +8,7 @@
   "Tags": [
     "customization"
   ],
-  "IconUrl": "https://raw.githubusercontent.com/loporrit/MareClient/way4/MareSynchronos/images/icon.png",
-  "RepoUrl": "https://github.com/loporrit/MareClient/",
+  "IconUrl": "https://plugin.lop-sync.com/images/icon.png",
+  "RepoUrl": "https://git.lop-sync.com/huggingway/LopClient",
   "CanUnloadAsync": true
 }

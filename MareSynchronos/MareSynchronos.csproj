@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>LoporritSync</AssemblyName>
     <Version>9.9.0</Version>
-    <PackageProjectUrl>https://github.com/loporrit/MareClient/</PackageProjectUrl>
+    <PackageProjectUrl>https://git.lop-sync.com/huggingway/LopClient</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
