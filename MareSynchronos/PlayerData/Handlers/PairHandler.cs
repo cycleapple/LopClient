@@ -729,6 +729,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             if (_deferred != Guid.Empty)
             {
                 _isVisible = true;
+                Mediator.Publish(new PairHandlerVisibleMessage(this));
                 _ = Task.Run(() =>
                 {
                     ApplyCharacterData(_deferred, _cachedData!, forceApplyCustomization: true);
