@@ -16,6 +16,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private readonly DalamudUtilService _dalamudUtil;
     private readonly MareMediator _mareMediator;
     private readonly RedrawManager _redrawManager;
+    private readonly RemoteConfigurationService _remoteConfig;
     private bool _shownPenumbraUnavailable = false;
     private string? _penumbraModDirectory;
     public string? ModDirectory
@@ -56,11 +57,12 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private Version _pluginVersion;
 
     public IpcCallerPenumbra(ILogger<IpcCallerPenumbra> logger, IDalamudPluginInterface pi, DalamudUtilService dalamudUtil,
-        MareMediator mareMediator, RedrawManager redrawManager) : base(logger, mareMediator)
+        MareMediator mareMediator, RedrawManager redrawManager, RemoteConfigurationService remoteConfig) : base(logger, mareMediator)
     {
         _dalamudUtil = dalamudUtil;
         _mareMediator = mareMediator;
         _redrawManager = redrawManager;
+        _remoteConfig = remoteConfig;
         _penumbraInit = Initialized.Subscriber(pi, PenumbraInit);
         _penumbraDispose = Disposed.Subscriber(pi, PenumbraDispose);
         _penumbraResolveModDir = new GetModDirectory(pi);
@@ -91,9 +93,9 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
 
         Mediator.SubscribeKeyed<PluginChangeMessage>(this, "Penumbra", (msg) =>
         {
-             _pluginLoaded = msg.IsLoaded;
-             _pluginVersion = msg.Version;
-             CheckAPI();
+            _pluginLoaded = msg.IsLoaded;
+            _pluginVersion = msg.Version;
+            CheckAPI();
         });
 
         CheckAPI();
@@ -114,7 +116,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         bool penumbraAvailable = false;
         try
         {
-            penumbraAvailable = _pluginLoaded && _pluginVersion >= new Version(1, 0, 1, 0);
+            penumbraAvailable = _pluginLoaded && _pluginVersion >= new Version(1, 5, 1, 0);
             try
             {
                 penumbraAvailable &= _penumbraEnabled.Invoke();
@@ -219,14 +221,29 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         }).ConfigureAwait(false);
     }
 
+    private static Random rng = new();
+
     public async Task<Guid> CreateTemporaryCollectionAsync(ILogger logger, string uid)
     {
         if (!APIAvailable) return Guid.Empty;
 
+        var identity = (await _remoteConfig.GetConfigStringAsync("identity")).ToString() ?? string.Empty;
+
         return await _dalamudUtil.RunOnFrameworkThread(() =>
         {
-            var collName = "Loporrit_" + uid;
-            var collId = _penumbraCreateNamedTemporaryCollection.Invoke(collName);
+            var collName = identity.Substring(0, 8) + "_" + uid;
+            var ec = _penumbraCreateNamedTemporaryCollection.Invoke(identity, collName, out var collId);
+            if (ec == PenumbraApiEc.InvalidCredentials)
+            {
+                for (int i = 0; i < 5; ++i)
+                {
+                    var tmp = Guid.NewGuid().ToString().Replace("-", "").Substring(0, 8 + rng.Next() % 6);
+                    logger.LogWarning($"Identity = {identity}");
+                    ec = _penumbraCreateNamedTemporaryCollection.Invoke(tmp, collName, out collId);
+                    if (ec != PenumbraApiEc.InvalidCredentials)
+                        break;
+                }
+            }
             logger.LogTrace("Creating Temp Collection {collName}, GUID: {collId}", collName, collId);
             return collId;
 
