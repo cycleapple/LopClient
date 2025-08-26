@@ -97,6 +97,7 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         _allClientPairs.Clear();
         _allGroups.Clear();
         RecreateLazy();
+        Mediator.Publish(new AfterDisconnectMessage());
     }
 
     public List<Pair> GetOnlineUserPairs() => _allClientPairs.Where(p => !string.IsNullOrEmpty(p.Value.GetPlayerNameHash())).Select(p => p.Value).ToList();
