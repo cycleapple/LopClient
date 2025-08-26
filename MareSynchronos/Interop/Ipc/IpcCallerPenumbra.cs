@@ -227,21 +227,31 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     {
         if (!APIAvailable) return Guid.Empty;
 
-        var identity = (await _remoteConfig.GetConfigStringAsync("identity")).ToString() ?? string.Empty;
+        var identity = (await _remoteConfig.GetConfigStringAsync("identity").ConfigureAwait(false))?.ToString() ?? "LoporritSync";
 
         return await _dalamudUtil.RunOnFrameworkThread(() =>
         {
-            var collName = identity.Substring(0, 8) + "_" + uid;
+            var collName = identity.Substring(0, Math.Min(identity.Length, 8)) + "_" + uid;
             var ec = _penumbraCreateNamedTemporaryCollection.Invoke(identity, collName, out var collId);
+
             if (ec == PenumbraApiEc.InvalidCredentials)
             {
-                for (int i = 0; i < 5; ++i)
+                for (int i = 0; i < 3; ++i)
                 {
                     var tmp = Guid.NewGuid().ToString().Replace("-", "").Substring(0, 8 + rng.Next() % 6);
-                    logger.LogWarning($"Identity = {identity}");
                     ec = _penumbraCreateNamedTemporaryCollection.Invoke(tmp, collName, out collId);
+
+                    ec = PenumbraApiEc.InvalidCredentials;
                     if (ec != PenumbraApiEc.InvalidCredentials)
                         break;
+                }
+
+                if (ec == PenumbraApiEc.InvalidCredentials)
+                {
+                    _mareMediator.Publish(new NotificationMessage("Penumbra is blocking this plugin",
+                        "Penumbra is blocking this plugin's ability to use features required for syncing.",
+                        NotificationType.Error));
+                    return Guid.Empty;
                 }
             }
             logger.LogTrace("Creating Temp Collection {collName}, GUID: {collId}", collName, collId);

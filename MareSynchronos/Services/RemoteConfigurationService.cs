@@ -33,12 +33,12 @@ public sealed class RemoteConfigurationService
         _initTask = Task.Run(DownloadConfig);
     }
 
-    public async Task<string> GetConfigStringAsync(string sectionName)
+    public async Task<string?> GetConfigStringAsync(string sectionName)
     {
         await _initTask.ConfigureAwait(false);
         if (!_configService.Current.Configuration.TryGetPropertyValue(sectionName, out var section))
             section = null;
-        return section?.AsValue()?.ToString() ?? string.Empty;
+        return section?.AsValue()?.ToString();
     }
 
     public async Task<JsonObject> GetConfigAsync(string sectionName)
