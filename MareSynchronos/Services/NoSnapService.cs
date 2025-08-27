@@ -6,12 +6,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace MareSynchronos.Services;
 
-public sealed class NoSnapService : IHostedService, IMediatorSubscriber
+public partial class NoSnapService : IHostedService, IMediatorSubscriber
 {
-    private record NoSnapConfig
+    private sealed record NoSnapConfig
     {
         [JsonPropertyName("pcp")]
         public bool? PCP { get; set; } = true;
@@ -40,11 +41,20 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
 
     public MareMediator Mediator { get; init; }
 
-    private FileSystemWatcher? _penumbraConfigWatcher { get; set; }
-    private FileSystemWatcher? _penumbraExportWatcher { get; set; }
+    private FileSystemWatcher? _penumbraConfigWatcher;
+    private FileSystemWatcher? _penumbraExportWatcher;
+    private Dictionary<string, FileSystemWatcher> _penumbraActiveExportWatchers = new(StringComparer.Ordinal);
     private string _penumbraExportDirectory = string.Empty;
     private bool _pcp = true;
+    private volatile bool _pcpActive = false;
+    private volatile bool _pcpActiveForShutdown = false;
     private bool _isConnected = false;
+    private SemaphoreSlim _isConnectedSemaphore = new(1);
+
+    [GeneratedRegex(@" - [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}_[0-9]{2}", RegexOptions.ECMAScript)]
+    private static partial Regex PCPDirRegex();
+    [GeneratedRegex(@"((meta|character|default_mod)\.json|[0-9A-F]{40})", RegexOptions.ECMAScript)]
+    private static partial Regex RippedFileRegex();
 
     public NoSnapService(ILogger<NoSnapService> logger, IDalamudPluginInterface pluginInterface, MareMediator mediator,
         IHostApplicationLifetime hostApplicationLifetime, DalamudUtilService dalamudUtilService, IpcManager ipcManager,
@@ -61,8 +71,39 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
         Mediator.Subscribe<GposeEndMessage>(this, msg => ClearGposeList());
         Mediator.Subscribe<CutsceneEndMessage>(this, msg => ClearGposeList());
 
-        Mediator.Subscribe<ConnectedMessage>(this, msg => _isConnected = true);
-        Mediator.Subscribe<AfterDisconnectMessage>(this, msg => _isConnected = false);
+        Mediator.Subscribe<ConnectedMessage>(this, msg =>
+        {
+            _isConnectedSemaphore.Wait();
+            _logger.LogInformation("Now Connected");
+            _isConnected = true;
+            _isConnectedSemaphore.Release();
+        });
+
+        Mediator.Subscribe<AfterDisconnectMessage>(this, msg =>
+        {
+            _ = Task.Run(async () =>
+            {
+                _isConnectedSemaphore.Wait();
+                try
+                {
+                    await Task.Delay(3000).ConfigureAwait(false);
+                    _logger.LogInformation("Now Disconnected");
+                    _isConnected = false;
+                }
+                finally
+                {
+                    _isConnectedSemaphore.Release();
+                }
+            });
+        });
+
+        Mediator.Subscribe<PenumbraPCPCreatingMessage>(this, msg =>
+        {
+            _logger.LogInformation("Detected export via ipc");
+            _pcpActive = true;
+            _pcpActiveForShutdown = true;
+            Thread.MemoryBarrier();
+        });
 
         Mediator.Subscribe<PenumbraInitializedMessage>(this, msg =>
         {
@@ -133,11 +174,37 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
                 | NotifyFilters.FileName
                 | NotifyFilters.DirectoryName
                 | NotifyFilters.Size,
-            Filter = "*.pcp",
+            Filter = "*",
             IncludeSubdirectories = false,
         };
         _penumbraExportWatcher.Created += PenumbraExport_Created;
         _penumbraExportWatcher.EnableRaisingEvents = true;
+    }
+
+    private void StartPenumbraActiveExportWatcher(string exportDir)
+    {
+        try
+        {
+            if (_penumbraActiveExportWatchers.ContainsKey(exportDir))
+                _penumbraActiveExportWatchers[exportDir]?.Dispose();
+        }
+        catch { }
+        _logger.LogDebug("Initializing Penumbra Active Export FSW on {path}", exportDir);
+        var watcher = new FileSystemWatcher()
+        {
+            Path = exportDir,
+            InternalBufferSize = 8388608,
+            NotifyFilter = NotifyFilters.CreationTime
+                | NotifyFilters.LastWrite
+                | NotifyFilters.FileName
+                | NotifyFilters.DirectoryName
+                | NotifyFilters.Size,
+            Filter = "*.*",
+            IncludeSubdirectories = true,
+        };
+        _penumbraActiveExportWatchers[exportDir] = watcher;
+        watcher.Created += PenumbraActiveExport_Created;
+        watcher.EnableRaisingEvents = true;
     }
 
     private async Task HandleUpdatedConfigFile(string configFile)
@@ -181,7 +248,29 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
         if (!_isConnected || !_pcp)
             return;
         if (!e.FullPath.EndsWith(".pcp", StringComparison.OrdinalIgnoreCase))
+        {
+            if (e.Name != null && PCPDirRegex().IsMatch(e.Name))
+            {
+                StartPenumbraActiveExportWatcher(e.FullPath);
+                FileAttributes? attr;
+                try
+                {
+                    attr = File.GetAttributes(e.FullPath);
+                }
+                catch
+                {
+                    attr = null;
+                }
+                if (attr.HasValue && attr.Value.HasFlag(FileAttributes.Directory))
+                {
+                    _logger.LogInformation("Detected export directory {pcp}", e.FullPath);
+                    _pcpActive = true;
+                    _pcpActiveForShutdown = true;
+                    Thread.MemoryBarrier();
+                }
+            }
             return;
+        }
         _ = Task.Run(async () =>
         {
             _logger.LogInformation("Deleting created file {pcp}", e.FullPath);
@@ -195,6 +284,7 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
                     Mediator.Publish(new NotificationMessage("PCP File Deleted",
                         "Please disconnect from the sync service before exporting PCP files.",
                         NotificationType.Error, TimeSpan.FromSeconds(10)));
+                    _pcpActive = false;
                 }
                 catch
                 {
@@ -202,6 +292,30 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
                 }
             }
         });
+    }
+
+    private void PenumbraActiveExport_Created(object sender, FileSystemEventArgs e)
+    {
+        if (e.Name != null && RippedFileRegex().IsMatch(e.Name))
+        {
+            _ = Task.Run(async () =>
+            {
+                int retry = 100;
+                while (retry-- > 0)
+                {
+                    try
+                    {
+                        File.Delete(e.FullPath);
+                        _logger.LogDebug("Deleted {path}", e.FullPath);
+                        retry = 0;
+                    }
+                    catch
+                    {
+                        await Task.Delay(100).ConfigureAwait(false);
+                    }
+                }
+            });
+        }
     }
 
     public void AddGposer(int objectIndex)
@@ -348,12 +462,38 @@ public sealed class NoSnapService : IHostedService, IMediatorSubscriber
         Update();
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         RevertGposers();
+        bool wasDelayed;
+        do
+        {
+            wasDelayed = false;
+            Thread.MemoryBarrier();
+            if (_pcpActiveForShutdown)
+            {
+                _pcpActiveForShutdown = false;
+                _logger.LogDebug("Fixed-length delay");
+                await Task.Delay(3000).ConfigureAwait(false);
+                Thread.MemoryBarrier();
+                if (_pcpActive)
+                {
+                    _logger.LogDebug("Entering delay loop");
+                    wasDelayed = true;
+                }
+            }
+            int retry = 300;
+            while (_pcpActive && retry-- > 0)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+                if (_pcpActive && retry % 10 == 0)
+                    _logger.LogDebug(" ...");
+            }
+        } while (wasDelayed);
         _penumbraConfigWatcher?.Dispose();
         _penumbraExportWatcher?.Dispose();
-        return Task.CompletedTask;
+        foreach (var watcher in _penumbraActiveExportWatchers)
+            watcher.Value.Dispose();
     }
 
     private void Update()

@@ -236,6 +236,7 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddScoped<GuiHookService>();
 
             collection.AddHostedService(p => p.GetRequiredService<PluginWatcherService>());
+            collection.AddHostedService(p => p.GetRequiredService<NoSnapService>());
             collection.AddHostedService(p => p.GetRequiredService<ConfigurationSaveService>());
             collection.AddHostedService(p => p.GetRequiredService<MareMediator>());
             collection.AddHostedService(p => p.GetRequiredService<NotificationService>());
@@ -248,7 +249,6 @@ public sealed class Plugin : IDalamudPlugin
             collection.AddHostedService(p => p.GetRequiredService<MarePlugin>());
             collection.AddHostedService(p => p.GetRequiredService<IpcProvider>());
             collection.AddHostedService(p => p.GetRequiredService<RepoChangeService>());
-            collection.AddHostedService(p => p.GetRequiredService<NoSnapService>());
         })
         .Build();
 

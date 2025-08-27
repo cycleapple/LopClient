@@ -39,6 +39,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
     private readonly EventSubscriber _penumbraInit;
     private readonly EventSubscriber<ModSettingChange, Guid, string, bool> _penumbraModSettingChanged;
     private readonly EventSubscriber<nint, int> _penumbraObjectIsRedrawn;
+    private readonly EventSubscriber<Newtonsoft.Json.Linq.JObject, ushort, string> _penumbraPcpCreating;
 
     private readonly AddTemporaryMod _penumbraAddTemporaryMod;
     private readonly AssignTemporaryCollection _penumbraAssignTemporaryCollection;
@@ -68,6 +69,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         _penumbraResolveModDir = new GetModDirectory(pi);
         _penumbraRedraw = new RedrawObject(pi);
         _penumbraObjectIsRedrawn = GameObjectRedrawn.Subscriber(pi, RedrawEvent);
+        _penumbraPcpCreating = CreatingPcp.Subscriber(pi, PcpCreating);
         _penumbraGetMetaManipulations = new GetPlayerMetaManipulations(pi);
         _penumbraRemoveTemporaryMod = new RemoveTemporaryMod(pi);
         _penumbraAddTemporaryMod = new AddTemporaryMod(pi);
@@ -167,6 +169,7 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         _penumbraDispose.Dispose();
         _penumbraInit.Dispose();
         _penumbraObjectIsRedrawn.Dispose();
+        _penumbraPcpCreating.Dispose();
     }
 
     public async Task AssignTemporaryCollectionAsync(ILogger logger, Guid collName, int idx)
@@ -369,6 +372,11 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
         {
             _mareMediator.Publish(new PenumbraResourceLoadMessage(ptr, arg1, arg2));
         }
+    }
+
+    private void PcpCreating(Newtonsoft.Json.Linq.JObject obj, ushort objIndex, string dirName)
+    {
+        _mareMediator.Publish(new PenumbraPCPCreatingMessage());
     }
 
     private void PenumbraDispose()
