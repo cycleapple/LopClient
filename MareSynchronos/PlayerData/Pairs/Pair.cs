@@ -76,6 +76,16 @@ public class Pair : DisposableMediatorSubscriberBase
 
     private PairHandler? CachedPlayer { get; set; }
 
+    // Expose some internal state for debugging
+    public bool HasInitializedCharacter => CachedPlayer?.HasInitializedCharacter ?? false;
+    public bool HasCachedData => CachedPlayer?.HasCachedData ?? false;
+    public bool HasPenumbraCollection => CachedPlayer?.HasPenumbraCollection ?? false;
+    public bool HasPendingDeferred => CachedPlayer?.HasPendingDeferred ?? false;
+    public bool HasPendingCombatData => CachedPlayer?.HasPendingCombatData ?? false;
+    public bool HasActiveApplicationTask => CachedPlayer?.HasPendingCombatData ?? false;
+    public bool HasHaltedProcessing => CachedPlayer?.HasHaltedProcessing ?? false;
+    public GameObjectHandler.DrawCondition CurrentDrawCondition => CachedPlayer?.CurrentDrawCondition ?? default;
+
     public bool IsWhitelisted
     {
         get

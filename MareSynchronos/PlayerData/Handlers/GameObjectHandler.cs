@@ -103,6 +103,8 @@ public sealed class GameObjectHandler : DisposableMediatorSubscriberBase, IHighP
     private ushort[] MainHandData { get; set; } = new ushort[3];
     private ushort[] OffHandData { get; set; } = new ushort[3];
 
+    public bool HasHaltedProcessing => _haltProcessing;
+
     public async Task ActOnFrameworkAfterEnsureNoDrawAsync(Action<Dalamud.Game.ClientState.Objects.Types.ICharacter> act, CancellationToken token)
     {
         while (await _dalamudUtil.RunOnFrameworkThread(() =>

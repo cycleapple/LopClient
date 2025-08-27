@@ -16,7 +16,6 @@ namespace MareSynchronos.UI.Components;
 
 public class DrawGroupPair : DrawPairBase
 {
-    protected readonly MareMediator _mediator;
     private readonly GroupPairFullInfoDto _fullInfoDto;
     private readonly GroupFullInfoDto _group;
     private readonly CharaDataManager _charaDataManager;
@@ -24,11 +23,10 @@ public class DrawGroupPair : DrawPairBase
     public DrawGroupPair(string id, Pair entry, ApiController apiController,
         MareMediator mareMediator, GroupFullInfoDto group, GroupPairFullInfoDto fullInfoDto,
         UidDisplayHandler handler, UiSharedService uiSharedService, CharaDataManager charaDataManager)
-        : base(id, entry, apiController, handler, uiSharedService)
+        : base(id, entry, apiController, handler, mareMediator, uiSharedService)
     {
         _group = group;
         _fullInfoDto = fullInfoDto;
-        _mediator = mareMediator;
         _charaDataManager = charaDataManager;
     }
 
@@ -38,8 +36,8 @@ public class DrawGroupPair : DrawPairBase
         var entryIsMod = _fullInfoDto.GroupPairStatusInfo.IsModerator();
         var entryIsOwner = string.Equals(_pair.UserData.UID, _group.OwnerUID, StringComparison.Ordinal);
         var entryIsPinned = _fullInfoDto.GroupPairStatusInfo.IsPinned();
-        var presenceIcon = _pair.IsVisible ? FontAwesomeIcon.Eye : (_pair.IsOnline ? FontAwesomeIcon.Link : FontAwesomeIcon.Unlink);
-        var presenceColor = (_pair.IsOnline || _pair.IsVisible) ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
+        var presenceIcon = _pair.IsOnline ? FontAwesomeIcon.Link : FontAwesomeIcon.Unlink;
+        var presenceColor = _pair.IsOnline ? ImGuiColors.ParsedGreen : ImGuiColors.DalamudRed;
         var presenceText = entryUID + " is offline";
 
         ImGui.SetCursorPosY(textPosY);
@@ -64,37 +62,22 @@ public class DrawGroupPair : DrawPairBase
             UiSharedService.AttachToolTip("You are paired with " + entryUID);
         }
 
-        if (_pair.IsOnline && !_pair.IsVisible) presenceText = entryUID + " is online";
-        else if (_pair.IsOnline && _pair.IsVisible) presenceText = entryUID + " is visible: " + _pair.PlayerName + Environment.NewLine + "Click to target this player";
+        if (_pair.IsOnline)
+            presenceText = entryUID + " is online";
 
         ImGui.SameLine();
         ImGui.SetCursorPosY(textPosY);
-        ImGui.PushFont(UiBuilder.IconFont);
-        UiSharedService.ColorText(presenceIcon.ToIconString(), presenceColor);
-        ImGui.PopFont();
         if (_pair.IsVisible)
         {
-            if (ImGui.IsItemClicked())
-            {
-                _mediator.Publish(new TargetPairMessage(_pair));
-            }
-            if (_pair.LastAppliedDataBytes >= 0)
-            {
-                presenceText += UiSharedService.TooltipSeparator;
-                presenceText += ((!_pair.IsVisible) ? "(Last) " : string.Empty) + "Mods Info" + Environment.NewLine;
-                presenceText += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataBytes, true);
-                if (_pair.LastAppliedApproximateVRAMBytes >= 0)
-                {
-                    presenceText += Environment.NewLine + "Approx. VRAM Usage: " + UiSharedService.ByteToString(_pair.LastAppliedApproximateVRAMBytes, true);
-                }
-                if (_pair.LastAppliedDataTris >= 0)
-                {
-                    presenceText += Environment.NewLine + "Triangle Count (excl. Vanilla): "
-                        + (_pair.LastAppliedDataTris > 1000 ? (_pair.LastAppliedDataTris / 1000d).ToString("0.0'k'") : _pair.LastAppliedDataTris);
-                }
-            }
+            DrawVisibleIcon();
         }
-        UiSharedService.AttachToolTip(presenceText);
+        else
+        {
+            ImGui.PushFont(UiBuilder.IconFont);
+            UiSharedService.ColorText(presenceIcon.ToIconString(), presenceColor);
+            ImGui.PopFont();
+            UiSharedService.AttachToolTip(presenceText);
+        }
 
         if (entryIsOwner)
         {

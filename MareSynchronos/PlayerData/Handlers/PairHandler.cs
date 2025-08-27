@@ -152,6 +152,17 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
     public string? PlayerName { get; private set; }
     public string PlayerNameHash => Pair.Ident;
 
+    public bool HasCachedData => _cachedData != null;
+    public bool HasInitializedCharacter => _charaHandler != null;
+    public bool HasPendingDeferred => _deferred != Guid.Empty;
+    public bool HasPendingCombatData => _dataReceivedInDowntime != null;
+    public bool HasActiveApplicationTask => _applicationTask?.IsCompleted ?? false;
+    public bool HasHaltedProcessing => _charaHandler?.HasHaltedProcessing ?? false;
+    public bool HasPenumbraCollection => _penumbraCollection != Guid.Empty;
+    public GameObjectHandler.DrawCondition CurrentDrawCondition => _charaHandler?.CurrentDrawCondition ?? default;
+
+    private static readonly Random rng = new Random();
+
     public void ApplyCharacterData(Guid applicationBase, CharacterData characterData, bool forceApplyCustomization = false)
     {
         if (_configService.Current.HoldCombatApplication && _dalamudUtil.IsInCombatOrPerforming)
@@ -171,6 +182,7 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
                 _isVisible = false;
                 _visibilityService.StopTracking(Pair.Ident);
                 _visibilityService.StartTracking(Pair.Ident);
+                return;
             }
 
             Mediator.Publish(new EventMessage(new Event(PlayerName, Pair.UserData, nameof(PairHandler), EventSeverity.Warning,

@@ -16,19 +16,17 @@ namespace MareSynchronos.UI.Components;
 
 public class DrawUserPair : DrawPairBase
 {
-    protected readonly MareMediator _mediator;
     private readonly SelectGroupForPairUi _selectGroupForPairUi;
     private readonly CharaDataManager _charaDataManager;
 
     public DrawUserPair(string id, Pair entry, UidDisplayHandler displayHandler, ApiController apiController,
         MareMediator mareMediator, SelectGroupForPairUi selectGroupForPairUi,
         UiSharedService uiSharedService, CharaDataManager charaDataManager)
-        : base(id, entry, apiController, displayHandler, uiSharedService)
+        : base(id, entry, apiController, displayHandler, mareMediator, uiSharedService)
     {
         if (_pair.UserPair == null) throw new ArgumentException("Pair must be UserPair", nameof(entry));
         _pair = entry;
         _selectGroupForPairUi = selectGroupForPairUi;
-        _mediator = mareMediator;
         _charaDataManager = charaDataManager;
     }
 
@@ -69,31 +67,7 @@ public class DrawUserPair : DrawPairBase
         {
             ImGui.SameLine();
             ImGui.SetCursorPosY(textPosY);
-            ImGui.PushFont(UiBuilder.IconFont);
-            UiSharedService.ColorText(FontAwesomeIcon.Eye.ToIconString(), ImGuiColors.ParsedGreen);
-            if (ImGui.IsItemClicked())
-            {
-                _mediator.Publish(new TargetPairMessage(_pair));
-            }
-            ImGui.PopFont();
-            var visibleTooltip = _pair.UserData.AliasOrUID + " is visible: " + _pair.PlayerName! + Environment.NewLine + "Click to target this player";
-            if (_pair.LastAppliedDataBytes >= 0)
-            {
-                visibleTooltip += UiSharedService.TooltipSeparator;
-                visibleTooltip += ((!_pair.IsVisible) ? "(Last) " : string.Empty) + "Mods Info" + Environment.NewLine;
-                visibleTooltip += "Files Size: " + UiSharedService.ByteToString(_pair.LastAppliedDataBytes, true);
-                if (_pair.LastAppliedApproximateVRAMBytes >= 0)
-                {
-                    visibleTooltip += Environment.NewLine + "Approx. VRAM Usage: " + UiSharedService.ByteToString(_pair.LastAppliedApproximateVRAMBytes, true);
-                }
-                if (_pair.LastAppliedDataTris >= 0)
-                {
-                    visibleTooltip += Environment.NewLine + "Triangle Count (excl. Vanilla): "
-                        + (_pair.LastAppliedDataTris > 1000 ? (_pair.LastAppliedDataTris / 1000d).ToString("0.0'k'") : _pair.LastAppliedDataTris);
-                }
-            }
-
-            UiSharedService.AttachToolTip(visibleTooltip);
+            DrawVisibleIcon();
         }
     }
 
