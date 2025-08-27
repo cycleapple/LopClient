@@ -18,7 +18,7 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
         PetNames = ipcCallerPetNames;
         Brio = ipcCallerBrio;
 
-        if (Initialized)
+        if (Penumbra.APIAvailable)
         {
             Mediator.Publish(new PenumbraInitializedMessage());
         }
@@ -27,7 +27,8 @@ public sealed partial class IpcManager : DisposableMediatorSubscriberBase
 
         try
         {
-            PeriodicApiStateCheck();
+            for (int i = 0; i < 3; ++i)
+                PeriodicApiStateCheck();
         }
         catch (Exception ex)
         {
