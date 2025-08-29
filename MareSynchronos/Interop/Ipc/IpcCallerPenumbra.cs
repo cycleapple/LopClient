@@ -244,7 +244,6 @@ public sealed class IpcCallerPenumbra : DisposableMediatorSubscriberBase, IIpcCa
                     var tmp = Guid.NewGuid().ToString().Replace("-", "").Substring(0, 8 + rng.Next() % 6);
                     ec = _penumbraCreateNamedTemporaryCollection.Invoke(tmp, collName, out collId);
 
-                    ec = PenumbraApiEc.InvalidCredentials;
                     if (ec != PenumbraApiEc.InvalidCredentials)
                         break;
                 }

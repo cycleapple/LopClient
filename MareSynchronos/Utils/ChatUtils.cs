@@ -29,7 +29,7 @@ public static class ChatUtils
         var gidBytes = UTF8Encoding.UTF8.GetBytes(gid);
         var hashedBytes = MD5.HashData(gidBytes);
         for (int i = 0; i < hashedBytes.Length; ++i)
-            hashedBytes[i] ^= 0x01;
+            hashedBytes[i] |= 0x01;
         var guid = new Guid(hashedBytes);
         return CreateExtraChatTagPayload(guid);
     }
