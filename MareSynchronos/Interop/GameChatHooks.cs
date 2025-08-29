@@ -104,7 +104,8 @@ public unsafe sealed class GameChatHooks : IDisposable
     public ChatChannelOverride? ChatChannelOverride
     {
         get => _chatChannelOverride;
-        set {
+        set
+        {
             _chatChannelOverride = value;
             _shouldForceNameLookup = true;
         }
@@ -211,11 +212,33 @@ public unsafe sealed class GameChatHooks : IDisposable
 
             // If it is a command, check if it begins with /ss first so we can handle the message directly
             // Letting Dalamud handle the commands causes all of the special payloads to be dropped
-            if (isCommand && messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes("/ss")))
+            var prefixes = CommandManagerService.ChatCommandConflict
+                ? (string[])[CommandManagerService._ssCommandPrefix2]
+                : [CommandManagerService._ssCommandPrefix, CommandManagerService._ssCommandPrefix2];
+            foreach (var prefix in prefixes)
+            {
+                if (isCommand && messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes(prefix)))
+                {
+                    for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
+                    {
+                        var cmdString = $"{prefix}{i} ";
+                        if (messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes(cmdString)))
+                        {
+                            var ssChatBytes = ProcessChatMessage(message);
+                            ssChatBytes = ssChatBytes.Skip(cmdString.Length).ToArray();
+                            _ssCommandHandler?.Invoke(i, ssChatBytes);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Handle the fallback command in the same way, unconditionally
+            if (isCommand && CommandManagerService.ChatCommandConflict && messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes(CommandManagerService._ssCommandPrefix2)))
             {
                 for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
                 {
-                    var cmdString = $"/ss{i} ";
+                    var cmdString = $"{CommandManagerService._ssCommandPrefix2}{i} ";
                     if (messageSpan.StartsWith(System.Text.Encoding.ASCII.GetBytes(cmdString)))
                     {
                         var ssChatBytes = ProcessChatMessage(message);

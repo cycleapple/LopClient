@@ -121,7 +121,7 @@ public class ChatService : DisposableMediatorSubscriberBase
         }
         if (color != 0)
             msg.AddUiForeground((ushort)color);
-        msg.AddText($"[SS{shellNumber}]<");
+        msg.AddText($"[{CommandManagerService.ChatChannelPrefix}{shellNumber}]<");
         if (message.ChatMsg.Sender.UID.Equals(_apiController.UID, StringComparison.Ordinal))
         {
             // Don't link to your own character

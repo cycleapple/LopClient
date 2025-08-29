@@ -246,7 +246,7 @@ internal sealed class GroupPanel
             if (!_mareConfig.Current.DisableSyncshellChat && shellConfig.Enabled)
             {
                 ImGui.TextUnformatted($"[{shellNumber}]");
-                UiSharedService.AttachToolTip("Chat command prefix: /ss" + shellNumber);
+                UiSharedService.AttachToolTip("Chat command prefix: " + CommandManagerService.ChatCommandPrefix + shellNumber);
             }
             if (textIsGid) ImGui.PushFont(UiBuilder.MonoFont);
             ImGui.SameLine();

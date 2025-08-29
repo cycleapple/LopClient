@@ -31,6 +31,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
     private readonly PairManager _pairManager;
     private readonly ServerConfigurationManager _serverManager;
     private readonly TokenProvider _tokenProvider;
+    private readonly MareConfigService _mareConfig;
     private CancellationTokenSource _connectionCancellationTokenSource;
     private ConnectionDto? _connectionDto;
     private bool _doNotNotifyOnNextInfo = false;
@@ -40,15 +41,18 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
     private ServerState _serverState;
     private CensusUpdateMessage? _lastCensus;
 
+    private bool _shownChatCommandError = false;
+
     public ApiController(ILogger<ApiController> logger, HubFactory hubFactory, DalamudUtilService dalamudUtil,
         PairManager pairManager, ServerConfigurationManager serverManager, MareMediator mediator,
-        TokenProvider tokenProvider) : base(logger, mediator)
+        TokenProvider tokenProvider, MareConfigService mareConfig) : base(logger, mediator)
     {
         _hubFactory = hubFactory;
         _dalamudUtil = dalamudUtil;
         _pairManager = pairManager;
         _serverManager = serverManager;
         _tokenProvider = tokenProvider;
+        _mareConfig = mareConfig;
         _connectionCancellationTokenSource = new CancellationTokenSource();
 
         Mediator.Subscribe<DalamudLoginMessage>(this, (_) => DalamudUtilOnLogIn());
@@ -223,6 +227,17 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
                 }
 
                 await LoadIninitialPairs().ConfigureAwait(false);
+
+                if (CommandManagerService.ChatCommandConflict && !_shownChatCommandError &&
+                    _pairManager.Groups.Count > 0 && !_mareConfig.Current.DisableSyncshellChat)
+                {
+                    Logger.LogWarning("Detected conflicted chat commands");
+                    Mediator.Publish(new NotificationMessage("Chat command conflict",
+                        "Another plugin loaded first and registered the /ss1 command before we could. Your chat command command prefix is now /lss (e.g. /lss1, /lss2)",
+                        NotificationType.Error, TimeSpan.FromSeconds(15)));
+                    _shownChatCommandError = true;
+                }
+
                 await LoadOnlinePairs().ConfigureAwait(false);
             }
             catch (OperationCanceledException)

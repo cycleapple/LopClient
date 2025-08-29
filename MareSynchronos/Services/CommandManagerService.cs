@@ -17,7 +17,11 @@ public sealed class CommandManagerService : IDisposable
     private const string _commandName = "/sync";
     private const string _commandName2 = "/loporrit";
 
-    private const string _ssCommandPrefix = "/ss";
+    public const string _ssCommandPrefix = "/ss";
+    private const string _ssChannelPrefix = "SS";
+
+    public const string _ssCommandPrefix2 = "/lss";
+    private const string _ssChannelPrefix2 = "LSS";
 
     private readonly ApiController _apiController;
     private readonly ICommandManager _commandManager;
@@ -27,6 +31,10 @@ public sealed class CommandManagerService : IDisposable
     private readonly CacheMonitor _cacheMonitor;
     private readonly ChatService _chatService;
     private readonly ServerConfigurationManager _serverConfigurationManager;
+
+    public static bool ChatCommandConflict { get; private set; } = false;
+    public static string ChatCommandPrefix { get; private set; } = _ssCommandPrefix;
+    public static string ChatChannelPrefix { get; private set; } = _ssChannelPrefix;
 
     public CommandManagerService(ICommandManager commandManager, PerformanceCollectorService performanceCollectorService,
         ServerConfigurationManager serverConfigurationManager, CacheMonitor periodicFileScanner, ChatService chatService,
@@ -49,14 +57,26 @@ public sealed class CommandManagerService : IDisposable
             HelpMessage = "Opens the Loporrit UI"
         });
 
-        // Lazy registration of all possible /ss# commands which tbf is what the game does for linkshells anyway
-        for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
+        var cmd = new CommandInfo(OnChatCommand)
         {
-            _commandManager.AddHandler($"{_ssCommandPrefix}{i}", new CommandInfo(OnChatCommand)
-            {
-                ShowInHelp = false
-            });
+            ShowInHelp = false
+        };
+
+        // Lazy registration of all possible /ss# commands which tbf is what the game does for linkshells anyway
+        if (_commandManager.AddHandler($"{_ssCommandPrefix}1", cmd))
+        {
+            for (int i = 2; i <= ChatService.CommandMaxNumber; ++i)
+                _commandManager.AddHandler($"{_ssCommandPrefix}{i}", cmd);
         }
+        else
+        {
+            ChatCommandConflict = true;
+            ChatCommandPrefix = _ssCommandPrefix2;
+            ChatChannelPrefix = _ssChannelPrefix2;
+        }
+
+        for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
+            _commandManager.AddHandler($"{_ssCommandPrefix2}{i}", cmd);
     }
 
     public void Dispose()
@@ -64,8 +84,14 @@ public sealed class CommandManagerService : IDisposable
         _commandManager.RemoveHandler(_commandName);
         _commandManager.RemoveHandler(_commandName2);
 
+        if (!ChatCommandConflict)
+        {
+            for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
+                _commandManager.RemoveHandler($"{_ssCommandPrefix}{i}");
+        }
+
         for (int i = 1; i <= ChatService.CommandMaxNumber; ++i)
-            _commandManager.RemoveHandler($"{_ssCommandPrefix}{i}");
+            _commandManager.RemoveHandler($"{_ssCommandPrefix2}{i}");
     }
 
     private void OnCommand(string command, string args)
