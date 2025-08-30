@@ -48,6 +48,7 @@ public partial class NoSnapService : IHostedService, IMediatorSubscriber
     private bool _pcp = true;
     private volatile bool _pcpActive = false;
     private volatile bool _pcpActiveForShutdown = false;
+    private DateTime _pcpActiveTime = default;
     private bool _isConnected = false;
     private SemaphoreSlim _isConnectedSemaphore = new(1);
 
@@ -86,9 +87,18 @@ public partial class NoSnapService : IHostedService, IMediatorSubscriber
                 _isConnectedSemaphore.Wait();
                 try
                 {
+                    bool inGpose = _dalamudUtilService.IsInGpose || _dalamudUtilService.IsInCutscene;
                     await Task.Delay(3000).ConfigureAwait(false);
-                    _logger.LogInformation("Now Disconnected");
-                    _isConnected = false;
+                    inGpose = inGpose || _dalamudUtilService.IsInGpose || _dalamudUtilService.IsInCutscene;
+                    if (inGpose)
+                    {
+                        _logger.LogInformation("Now Disconnected");
+                        _isConnected = false;
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Ignoring disconnect in gpose");
+                    }
                 }
                 finally
                 {
@@ -102,6 +112,7 @@ public partial class NoSnapService : IHostedService, IMediatorSubscriber
             _logger.LogInformation("Detected export via ipc");
             _pcpActive = true;
             _pcpActiveForShutdown = true;
+            _pcpActiveTime = DateTime.UtcNow;
             Thread.MemoryBarrier();
         });
 
@@ -266,6 +277,7 @@ public partial class NoSnapService : IHostedService, IMediatorSubscriber
                     _logger.LogInformation("Detected export directory {pcp}", e.FullPath);
                     _pcpActive = true;
                     _pcpActiveForShutdown = true;
+                    _pcpActiveTime = DateTime.UtcNow;
                     Thread.MemoryBarrier();
                 }
             }
@@ -465,16 +477,18 @@ public partial class NoSnapService : IHostedService, IMediatorSubscriber
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         RevertGposers();
+        _logger.LogDebug("Fixed-length delay");
+        await Task.Delay(2000).ConfigureAwait(false);
         bool wasDelayed;
         do
         {
             wasDelayed = false;
             Thread.MemoryBarrier();
-            if (_pcpActiveForShutdown)
+            if (_pcpActiveForShutdown && (DateTime.UtcNow - _pcpActiveTime).TotalSeconds <= 30.0)
             {
                 _pcpActiveForShutdown = false;
-                _logger.LogDebug("Fixed-length delay");
-                await Task.Delay(3000).ConfigureAwait(false);
+                _logger.LogDebug("Extra delay");
+                await Task.Delay(5000).ConfigureAwait(false);
                 Thread.MemoryBarrier();
                 if (_pcpActive)
                 {
