@@ -109,6 +109,8 @@ public record GPoseLobbyUserLeave(UserData UserData) : MessageBase;
 public record GPoseLobbyReceiveCharaData(CharaDataDownloadDto CharaDataDownloadDto) : MessageBase;
 public record GPoseLobbyReceivePoseData(UserData UserData, PoseData PoseData) : MessageBase;
 public record GPoseLobbyReceiveWorldData(UserData UserData, WorldData WorldData) : MessageBase;
+public record UserAliasUpdatedMessage(string UID, string? newAlias) : MessageBase;
+public record GroupAliasUpdatedMessage(string GID, string? newAlias) : MessageBase;
 
 public record PluginChangeMessage(string InternalName, Version Version, bool IsLoaded) : KeyedMessage(InternalName);
 #pragma warning restore S2094

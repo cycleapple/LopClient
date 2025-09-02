@@ -123,6 +123,11 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             Logger.LogDebug("Recalculating performance for {uid}", Pair.UserData.UID);
             pair.ApplyLastReceivedData(forced: true);
         });
+        Mediator.Subscribe<UserAliasUpdatedMessage>(this, (msg) =>
+        {
+            if (msg.UID == null || !msg.UID.Equals(Pair.UserData.UID, StringComparison.Ordinal)) return;
+            pair.UserData = pair.UserData with { Alias = msg.newAlias };
+        });
 
         LastAppliedDataBytes = -1;
     }

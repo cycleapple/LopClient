@@ -70,7 +70,7 @@ public class Pair : DisposableMediatorSubscriberBase
     public string Ident => _onlineUserIdentDto?.Ident ?? string.Empty;
     public PairAnalyzer? PairAnalyzer => CachedPlayer?.PairAnalyzer;
 
-    public UserData UserData { get; init; }
+    public UserData UserData { get; set; }
 
     public UserPairDto? UserPair { get; set; }
 

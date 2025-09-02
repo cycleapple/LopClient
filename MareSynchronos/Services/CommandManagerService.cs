@@ -158,6 +158,34 @@ public sealed class CommandManagerService : IDisposable
         {
             _mediator.Publish(new UiToggleMessage(typeof(DataAnalysisUi)));
         }
+        else if (string.Equals(splitArgs[0], "vanity", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_apiController.IsConnected)
+            {
+                _mediator.Publish(new NotificationMessage("Loporrit disconnected", "Cannot use /vanity while disconnected", NotificationType.Error));
+                return;
+            }
+
+            // Re-split but preserve case
+            splitArgs = args.Trim().Split(" ", StringSplitOptions.RemoveEmptyEntries);
+            var newUid = splitArgs.Length >= 2 ? splitArgs[1].Trim() : string.Empty;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    bool result = await _apiController.UserUpdateAlias(newUid).ConfigureAwait(false);
+                    if (result)
+                        _mediator.Publish(new NotificationMessage("Success!", "Your vanity UID was accepted", NotificationType.Info));
+                    else
+                        _mediator.Publish(new NotificationMessage("Failure!", "Your vanity UID was rejected", NotificationType.Info));
+                }
+                catch
+                {
+                    _mediator.Publish(new NotificationMessage("Failure!", "Your vanity UID caused an error!", NotificationType.Info));
+                }
+            });
+        }
     }
 
     private void OnChatCommand(string command, string args)

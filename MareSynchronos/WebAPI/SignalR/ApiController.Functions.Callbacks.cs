@@ -9,7 +9,6 @@ using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.Services.Mediator;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
-using static FFXIVClientStructs.FFXIV.Client.Game.UI.MapMarkerData.Delegates;
 
 namespace MareSynchronos.WebAPI;
 
@@ -229,6 +228,20 @@ public partial class ApiController
         return Task.CompletedTask;
     }
 
+    public Task Client_UserAliasUpdated(UserDto dto)
+    {
+        Logger.LogDebug("Client_UserAliasUpdated: {dto}", dto);
+        ExecuteSafely(() => Mediator.Publish(new UserAliasUpdatedMessage(dto.User.UID, dto.User.Alias)));
+        return Task.CompletedTask;
+    }
+
+    public Task Client_GroupAliasUpdated(GroupDto dto)
+    {
+        Logger.LogDebug("Client_GroupAliasUpdated: {dto}", dto);
+        ExecuteSafely(() => Mediator.Publish(new GroupAliasUpdatedMessage(dto.Group.GID, dto.Group.Alias)));
+        return Task.CompletedTask;
+    }
+
     public void OnDownloadReady(Action<Guid> act)
     {
         if (_initialized) return;
@@ -389,6 +402,18 @@ public partial class ApiController
     {
         if (_initialized) return;
         _mareHub!.On(nameof(Client_GposeLobbyPushWorldData), act);
+    }
+
+    public void OnUserAliasUpdated(Action<UserDto> act)
+    {
+        if (_initialized) return;
+        _mareHub!.On(nameof(Client_UserAliasUpdated), act);
+    }
+
+    public void OnGroupAliasUpdated(Action<GroupDto> act)
+    {
+        if (_initialized) return;
+        _mareHub!.On(nameof(Client_GroupAliasUpdated), act);
     }
 
     private void ExecuteSafely(Action act)

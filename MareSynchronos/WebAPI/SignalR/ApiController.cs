@@ -10,6 +10,7 @@ using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.Services.ServerConfiguration;
+using MareSynchronos.Utils;
 using MareSynchronos.WebAPI.SignalR;
 using MareSynchronos.WebAPI.SignalR.Utils;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -63,6 +64,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
         Mediator.Subscribe<CyclePauseMessage>(this, (msg) => _ = CyclePause(msg.UserData));
         Mediator.Subscribe<CensusUpdateMessage>(this, (msg) => _lastCensus = msg);
         Mediator.Subscribe<PauseMessage>(this, (msg) => _ = Pause(msg.UserData));
+        Mediator.Subscribe<UserAliasUpdatedMessage>(this, msg => CheckAndUpdateAlias(msg.UID, msg.newAlias));
 
         ServerState = ServerState.Offline;
 
@@ -382,6 +384,9 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
         OnGposeLobbyPushPoseData((dto, data) => _ = Client_GposeLobbyPushPoseData(dto, data));
         OnGposeLobbyPushWorldData((dto, data) => _ = Client_GposeLobbyPushWorldData(dto, data));
 
+        OnUserAliasUpdated((dto) => _ = Client_UserAliasUpdated(dto));
+        OnGroupAliasUpdated((dto) => _ = Client_GroupAliasUpdated(dto));
+
         _healthCheckTokenSource?.Cancel();
         _healthCheckTokenSource?.Dispose();
         _healthCheckTokenSource = new CancellationTokenSource();
@@ -406,7 +411,7 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
         {
             var users = await GroupsGetUsersInGroup(group).ConfigureAwait(false);
             foreach (var user in users)
-        {
+            {
                 Logger.LogDebug("Group Pair: {user}", user);
                 _pairManager.AddGroupPair(user);
             }
@@ -492,6 +497,17 @@ public sealed partial class ApiController : DisposableMediatorSubscriberBase, IM
         }
 
         ServerState = state;
+    }
+
+    private void CheckAndUpdateAlias(string uid, string? newAlias)
+    {
+        if (_connectionDto != null && _connectionDto.User.UID.Equals(uid, StringComparison.Ordinal))
+        {
+            _connectionDto = _connectionDto with
+            {
+                User = _connectionDto.User with { Alias = newAlias }
+            };
+        }
     }
 }
 #pragma warning restore MA0040
