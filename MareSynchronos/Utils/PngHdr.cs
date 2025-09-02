@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 namespace MareSynchronos.Utils;
 
 public class PngHdr
@@ -20,7 +22,7 @@ public class PngHdr
 
 			stream.ReadExactly(buffer[..8]);
 
-			uint ihdrLength = BitConverter.ToUInt32(buffer);
+			uint ihdrLength = BinaryPrimitives.ReadUInt32BigEndian(buffer);
 
 			// The next four bytes will be the length of the IHDR section (it should be 13 bytes but we only need 8)
 			if (ihdrLength < 8)
@@ -32,8 +34,8 @@ public class PngHdr
 
 			stream.ReadExactly(buffer[..8]);
 
-			uint width = BitConverter.ToUInt32(buffer);
-			uint height = BitConverter.ToUInt32(buffer[4..]);
+			uint width = BinaryPrimitives.ReadUInt32BigEndian(buffer);
+			uint height = BinaryPrimitives.ReadUInt32BigEndian(buffer[4..]);
 
 			// Validate the width/height are non-negative and... that's all we care about!
 			if (width > int.MaxValue || height > int.MaxValue)
