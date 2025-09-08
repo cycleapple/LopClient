@@ -694,7 +694,7 @@ internal sealed class GroupPanel
             ? 1
             : (ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y) - _mainUi.TransferPartHeight - ImGui.GetCursorPosY();
         ImGui.BeginChild("list", new Vector2(_mainUi.WindowContentWidth, ySize), border: false);
-        foreach (var entry in _pairManager.GroupPairs.OrderBy(g => g.Key.Group.AliasOrGID, StringComparer.OrdinalIgnoreCase).ToList())
+        foreach (var entry in _pairManager.GroupPairs.OrderBy(g => _serverConfigurationManager.GetShellConfigForGid(g.Key.Group.GID).ShellNumber).ToList())
         {
             using (ImRaii.PushId(entry.Key.Group.GID)) DrawSyncshell(entry.Key, entry.Value);
         }
