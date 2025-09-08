@@ -24,12 +24,16 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     private readonly PairManager _pairManager;
     private readonly UiSharedService _uiSharedService;
     private List<BannedGroupUserDto> _bannedUsers = [];
+    private Task _bannedUsersTask;
     private int _multiInvites;
     private string _newPassword;
     private bool _pwChangeSuccess;
     private Task<int>? _pruneTestTask;
     private Task<int>? _pruneTask;
     private int _pruneDays = 14;
+
+    private string _filterUserList = string.Empty;
+    private string _filterBanList = string.Empty;
 
     public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, MareMediator mediator, ApiController apiController,
         UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService)
@@ -38,6 +42,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
         GroupFullInfo = groupFullInfo;
         _apiController = apiController;
         _uiSharedService = uiSharedService;
+        _bannedUsersTask = Task.CompletedTask;
         _pairManager = pairManager;
         _isOwner = string.Equals(GroupFullInfo.OwnerUID, _apiController.UID, StringComparison.Ordinal);
         _isModerator = GroupFullInfo.GroupUserInfo.IsModerator();
@@ -114,13 +119,16 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
             }
             inviteTab.Dispose();
 
-            var mgmtTab = ImRaii.TabItem("User Management");
-            if (mgmtTab)
+            _pairManager.GroupPairs.TryGetValue(GroupFullInfo, out var groupPairs);
+            var numMembers = groupPairs?.Count ?? 0;
+
+            using (var userListTab = ImRaii.TabItem($"Member List ({numMembers})###memberList"))
             {
-                var userNode = ImRaii.TreeNode("User List & Administration");
-                if (userNode)
+                if (userListTab)
                 {
-                    if (!_pairManager.GroupPairs.TryGetValue(GroupFullInfo, out var pairs))
+                    ImGui.SetNextItemWidth(200);
+                    ImGui.InputText("Search##searchUserList", ref _filterUserList, 50);
+                    if (groupPairs == null || numMembers == 0)
                     {
                         UiSharedService.ColorTextWrapped("No users found in this Syncshell", ImGuiColors.DalamudYellow);
                     }
@@ -135,7 +143,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                             ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.None, 2);
                             ImGui.TableHeadersRow();
 
-                            var groupedPairs = new Dictionary<Pair, GroupUserInfo?>(pairs.Select(p => new KeyValuePair<Pair, GroupUserInfo?>(p,
+                            var groupedPairs = new Dictionary<Pair, GroupUserInfo?>(groupPairs.Select(p => new KeyValuePair<Pair, GroupUserInfo?>(p,
                                 p.GroupPair.TryGetValue(GroupFullInfo, out GroupPairFullInfoDto? value) ? value.GroupPairStatusInfo : null)));
 
                             foreach (var pair in groupedPairs.OrderBy(p =>
@@ -146,17 +154,29 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                                 return 10;
                             }).ThenBy(p => p.Key.GetNote() ?? p.Key.UserData.AliasOrUID, StringComparer.OrdinalIgnoreCase))
                             {
-                                using var tableId = ImRaii.PushId("userTable_" + pair.Key.UserData.UID);
+                                var uid = pair.Key.UserData.AliasOrUID;
+                                var note = pair.Key.GetNote();
+                                string? name = pair.Key.GetNoteOrName();
+
+                                if (!string.IsNullOrEmpty(_filterUserList))
+                                {
+                                    if (!uid.Contains(_filterUserList, StringComparison.OrdinalIgnoreCase)
+                                     && !(note?.Contains(_filterUserList, StringComparison.OrdinalIgnoreCase) ?? false)
+                                     && !(name?.Contains(_filterUserList, StringComparison.OrdinalIgnoreCase) ?? false))
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                using var tableId = ImRaii.PushId("userTable_" + uid);
 
                                 ImGui.TableNextColumn(); // alias/uid/note
-                                var note = pair.Key.GetNote();
-                                var text = note == null ? pair.Key.UserData.AliasOrUID : note + " (" + pair.Key.UserData.AliasOrUID + ")";
+                                var text = note == null ? uid : note + " (" + uid + ")";
                                 ImGui.AlignTextToFramePadding();
                                 ImGui.TextUnformatted(text);
 
                                 ImGui.TableNextColumn(); // online/name
                                 string onlineText = pair.Key.IsOnline ? "Online" : "Offline";
-                                string? name = pair.Key.GetNoteOrName();
                                 if (!string.IsNullOrEmpty(name))
                                 {
                                     onlineText += " (" + name + ")";
@@ -237,9 +257,11 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                         }
                     }
                 }
-                userNode.Dispose();
-                var clearNode = ImRaii.TreeNode("Mass Cleanup");
-                if (clearNode)
+            }
+
+            using (var cleanupTab = ImRaii.TabItem("Mass Cleanup"))
+            {
+                if (cleanupTab)
                 {
                     using (ImRaii.Disabled(!UiSharedService.CtrlPressed()))
                     {
@@ -314,14 +336,22 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                         }
                     }
                 }
-                clearNode.Dispose();
+            }
 
-                var banNode = ImRaii.TreeNode("User Bans");
-                if (banNode)
+            var numBans = _bannedUsersTask.IsCompleted ? $" ({_bannedUsers.Count})" : string.Empty;
+            using (var banListTab = ImRaii.TabItem($"Ban List{numBans}###banList"))
+            {
+                if (banListTab)
                 {
+                    ImGui.SetNextItemWidth(200);
+                    ImGui.InputText("Search##searchBanList", ref _filterBanList, 50);
+                    ImGui.SameLine();
                     if (_uiSharedService.IconTextButton(FontAwesomeIcon.Retweet, "Refresh Banlist from Server"))
                     {
-                        _bannedUsers = _apiController.GroupGetBannedUsers(new GroupDto(GroupFullInfo.Group)).Result;
+                        _bannedUsersTask = Task.Run(async () =>
+                        {
+                            _bannedUsers = await _apiController.GroupGetBannedUsers(new GroupDto(GroupFullInfo.Group)).ConfigureAwait(false);
+                        });
                     }
 
                     if (ImGui.BeginTable("bannedusertable" + GroupFullInfo.GID, 6, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.ScrollY))
@@ -335,8 +365,22 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
                         ImGui.TableHeadersRow();
 
-                        foreach (var bannedUser in _bannedUsers.ToList())
+                        foreach (var bannedUser in _bannedUsers.OrderBy(u => u.BannedOn).ToList())
                         {
+                            var uid = bannedUser.UID;
+                            var alias = bannedUser.UserAlias ?? string.Empty;
+                            var reason = bannedUser.Reason;
+
+                            if (!string.IsNullOrEmpty(_filterBanList))
+                            {
+                                if (!uid.Contains(_filterBanList, StringComparison.OrdinalIgnoreCase)
+                                    && !alias.Contains(_filterBanList, StringComparison.OrdinalIgnoreCase)
+                                    && !reason.Replace("Alias at time of ban", "").Contains(_filterBanList, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    continue;
+                                }
+                            }
+
                             ImGui.TableNextColumn();
                             ImGui.TextUnformatted(bannedUser.UID);
                             ImGui.TableNextColumn();
@@ -359,9 +403,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                         ImGui.EndTable();
                     }
                 }
-                banNode.Dispose();
             }
-            mgmtTab.Dispose();
 
             var permissionTab = ImRaii.TabItem("Permissions");
             if (permissionTab)
@@ -446,6 +488,16 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 ownerTab.Dispose();
             }
         }
+    }
+
+    public override void OnOpen()
+    {
+        _filterUserList = string.Empty;
+        _filterBanList = string.Empty;
+        _bannedUsersTask = Task.Run(async () =>
+        {
+            _bannedUsers = await _apiController.GroupGetBannedUsers(new GroupDto(GroupFullInfo.Group)).ConfigureAwait(false);
+        });
     }
 
     public override void OnClose()
