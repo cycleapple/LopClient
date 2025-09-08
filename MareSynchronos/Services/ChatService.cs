@@ -180,7 +180,7 @@ public class ChatService : DisposableMediatorSubscriberBase
                 if (_gameChatHooks.IsValueCreated && _gameChatHooks.Value.ChatChannelOverride != null)
                 {
                     // Very dumb and won't handle re-numbering -- need to identify the active chat channel more reliably later
-                    if (_gameChatHooks.Value.ChatChannelOverride.ChannelName.StartsWith($"SS [{shellNumber}]", StringComparison.Ordinal))
+                    if (_gameChatHooks.Value.ChatChannelOverride.ChannelName.StartsWith($"{CommandManagerService.ChatChannelPrefix} [{shellNumber}]", StringComparison.Ordinal))
                         SwitchChatShell(shellNumber);
                 }
             }
@@ -197,11 +197,11 @@ public class ChatService : DisposableMediatorSubscriberBase
             var shellConfig = _serverConfigurationManager.GetShellConfigForGid(group.Key.GID);
             if (shellConfig.Enabled && shellConfig.ShellNumber == shellNumber)
             {
-                var name = _serverConfigurationManager.GetNoteForGid(group.Key.GID) ?? group.Key.AliasOrGID;
+                var name = _serverConfigurationManager.GetNoteForGid(group.Key.GID) ?? group.Value.GroupAliasOrGID;
                 // BUG: This doesn't always update the chat window e.g. when renaming a group
                 _gameChatHooks.Value.ChatChannelOverride = new()
                 {
-                    ChannelName = $"SS [{shellNumber}]: {name}",
+                    ChannelName = CommandManagerService.ChatChannelPrefix + $" [{shellNumber}]: {name}",
                     ChatMessageHandler = chatBytes => SendChatShell(shellNumber, chatBytes)
                 };
                 return;

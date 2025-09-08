@@ -6,16 +6,18 @@ using Dalamud.Interface.Utility.Raii;
 using MareSynchronos.API.Data.Enum;
 using MareSynchronos.API.Data.Extensions;
 using MareSynchronos.API.Dto.Group;
+using MareSynchronos.MareConfiguration.Models;
 using MareSynchronos.PlayerData.Pairs;
 using MareSynchronos.Services;
 using MareSynchronos.Services.Mediator;
 using MareSynchronos.WebAPI;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace MareSynchronos.UI.Components.Popup;
 
-public class SyncshellAdminUI : WindowMediatorSubscriberBase
+public partial class SyncshellAdminUI : WindowMediatorSubscriberBase
 {
     private readonly ApiController _apiController;
     private readonly bool _isModerator = false;
@@ -34,6 +36,11 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
 
     private string _filterUserList = string.Empty;
     private string _filterBanList = string.Empty;
+    private string _newAlias = string.Empty;
+    private bool _newAliasPending = false;
+
+    [GeneratedRegex(@"^[A-Z0-9][-_ A-Z0-9]*[-_A-Z0-9]$", RegexOptions.IgnoreCase | RegexOptions.ECMAScript)]
+    private static partial Regex GroupAliasRegex();
 
     public SyncshellAdminUI(ILogger<SyncshellAdminUI> logger, MareMediator mediator, ApiController apiController,
         UiSharedService uiSharedService, PairManager pairManager, GroupFullInfoDto groupFullInfo, PerformanceCollectorService performanceCollectorService)
@@ -453,11 +460,58 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
                 if (ownerTab)
                 {
                     ImGui.AlignTextToFramePadding();
-                    ImGui.TextUnformatted("New Password");
+
+                    ImGui.TextUnformatted("New Group Alias");
                     var availableWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X;
-                    var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.Passport, "Change Password");
-                    var textSize = ImGui.CalcTextSize("New Password").X;
+                    var buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.Tag, "Change Alias");
+                    var textSize = ImGui.CalcTextSize("New Group Alias").X;
                     var spacing = ImGui.GetStyle().ItemSpacing.X;
+
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(availableWidth - buttonSize - textSize - spacing * 2);
+                    ImGui.InputTextWithHint("##changelias", "3-20 characters", ref _newAlias, 20);
+                    ImGui.SameLine();
+
+                    bool validAlias = (_newAlias.Length == 0 || (_newAlias.Length >= 3 && _newAlias.Length <= 20))
+                        && _newAlias != (GroupFullInfo.GroupAlias ?? string.Empty)
+                        && GroupAliasRegex().IsMatch(_newAlias);
+                    using (ImRaii.Disabled(!validAlias || _newAliasPending))
+                    {
+                        if (_uiSharedService.IconTextButton(FontAwesomeIcon.Tag, "Change Alias"))
+                        {
+                            _newAliasPending = true;
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    bool result = await _apiController.GroupUpdateAlias(GroupFullInfo, _newAlias).ConfigureAwait(false);
+                                    if (result)
+                                    {
+                                        Mediator.Publish(new NotificationMessage("Success!", "Your vanity GID was accepted", NotificationType.Info));
+                                    }
+                                    else
+                                    {
+                                        _newAlias = string.Empty;
+                                        Mediator.Publish(new NotificationMessage("Failure!", "Your vanity GID was rejected", NotificationType.Info));
+                                    }
+                                }
+                                catch
+                                {
+                                    Mediator.Publish(new NotificationMessage("Failure!", "Your vanity GID caused an error!", NotificationType.Info));
+                                }
+                                finally
+                                {
+                                    _newAliasPending = false;
+                                }
+                            });
+                        }
+                    }
+
+                    ImGui.TextUnformatted("New Password");
+                    availableWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X;
+                    buttonSize = _uiSharedService.GetIconTextButtonSize(FontAwesomeIcon.Passport, "Change Password");
+                    textSize = ImGui.CalcTextSize("New Password").X;
+                    spacing = ImGui.GetStyle().ItemSpacing.X;
 
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(availableWidth - buttonSize - textSize - spacing * 2);
@@ -494,6 +548,7 @@ public class SyncshellAdminUI : WindowMediatorSubscriberBase
     {
         _filterUserList = string.Empty;
         _filterBanList = string.Empty;
+        _newAlias = GroupFullInfo.GroupAlias ?? string.Empty;
         _bannedUsersTask = Task.Run(async () =>
         {
             _bannedUsers = await _apiController.GroupGetBannedUsers(new GroupDto(GroupFullInfo.Group)).ConfigureAwait(false);

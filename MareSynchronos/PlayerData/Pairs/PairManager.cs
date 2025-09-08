@@ -37,12 +37,22 @@ public sealed class PairManager : DisposableMediatorSubscriberBase
         _groupPairsInternal = GroupPairsLazy();
 
         _dalamudContextMenu.OnMenuOpened += DalamudContextMenuOnOnOpenGameObjectContextMenu;
+
+        Mediator.Subscribe<GroupAliasUpdatedMessage>(this, (msg) =>
+        {
+            var gkey = new GroupData(msg.GID ?? string.Empty, msg.newAlias);
+            if (_allGroups.TryGetValue(gkey, out var fullInfo))
+            {
+                _allGroups[gkey] = fullInfo with { Group = fullInfo.Group with { Alias = msg.newAlias } };
+                RecreateLazy();
+            }
+        });
     }
 
     public List<Pair> DirectPairs => _directPairsInternal.Value;
 
     public Dictionary<GroupFullInfoDto, List<Pair>> GroupPairs => _groupPairsInternal.Value;
-    public Dictionary<GroupData, GroupFullInfoDto> Groups => _allGroups.ToDictionary(k => k.Key, k => k.Value);
+    public Dictionary<GroupData, GroupFullInfoDto> Groups => _allGroups.ToDictionary(k => k.Key, k => k.Value, GroupDataComparer.Instance);
     public Pair? LastAddedUser { get; internal set; }
 
     public void AddGroup(GroupFullInfoDto dto)
