@@ -130,6 +130,7 @@ public class ChatService : DisposableMediatorSubscriberBase
         else
         {
             msg.Add(new PlayerPayload(chatMsg.SenderName, chatMsg.SenderHomeWorldId));
+            _serverConfigurationManager.SetNameForUid(message.ChatMsg.Sender.UID, chatMsg.SenderName);
         }
         msg.AddText("> ");
         msg.Append(SeString.Parse(message.ChatMsg.PayloadContent));

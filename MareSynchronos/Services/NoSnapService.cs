@@ -90,7 +90,7 @@ public partial class NoSnapService : IHostedService, IMediatorSubscriber
                     bool inGpose = _dalamudUtilService.IsInGpose || _dalamudUtilService.IsInCutscene;
                     await Task.Delay(3000).ConfigureAwait(false);
                     inGpose = inGpose || _dalamudUtilService.IsInGpose || _dalamudUtilService.IsInCutscene;
-                    if (inGpose)
+                    if (!inGpose)
                     {
                         _logger.LogInformation("Now Disconnected");
                         _isConnected = false;

@@ -799,6 +799,8 @@ public sealed class PairHandler : DisposableMediatorSubscriberBase
             Logger.LogTrace("Reapplying Pet Names data for {this}", this);
             _ = Task.Run(async () => await _ipcManager.PetNames.SetPlayerData(PlayerCharacter, _cachedData.PetNamesData).ConfigureAwait(false), CancellationToken.None);
         });
+
+        _serverConfigManager.SetNameForUid(Pair.UserData.UID, name);
     }
 
     private async Task RevertCustomizationDataAsync(ObjectKind objectKind, string name, Guid applicationId, CancellationToken cancelToken)
