@@ -2,8 +2,8 @@
 <Project Sdk="Dalamud.NET.Sdk/13.0.0">
   <PropertyGroup>
     <AssemblyName>LoporritSync</AssemblyName>
-    <Version>9.9.0</Version>
-    <PackageProjectUrl>https://git.lop-sync.com/huggingway/LopClient</PackageProjectUrl>
+    <Version>1.0.9.2</Version>
+    <PackageProjectUrl>https://github.com/cycleapple/LopClient/tree/api13-tw</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,9 +20,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.18" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.18" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.18" />
     <PackageReference Include="NReco.Logging.File" Version="1.2.2" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="10.7.0.110445">
       <PrivateAssets>all</PrivateAssets>

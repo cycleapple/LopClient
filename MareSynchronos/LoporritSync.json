@@ -9,6 +9,6 @@
     "customization"
   ],
   "IconUrl": "https://plugin.lop-sync.com/images/icon.png",
-  "RepoUrl": "https://git.lop-sync.com/huggingway/LopClient",
+  "RepoUrl": "https://github.com/cycleapple/LopClient/tree/api13-tw",
   "CanUnloadAsync": true
 }
