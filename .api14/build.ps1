@@ -33,6 +33,11 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Dependency differs from its pinned API14 patch: $($dependency.path)" }
         }
     }
+    $prebuild = Join-Path $PSScriptRoot 'prebuild.ps1'
+    if ((Test-Path -LiteralPath $prebuild) -and !$ManagedOnly) {
+        & $prebuild
+        if ($LASTEXITCODE -ne 0) { throw 'Native prerequisite build failed.' }
+    }
     $projects = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'projects.json') -Raw | ConvertFrom-Json
     foreach ($project in $projects) {
         $extra = @()
