@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -582,7 +582,7 @@ public class DalamudUtilService : IHostedService, IMediatorSubscriber
         bool isDrawingChanged = false;
         if ((nint)drawObj != IntPtr.Zero)
         {
-            isDrawing = gameObj->RenderFlags == 0b100000000000;
+            isDrawing = gameObj->RenderFlags == FFXIVClientStructs.FFXIV.Client.Game.Object.VisibilityFlags.Nameplate;
             if (!isDrawing)
             {
                 isDrawing = ((CharacterBase*)drawObj)->HasModelInSlotLoaded != 0;

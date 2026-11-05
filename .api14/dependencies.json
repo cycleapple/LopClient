@@ -1,0 +1,14 @@
+[
+  {
+    "path": "Glamourer.Api",
+    "baseCommit": "54c1944dc7db704733b4788520e494761bb0b58e",
+    "patch": "patches/1e3fa2cf51f60cdb.patch",
+    "sha256": "d2fb54d4beb9d9ed314a8f43a4f99732937694000836735ea0b37673133fdde5"
+  },
+  {
+    "path": "Penumbra.Api",
+    "baseCommit": "af41b1787acef9df7dc83619fe81e63a36443ee5",
+    "patch": "patches/4b4086828078f567.patch",
+    "sha256": "84453bca64b86b051ea548661579cb77003aee1216e762d457c8ba899131357a"
+  }
+]

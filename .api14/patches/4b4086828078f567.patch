@@ -1,0 +1,31 @@
+diff --git a/Penumbra.Api.csproj b/Penumbra.Api.csproj
+index e20c2bd..f91f9e8 100644
+--- a/Penumbra.Api.csproj
++++ b/Penumbra.Api.csproj
+@@ -1,4 +1,4 @@
+-<Project Sdk="Dalamud.NET.Sdk/13.0.0">
++<Project Sdk="Dalamud.NET.Sdk/14.0.1">
+     <PropertyGroup>
+         <AssemblyTitle>Penumbra.Api</AssemblyTitle>
+         <Product>Penumbra</Product>
+diff --git a/packages.lock.json b/packages.lock.json
+index 1d39508..0a160ea 100644
+--- a/packages.lock.json
++++ b/packages.lock.json
+@@ -1,12 +1,12 @@
+ {
+   "version": 1,
+   "dependencies": {
+-    "net9.0-windows7.0": {
++    "net10.0-windows7.0": {
+       "DotNet.ReproducibleBuilds": {
+         "type": "Direct",
+-        "requested": "[1.2.25, )",
+-        "resolved": "1.2.25",
+-        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
++        "requested": "[1.2.39, )",
++        "resolved": "1.2.39",
++        "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
+       }
+     }
+   }
